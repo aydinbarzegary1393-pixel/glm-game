@@ -309,39 +309,177 @@ const sc = dirLight.shadow.camera;
 sc.near=0.5;sc.far=80;sc.left=-40;sc.right=40;sc.top=40;sc.bottom=-40;
 scene.add(dirLight);
 
-// Ground
-const groundMat = new THREE.MeshStandardMaterial({color:0x4a7c3f,roughness:0.9});
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100), groundMat);
-ground.rotation.x = -Math.PI/2;
-ground.receiveShadow = true;
-scene.add(ground);
-scene.add(new THREE.GridHelper(100, 50, 0x000000, 0x2a5c1f));
-
-// Scene objects
+// ===== MAP SYSTEM =====
+const mapGroup = new THREE.Group();
+scene.add(mapGroup);
 const sceneObjects = [];
-function mkBox(x,y,z,w,h,d,c) {
+let currentMap = 0;
+
+function clearMap() {
+  while(mapGroup.children.length > 0) {
+    const child = mapGroup.children[0];
+    mapGroup.remove(child);
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) child.material.dispose();
+  }
+  sceneObjects.length = 0;
+}
+
+function addBox(x,y,z,w,h,d,c) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
     new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1}));
   m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
-  scene.add(m); sceneObjects.push(m); return m;
+  mapGroup.add(m); sceneObjects.push(m); return m;
 }
-mkBox(0,0.75,-8,1.5,1.5,1.5,0xe74c3c);
-mkBox(-6,1,-4,2,2,2,0x3498db);
-mkBox(6,0.5,-6,1,1,4,0xf39c12);
-mkBox(0,1.5,8,3,3,3,0x9b59b6);
-mkBox(-4,0.5,5,1,1,1,0x1abc9c);
-mkBox(8,2,3,2,4,2,0xe67e22);
-mkBox(-8,0.75,-10,1.5,1.5,1.5,0x2ecc71);
-mkBox(5,1,10,2,2,1,0xe84393);
-function mkCyl(x,y,z,r,h,c) {
+
+function addCyl(x,y,z,r,h,c,roughness) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),
-    new THREE.MeshStandardMaterial({color:c,roughness:0.4,metalness:0.3}));
+    new THREE.MeshStandardMaterial({color:c,roughness:roughness||0.4,metalness:0.3}));
   m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
-  scene.add(m); sceneObjects.push(m); return m;
+  mapGroup.add(m); sceneObjects.push(m); return m;
 }
-mkCyl(10,1,-5,0.5,2,0xc0392b);
-mkCyl(-10,1.5,5,0.7,3,0x2980b9);
-mkCyl(3,0.75,-12,0.75,1.5,0x27ae60);
+
+function setGround(color, gridColor1, gridColor2) {
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(100,100),
+    new THREE.MeshStandardMaterial({color:color,roughness:0.9}));
+  g.rotation.x = -Math.PI/2; g.receiveShadow = true;
+  mapGroup.add(g);
+  mapGroup.add(new THREE.GridHelper(100, 50, gridColor1, gridColor2));
+}
+
+function addRamp(x,y,z,w,h,d,ry,c) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color:c,roughness:0.7}));
+  m.position.set(x,y,z); m.rotation.set(-0.2,ry||0,0);
+  m.castShadow=true; m.receiveShadow=true;
+  mapGroup.add(m); sceneObjects.push(m); return m;
+}
+
+// ===== MAPS =====
+function loadTestMap() {
+  scene.background = new THREE.Color(0x87CEEB);
+  scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+  setGround(0x4a7c3f, 0x000000, 0x2a5c1f);
+  addBox(0,0.75,-8,1.5,1.5,1.5,0xe74c3c);
+  addBox(-6,1,-4,2,2,2,0x3498db);
+  addBox(6,0.5,-6,1,1,4,0xf39c12);
+  addBox(0,1.5,8,3,3,3,0x9b59b6);
+  addBox(-4,0.5,5,1,1,1,0x1abc9c);
+  addBox(8,2,3,2,4,2,0xe67e22);
+  addBox(-8,0.75,-10,1.5,1.5,1.5,0x2ecc71);
+  addBox(5,1,10,2,2,1,0xe84393);
+  addCyl(10,1,-5,0.5,2,0xc0392b);
+  addCyl(-10,1.5,5,0.7,3,0x2980b9);
+  addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
+}
+
+function loadDesertMap() {
+  scene.background = new THREE.Color(0xd4a574);
+  scene.fog = new THREE.Fog(0xd4a574, 25, 80);
+  setGround(0xc2b280, 0x8b7355, 0xa89060);
+  // Pyramids
+  addBox(0,2,-15,6,4,6,0xb8860b);
+  addBox(0,1.2,-14,4,2.4,4,0xcd9b1d);
+  addBox(12,1.5,-8,5,3,5,0xb8860b);
+  addBox(-10,1,-5,3,2,3,0xcd9b1d);
+  // Sandbags
+  addBox(4,0.4,3,4,0.8,1,0x8b7355);
+  addBox(4,0.9,3,3.5,0.4,0.8,0x8b7355);
+  addBox(-5,0.4,-2,3,0.8,1,0x8b7355);
+  addBox(-5,0.9,-2,2.5,0.4,0.8,0x8b7355);
+  // Rocks
+  addCyl(8,0.8,8,1.2,1.6,0x9e8c6c,0.9);
+  addCyl(-7,0.5,10,0.8,1,0xa09070,0.85);
+  addCyl(-3,0.6,-10,1,1.2,0x8b7d5e,0.95);
+  addCyl(15,1,0,1.5,2,0x9e8c6c,0.9);
+  // Ruins
+  addBox(-12,2,-12,1,4,6,0xb09060);
+  addBox(-12,4,-12,1,0.5,6,0xc0a070);
+  addBox(10,1.5,12,6,3,1,0xb09060);
+  addBox(10,3,12,6,0.5,1,0xc0a070);
+  // Oil barrels
+  addCyl(2,0.6,-5,0.4,1.2,0x333333,0.3);
+  addCyl(2.9,0.6,-5,0.4,1.2,0x333333,0.3);
+  addCyl(2.45,1.4,-5,0.35,0.4,0x666666,0.3);
+  // Small structures
+  addBox(-8,0.75,4,2,1.5,2,0xa08050);
+  addBox(6,0.5,-3,1.5,1,3,0xb09060);
+}
+
+function loadUrbanMap() {
+  scene.background = new THREE.Color(0x8899aa);
+  scene.fog = new THREE.Fog(0x8899aa, 20, 70);
+  setGround(0x555555, 0x333333, 0x444444);
+  // Buildings forming streets
+  addBox(0,4,-16,20,8,2,0x777777);
+  addBox(0,4,16,20,8,2,0x666666);
+  addBox(-12,4,0,2,8,30,0x6a6a6a);
+  addBox(12,4,0,2,8,30,0x707070);
+  // Inner buildings
+  addBox(-5,3,0,4,6,4,0x888888);
+  addBox(5,2.5,-5,3,5,3,0x7a7a7a);
+  addBox(5,2,7,5,4,3,0x808080);
+  addBox(-5,1.5,-8,3,3,5,0x757575);
+  // Cars (boxes on street)
+  addBox(3,0.6,5,2,1.2,4,0xcc3333);
+  addBox(3,1.1,5,1.8,0.5,2,0x88bbdd);
+  addBox(-3,0.6,-3,2,1.2,4,0x2255aa);
+  addBox(-3,1.1,-3,1.8,0.5,2,0x88bbdd);
+  // Barriers
+  addBox(0,0.5,0,3,1,0.5,0xffaa00);
+  addBox(8,0.4,-8,2,0.8,0.4,0xffaa00);
+  // Street lamps
+  addCyl(6,2,6,0.1,4,0x444444,0.2);
+  addCyl(-6,2,-6,0.1,4,0x444444,0.2);
+  addCyl(6,2,-10,0.1,4,0x444444,0.2);
+  // Dumpsters
+  addBox(-8,0.6,-2,1.5,1.2,1,0x336633);
+  addBox(8,0.6,10,1.5,1.2,1,0x336633);
+  // Rubble
+  addBox(2,0.3,10,1.5,0.6,1,0x666666);
+  addBox(3,0.2,11,1,0.4,1.5,0x777777);
+  addBox(-1,0.25,9,1.2,0.5,0.8,0x555555);
+}
+
+function loadArcticMap() {
+  scene.background = new THREE.Color(0xb0c4de);
+  scene.fog = new THREE.Fog(0xb0c4de, 20, 80);
+  setGround(0xddeeff, 0xaabbcc, 0xc8ddf0);
+  // Ice blocks
+  addBox(0,1,-8,2,2,2,0xadd8e6);
+  addBox(3,0.75,-6,1.5,1.5,1.5,0x87ceeb);
+  addBox(-4,1.2,-10,2.5,2.4,2,0xb0e0e6);
+  addBox(7,0.5,5,1,1,3,0xadd8e6);
+  // Snow walls
+  addBox(-8,2,0,1,4,12,0xe8e8f0);
+  addBox(8,2,0,1,4,12,0xe0e0e8);
+  addBox(0,2,-14,16,4,1,0xe8e8f0);
+  // Base structures
+  addBox(0,1.5,8,6,3,6,0x8899aa);
+  addBox(0,3.2,8,5,0.4,5,0x667788);
+  addBox(0,1.5,8.1,2,2.8,0.3,0x445566);
+  // Ice pillars
+  addCyl(5,2,-5,0.6,4,0x99ccee,0.1);
+  addCyl(-5,1.5,3,0.5,3,0xaaddff,0.1);
+  addCyl(10,1.8,-8,0.7,3.6,0x88bbdd,0.15);
+  addCyl(-10,1.2,8,0.5,2.4,0xaaddff,0.1);
+  // Snow mounds
+  addCyl(6,0.5,10,1.5,1,0xeef4ff,0.95);
+  addCyl(-3,0.4,-3,1.2,0.8,0xeef4ff,0.95);
+  addCyl(12,0.3,0,2,0.6,0xeef4ff,0.95);
+  // Crates
+  addBox(-6,0.5,-6,1,1,1,0x8b6914);
+  addBox(-6,1.4,-6,0.8,0.8,0.8,0x9b7924);
+  addBox(4,0.5,12,1.2,1,1.2,0x8b6914);
+  // Frozen lake (flat blue area)
+  const lake = new THREE.Mesh(new THREE.CircleGeometry(5, 32),
+    new THREE.MeshStandardMaterial({color:0x4488bb,roughness:0.05,metalness:0.3,transparent:true,opacity:0.7}));
+  lake.rotation.x = -Math.PI/2; lake.position.set(-8,-0.01,6);
+  lake.receiveShadow = true;
+  mapGroup.add(lake);
+}
+
+const mapLoaders = [loadTestMap, loadDesertMap, loadUrbanMap, loadArcticMap];
 
 // ===== FPS GUN MODEL =====
 const gunGroup = new THREE.Group();
