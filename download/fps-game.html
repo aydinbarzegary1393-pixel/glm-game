@@ -95,18 +95,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
 <div class="map-card playable" onclick="selectMap(1)">
-<div class="map-icon">🏜️</div>
-<div class="map-name" data-en="Desert Storm" data-fa="طوفان شن">Desert Storm</div>
+<div class="map-icon">🏗️</div>
+<div class="map-name" data-en="Vertigo" data-fa="ورتیگو">Vertigo</div>
 <div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
 <div class="map-card playable" onclick="selectMap(2)">
-<div class="map-icon">🏙️</div>
-<div class="map-name" data-en="Urban Warfare" data-fa="جنگ شهری">Urban Warfare</div>
+<div class="map-icon">🏜️</div>
+<div class="map-name" data-en="Dust" data-fa="داست">Dust</div>
 <div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
 <div class="map-card playable" onclick="selectMap(3)">
-<div class="map-icon">❄️</div>
-<div class="map-name" data-en="Arctic Base" data-fa="پایگاه قطبی">Arctic Base</div>
+<div class="map-icon">💥</div>
+<div class="map-name" data-en="Shoot" data-fa="شوت">Shoot</div>
 <div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
 </div>
@@ -380,113 +380,255 @@ function loadTestMap() {
   addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
 }
 
-function loadDesertMap() {
-  scene.background = new THREE.Color(0xd4a574);
-  scene.fog = new THREE.Fog(0xd4a574, 25, 80);
-  setGround(0xc2b280, 0x8b7355, 0xa89060);
-  // Pyramids
-  addBox(0,2,-15,6,4,6,0xb8860b);
-  addBox(0,1.2,-14,4,2.4,4,0xcd9b1d);
-  addBox(12,1.5,-8,5,3,5,0xb8860b);
-  addBox(-10,1,-5,3,2,3,0xcd9b1d);
-  // Sandbags
-  addBox(4,0.4,3,4,0.8,1,0x8b7355);
-  addBox(4,0.9,3,3.5,0.4,0.8,0x8b7355);
-  addBox(-5,0.4,-2,3,0.8,1,0x8b7355);
-  addBox(-5,0.9,-2,2.5,0.4,0.8,0x8b7355);
-  // Rocks
-  addCyl(8,0.8,8,1.2,1.6,0x9e8c6c,0.9);
-  addCyl(-7,0.5,10,0.8,1,0xa09070,0.85);
-  addCyl(-3,0.6,-10,1,1.2,0x8b7d5e,0.95);
-  addCyl(15,1,0,1.5,2,0x9e8c6c,0.9);
-  // Ruins
-  addBox(-12,2,-12,1,4,6,0xb09060);
-  addBox(-12,4,-12,1,0.5,6,0xc0a070);
-  addBox(10,1.5,12,6,3,1,0xb09060);
-  addBox(10,3,12,6,0.5,1,0xc0a070);
-  // Oil barrels
-  addCyl(2,0.6,-5,0.4,1.2,0x333333,0.3);
-  addCyl(2.9,0.6,-5,0.4,1.2,0x333333,0.3);
-  addCyl(2.45,1.4,-5,0.35,0.4,0x666666,0.3);
-  // Small structures
-  addBox(-8,0.75,4,2,1.5,2,0xa08050);
-  addBox(6,0.5,-3,1.5,1,3,0xb09060);
+function loadVertigoMap() {
+  scene.background = new THREE.Color(0x6699cc);
+  scene.fog = new THREE.Fog(0x6699cc, 40, 120);
+  setGround(0x555566, 0x333344, 0x444455);
+  const M = 0x667788; // metal
+  const D = 0x444455; // dark
+  const Y = 0xccaa44; // yellow warning
+  // === MAIN PLATFORM (A site) ===
+  addWall(0, 0.15, -12, 24, 0.3, 18, M); // floor slab
+  // Edge walls
+  addWall(0, 2, -20.5, 24, 4, 0.5, D);
+  addWall(0, 2, -3.5, 24, 4, 0.5, D);
+  addWall(-12.25, 2, -12, 0.5, 4, 18, D);
+  addWall(12.25, 2, -12, 0.5, 4, 18, D);
+  // Scaffolding pillars
+  addCyl(-10, 2, -18, 0.15, 4, M, 0.2);
+  addCyl(-5, 2, -18, 0.15, 4, M, 0.2);
+  addCyl(0, 2, -18, 0.15, 4, M, 0.2);
+  addCyl(5, 2, -18, 0.15, 4, M, 0.2);
+  addCyl(10, 2, -18, 0.15, 4, M, 0.2);
+  addCyl(-10, 2, -6, 0.15, 4, M, 0.2);
+  addCyl(-5, 2, -6, 0.15, 4, M, 0.2);
+  addCyl(0, 2, -6, 0.15, 4, M, 0.2);
+  addCyl(5, 2, -6, 0.15, 4, M, 0.2);
+  addCyl(10, 2, -6, 0.15, 4, M, 0.2);
+  // Cross beams
+  addWall(-7.5, 3.8, -18, 7, 0.2, 0.2, D);
+  addWall(2.5, 3.8, -18, 7, 0.2, 0.2, D);
+  addWall(-7.5, 2.5, -18, 7, 0.2, 0.2, D);
+  addWall(2.5, 2.5, -18, 7, 0.2, 0.2, D);
+  addWall(-7.5, 3.8, -6, 7, 0.2, 0.2, D);
+  addWall(2.5, 3.8, -6, 7, 0.2, 0.2, D);
+  // Crates on A site
+  addBox(-6, 0.75, -16, 1.5, 1.5, 1.5, 0x8b6914);
+  addBox(-4.5, 0.75, -16, 1.5, 1.5, 1.5, 0x8b6914);
+  addBox(-5.25, 2.15, -16, 1.2, 1, 1.2, 0x9b7924);
+  addBox(7, 0.5, -14, 1, 1, 2, 0x8b6914);
+  addBox(7, 1.4, -14, 0.8, 0.8, 1.6, 0x9b7924);
+  addBox(2, 0.75, -9, 1.5, 1.5, 1.5, 0x8b6914);
+  addBox(-8, 0.5, -10, 2, 1, 1, 0x8b6914);
+  // === CONNECTOR BRIDGE ===
+  addWall(0, 0.15, 0, 6, 0.3, 12, M);
+  addWall(0, 2, -5.5, 6, 4, 0.5, D);
+  addWall(0, 2, 5.5, 6, 4, 0.5, D);
+  addWall(-3.25, 2, 0, 0.5, 4, 12, D);
+  addWall(3.25, 2, 0, 0.5, 4, 12, D);
+  addCyl(-2, 2, -3, 0.12, 4, M, 0.2);
+  addCyl(2, 2, -3, 0.12, 4, M, 0.2);
+  addCyl(-2, 2, 3, 0.12, 4, M, 0.2);
+  addCyl(2, 2, 3, 0.12, 4, M, 0.2);
+  addWall(0, 1, -2, 6, 0.15, 0.15, D);
+  addWall(0, 2.8, -2, 6, 0.15, 0.15, D);
+  addWall(0, 1, 2, 6, 0.15, 0.15, D);
+  addWall(0, 2.8, 2, 6, 0.15, 0.15, D);
+  addBox(1, 0.5, -2, 1, 1, 1, 0x8b6914);
+  addBox(-1, 0.5, 2, 1, 1, 1, 0x8b6914);
+  // === LOWER PLATFORM (B site) ===
+  addWall(0, -1.85, 12, 20, 0.3, 16, M);
+  addWall(0, 0.15, 4, 20, 4, 0.5, D);
+  addWall(0, 0.15, 20, 20, 4, 0.5, D);
+  addWall(-10.25, 0.15, 12, 0.5, 4, 16, D);
+  addWall(10.25, 0.15, 12, 0.5, 4, 16, D);
+  // B site details
+  addBox(-5, -1.1, 10, 2, 1.5, 2, 0x8b6914);
+  addBox(5, -1.1, 14, 3, 1.5, 1.5, 0x8b6914);
+  addBox(0, -1.1, 17, 1.5, 1.5, 1.5, 0x8b6914);
+  addBox(7, -1.1, 10, 1, 1.5, 1, 0x8b6914);
+  addBox(-7, -1.1, 15, 2, 1, 3, 0x8b6914);
+  // Ramp from bridge to B
+  addRamp(0, -0.7, 3, 4, 0.2, 4, 0, 0.25, M);
+  // Scaffolding on B
+  addCyl(-8, 0, 6, 0.12, 4, M, 0.2);
+  addCyl(8, 0, 6, 0.12, 4, M, 0.2);
+  addCyl(-8, 0, 18, 0.12, 4, M, 0.2);
+  addCyl(8, 0, 18, 0.12, 4, M, 0.2);
+  addWall(0, 1.8, 6, 16, 0.15, 0.15, D);
+  addWall(0, 1.8, 18, 16, 0.15, 0.15, D);
+  // Yellow warning stripes
+  addWall(-12.1, 0.3, -12, 0.1, 0.3, 18, Y);
+  addWall(12.1, 0.3, -12, 0.1, 0.3, 18, Y);
+  addWall(0, -1.7, 4, 20, 0.1, 0.3, Y);
+  addWall(0, -1.7, 20, 20, 0.1, 0.3, Y);
 }
 
-function loadUrbanMap() {
-  scene.background = new THREE.Color(0x8899aa);
-  scene.fog = new THREE.Fog(0x8899aa, 20, 70);
-  setGround(0x555555, 0x333333, 0x444444);
-  // Buildings forming streets
-  addBox(0,4,-16,20,8,2,0x777777);
-  addBox(0,4,16,20,8,2,0x666666);
-  addBox(-12,4,0,2,8,30,0x6a6a6a);
-  addBox(12,4,0,2,8,30,0x707070);
-  // Inner buildings
-  addBox(-5,3,0,4,6,4,0x888888);
-  addBox(5,2.5,-5,3,5,3,0x7a7a7a);
-  addBox(5,2,7,5,4,3,0x808080);
-  addBox(-5,1.5,-8,3,3,5,0x757575);
-  // Cars (boxes on street)
-  addBox(3,0.6,5,2,1.2,4,0xcc3333);
-  addBox(3,1.1,5,1.8,0.5,2,0x88bbdd);
-  addBox(-3,0.6,-3,2,1.2,4,0x2255aa);
-  addBox(-3,1.1,-3,1.8,0.5,2,0x88bbdd);
-  // Barriers
-  addBox(0,0.5,0,3,1,0.5,0xffaa00);
-  addBox(8,0.4,-8,2,0.8,0.4,0xffaa00);
-  // Street lamps
-  addCyl(6,2,6,0.1,4,0x444444,0.2);
-  addCyl(-6,2,-6,0.1,4,0x444444,0.2);
-  addCyl(6,2,-10,0.1,4,0x444444,0.2);
-  // Dumpsters
-  addBox(-8,0.6,-2,1.5,1.2,1,0x336633);
-  addBox(8,0.6,10,1.5,1.2,1,0x336633);
-  // Rubble
-  addBox(2,0.3,10,1.5,0.6,1,0x666666);
-  addBox(3,0.2,11,1,0.4,1.5,0x777777);
-  addBox(-1,0.25,9,1.2,0.5,0.8,0x555555);
+function loadDustMap() {
+  scene.background = new THREE.Color(0xc4a06a);
+  scene.fog = new THREE.Fog(0xc4a06a, 30, 90);
+  setGround(0xc2a878, 0x9e8060, 0xb09870);
+  const S = 0xc4a868; // sandstone
+  const D = 0x9e8a5a; // dark sand
+  const W = 0x8b7355; // wood
+  const C = 0x8b6914; // crate
+  // === T SPAWN ===
+  addWall(0, 2, 18, 16, 4, 0.6, S);
+  addWall(-8.3, 2, 12, 0.6, 4, 12, S);
+  addWall(8.3, 2, 12, 0.6, 4, 12, S);
+  addBox(-6, 0.5, 16, 1.2, 1, 1.2, C);
+  addBox(-4.7, 0.5, 16, 1.2, 1, 1.2, C);
+  addBox(4, 0.5, 15, 1.2, 1, 1.2, C);
+  addBox(6, 0.5, 16, 1.2, 1, 1.2, C);
+  // === LONG CORRIDOR (Long A) ===
+  addWall(-5.5, 2, 2, 0.6, 4, 18, S);
+  addWall(5.5, 2, 2, 0.6, 4, 18, S);
+  // Archways along corridor
+  addArch(-5.2, 0, 8, 2, 3.5, 0.8, S);
+  addArch(5.2, 0, 4, 2, 3.5, 0.8, S);
+  addArch(-5.2, 0, -2, 2, 3.5, 0.8, S);
+  addArch(5.2, 0, -4, 2, 3.5, 0.8, S);
+  // Crates in corridor
+  addBox(-3, 0.75, 5, 1.5, 1.5, 1.5, C);
+  addBox(3, 0.5, 0, 1, 1, 2, C);
+  addBox(-2, 0.5, -4, 1.2, 1, 1.2, C);
+  addBox(4, 1, 3, 1, 1, 1, C);
+  addBox(4, 1.9, 3, 0.8, 0.8, 0.8, C);
+  // === A SITE ===
+  addWall(0, 2, -8, 20, 4, 0.6, S);
+  addWall(-10.3, 2, -14, 0.6, 4, 12, S);
+  addWall(10.3, 2, -14, 0.6, 4, 12, S);
+  addWall(0, 2, -20.3, 20, 4, 0.6, S);
+  // Archways into A site
+  addArch(0, 0, -7, 4, 3.5, 0.8, S);
+  addArch(-5, 0, -10, 3, 3.5, 0.8, S);
+  addArch(5, 0, -10, 3, 3.5, 0.8, S);
+  // A site crates and cover
+  addBox(-4, 0.75, -12, 1.5, 1.5, 1.5, C);
+  addBox(-2.5, 0.75, -12, 1.5, 1.5, 1.5, C);
+  addBox(-3.25, 2.15, -12, 1.2, 1, 1.2, C);
+  addBox(5, 0.75, -16, 1.5, 1.5, 1.5, C);
+  addBox(6.5, 0.75, -16, 1.5, 1.5, 1.5, C);
+  addBox(5.75, 2.15, -16, 1.2, 1, 1.2, C);
+  addBox(0, 0.75, -18, 2, 1.5, 2, C);
+  addBox(-7, 0.5, -15, 1, 1, 3, C);
+  addBox(8, 0.5, -12, 1.5, 1, 1.5, C);
+  addBox(3, 0.5, -14, 1, 1, 1, C);
+  // === MID (connects T spawn to B) ===
+  addWall(12, 2, 2, 0.6, 4, 18, S);
+  addWall(18, 2, 2, 0.6, 4, 18, S);
+  addArch(15, 0, 8, 4, 3.5, 0.8, S);
+  addArch(15, 0, 0, 4, 3.5, 0.8, S);
+  addArch(15, 0, -5, 4, 3.5, 0.8, S);
+  addBox(14, 0.5, 5, 1.2, 1, 1.2, C);
+  addBox(16, 0.5, -2, 1.2, 1, 1.2, C);
+  addBox(15, 1.4, -2, 0.8, 0.8, 0.8, C);
+  // === B SITE ===
+  addWall(15, 2, -12, 14, 4, 0.6, S);
+  addWall(8.3, 2, -18, 0.6, 4, 12, S);
+  addWall(21.7, 2, -18, 0.6, 4, 12, S);
+  addWall(15, 2, -24, 14, 4, 0.6, S);
+  // Door to B
+  addArch(15, 0, -11.5, 4, 3.5, 0.8, S);
+  // B site cover
+  addBox(12, 0.75, -16, 1.5, 1.5, 1.5, C);
+  addBox(13.5, 0.75, -16, 1.5, 1.5, 1.5, C);
+  addBox(12.75, 2.15, -16, 1.2, 1, 1.2, C);
+  addBox(17, 0.75, -20, 1.5, 1.5, 1.5, C);
+  addBox(18.5, 0.75, -20, 1.5, 1.5, 1.5, C);
+  addBox(15, 0.5, -22, 2, 1, 2, C);
+  addBox(10, 0.5, -20, 1, 1, 2, C);
+  addBox(20, 0.5, -15, 1.5, 1, 1, C);
+  // Barrels
+  addCyl(-7, 0.6, -10, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(-6.2, 0.6, -10, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(10, 0.6, 10, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(10.8, 0.6, 10, 0.4, 1.2, 0x444444, 0.3);
 }
 
-function loadArcticMap() {
-  scene.background = new THREE.Color(0xb0c4de);
-  scene.fog = new THREE.Fog(0xb0c4de, 20, 80);
-  setGround(0xddeeff, 0xaabbcc, 0xc8ddf0);
-  // Ice blocks
-  addBox(0,1,-8,2,2,2,0xadd8e6);
-  addBox(3,0.75,-6,1.5,1.5,1.5,0x87ceeb);
-  addBox(-4,1.2,-10,2.5,2.4,2,0xb0e0e6);
-  addBox(7,0.5,5,1,1,3,0xadd8e6);
-  // Snow walls
-  addBox(-8,2,0,1,4,12,0xe8e8f0);
-  addBox(8,2,0,1,4,12,0xe0e0e8);
-  addBox(0,2,-14,16,4,1,0xe8e8f0);
-  // Base structures
-  addBox(0,1.5,8,6,3,6,0x8899aa);
-  addBox(0,3.2,8,5,0.4,5,0x667788);
-  addBox(0,1.5,8.1,2,2.8,0.3,0x445566);
-  // Ice pillars
-  addCyl(5,2,-5,0.6,4,0x99ccee,0.1);
-  addCyl(-5,1.5,3,0.5,3,0xaaddff,0.1);
-  addCyl(10,1.8,-8,0.7,3.6,0x88bbdd,0.15);
-  addCyl(-10,1.2,8,0.5,2.4,0xaaddff,0.1);
-  // Snow mounds
-  addCyl(6,0.5,10,1.5,1,0xeef4ff,0.95);
-  addCyl(-3,0.4,-3,1.2,0.8,0xeef4ff,0.95);
-  addCyl(12,0.3,0,2,0.6,0xeef4ff,0.95);
-  // Crates
-  addBox(-6,0.5,-6,1,1,1,0x8b6914);
-  addBox(-6,1.4,-6,0.8,0.8,0.8,0x9b7924);
-  addBox(4,0.5,12,1.2,1,1.2,0x8b6914);
-  // Frozen lake (flat blue area)
-  const lake = new THREE.Mesh(new THREE.CircleGeometry(5, 32),
-    new THREE.MeshStandardMaterial({color:0x4488bb,roughness:0.05,metalness:0.3,transparent:true,opacity:0.7}));
-  lake.rotation.x = -Math.PI/2; lake.position.set(-8,-0.01,6);
-  lake.receiveShadow = true;
-  mapGroup.add(lake);
+function loadShootMap() {
+  scene.background = new THREE.Color(0x99aabb);
+  scene.fog = new THREE.Fog(0x99aabb, 15, 60);
+  setGround(0x666677, 0x444455, 0x555566);
+  const G = 0x888899; // gray wall
+  const D = 0x555566; // dark
+  const C = 0x8b6914; // crate
+  const R = 0x884422; // rust
+  // === MAIN HALL ===
+  addWall(0, 2.5, -10, 24, 5, 0.6, G);
+  addWall(0, 2.5, 10, 24, 5, 0.6, G);
+  addWall(-12.3, 2.5, 0, 0.6, 5, 20, G);
+  addWall(12.3, 2.5, 0, 0.6, 5, 20, G);
+  // Inner walls creating rooms
+  addWall(-3, 2, -4, 0.5, 4, 6, G);
+  addWall(3, 2, 4, 0.5, 4, 6, G);
+  addWall(-6, 2, 3, 4, 4, 0.5, G);
+  addWall(6, 2, -3, 4, 4, 0.5, G);
+  // Doorways (gaps in walls)
+  // Central structure
+  addBox(0, 1.5, 0, 3, 3, 3, D);
+  addBox(0, 3.3, 0, 2.2, 0.3, 2.2, R);
+  // Crates EVERYWHERE (cover)
+  addBox(-8, 0.75, -7, 1.5, 1.5, 1.5, C);
+  addBox(-6.5, 0.75, -7, 1.5, 1.5, 1.5, C);
+  addBox(-7.25, 2.15, -7, 1.2, 1, 1.2, C);
+  addBox(8, 0.75, 7, 1.5, 1.5, 1.5, C);
+  addBox(9.5, 0.75, 7, 1.5, 1.5, 1.5, C);
+  addBox(8.75, 2.15, 7, 1.2, 1, 1.2, C);
+  addBox(-9, 0.5, 5, 1, 1, 2, C);
+  addBox(9, 0.5, -5, 1, 1, 2, C);
+  addBox(-2, 0.5, 7, 1.2, 1, 1.2, C);
+  addBox(2, 0.5, -7, 1.2, 1, 1.2, C);
+  addBox(-5, 0.75, 0, 1.5, 1.5, 1.5, C);
+  addBox(5, 0.75, 0, 1.5, 1.5, 1.5, C);
+  addBox(0, 0.5, -8, 2, 1, 1, C);
+  addBox(0, 0.5, 8, 2, 1, 1, C);
+  addBox(-10, 0.5, 0, 1, 1, 1, C);
+  addBox(10, 0.5, 0, 1, 1, 1, C);
+  // === LEFT WING ===
+  addWall(-18, 2.5, -4, 0.6, 5, 12, G);
+  addWall(-15, 2.5, -10, 8, 5, 0.6, G);
+  addWall(-15, 2.5, 2, 8, 5, 0.6, G);
+  addWall(-12, 2.5, -4, 0.6, 5, 8, G);
+  addBox(-15, 0.75, -6, 1.5, 1.5, 1.5, C);
+  addBox(-16.5, 0.75, -6, 1.5, 1.5, 1.5, C);
+  addBox(-15.75, 2.15, -6, 1.2, 1, 1.2, C);
+  addBox(-13, 0.5, -1, 1, 1, 1.5, C);
+  addBox(-17, 0.5, 0, 1.2, 1, 1.2, C);
+  // === RIGHT WING ===
+  addWall(18, 2.5, 4, 0.6, 5, 12, G);
+  addWall(15, 2.5, -2, 8, 5, 0.6, G);
+  addWall(15, 2.5, 10, 8, 5, 0.6, G);
+  addWall(12, 2.5, 4, 0.6, 5, 8, G);
+  addBox(15, 0.75, 6, 1.5, 1.5, 1.5, C);
+  addBox(16.5, 0.75, 6, 1.5, 1.5, 1.5, C);
+  addBox(15.75, 2.15, 6, 1.2, 1, 1.2, C);
+  addBox(13, 0.5, 1, 1, 1, 1.5, C);
+  addBox(17, 0.5, 0, 1.2, 1, 1.2, C);
+  // === CORRIDORS ===
+  addWall(-6, 2.5, 12, 0.6, 5, 10, G);
+  addWall(6, 2.5, 12, 0.6, 5, 10, G);
+  addWall(0, 2.5, 17, 12, 5, 0.6, G);
+  addBox(-3, 0.75, 14, 1.5, 1.5, 1.5, C);
+  addBox(3, 0.75, 14, 1.5, 1.5, 1.5, C);
+  addBox(0, 0.5, 15, 2, 1, 1, C);
+  // === BACK CORRIDOR ===
+  addWall(-6, 2.5, -12, 0.6, 5, 10, G);
+  addWall(6, 2.5, -12, 0.6, 5, 10, G);
+  addWall(0, 2.5, -17, 12, 5, 0.6, G);
+  addBox(-3, 0.75, -14, 1.5, 1.5, 1.5, C);
+  addBox(3, 0.75, -14, 1.5, 1.5, 1.5, C);
+  addBox(0, 0.5, -15, 2, 1, 1, C);
+  // Barrels
+  addCyl(-11, 0.6, -8, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(-11.9, 0.6, -8, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(11, 0.6, 8, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(11.9, 0.6, 8, 0.4, 1.2, 0x444444, 0.3);
+  addCyl(-15, 0.6, 1, 0.4, 1.2, R, 0.3);
+  addCyl(15, 0.6, -1, 0.4, 1.2, R, 0.3);
 }
 
-const mapLoaders = [loadTestMap, loadDesertMap, loadUrbanMap, loadArcticMap];
+const mapLoaders = [loadTestMap, loadVertigoMap, loadDustMap, loadShootMap];
 loadTestMap(); // Load default map behind menu
 
 // ===== FPS GUN MODEL =====
