@@ -346,13 +346,21 @@ function setGround(color, gridColor1, gridColor2) {
   mapGroup.add(new THREE.GridHelper(100, 50, gridColor1, gridColor2));
 }
 
-function addRamp(x,y,z,w,h,d,ry,c) {
+function addRamp(x,y,z,w,h,d,ry,rx,c) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
     new THREE.MeshStandardMaterial({color:c,roughness:0.7}));
-  m.position.set(x,y,z); m.rotation.set(-0.2,ry||0,0);
+  m.position.set(x,y,z); m.rotation.set(rx||-0.2,ry||0,0);
   m.castShadow=true; m.receiveShadow=true;
   mapGroup.add(m); sceneObjects.push(m); return m;
 }
+
+function addArch(x,y,z,spanW,height,thickness,color) {
+  addBox(x-spanW/2+thickness/2, y+height/2, z, thickness, height, thickness, color);
+  addBox(x+spanW/2-thickness/2, y+height/2, z, thickness, height, thickness, color);
+  addBox(x, y+height, z, spanW, thickness*0.8, thickness, color);
+}
+
+function addWall(x,y,z,w,h,d,c) { return addBox(x,y,z,w,h,d,c); }
 
 // ===== MAPS =====
 function loadTestMap() {
