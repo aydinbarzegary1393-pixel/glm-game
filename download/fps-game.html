@@ -90,25 +90,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h2 data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</h2>
 <div class="map-grid">
-<div class="map-card playable" onclick="selectMap(0)">
-<div class="map-icon">🏗️</div>
+<div class="map-card playable" onclick="selectMap(0)"><div class="map-icon">🏗️</div>
 <div class="map-name">Test Map</div>
 <div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
-<div class="map-card locked">
+<div class="map-card playable" onclick="selectMap(1)">
 <div class="map-icon">🏜️</div>
 <div class="map-name" data-en="Desert Storm" data-fa="طوفان شن">Desert Storm</div>
-<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
-<div class="map-card locked">
+<div class="map-card playable" onclick="selectMap(2)">
 <div class="map-icon">🏙️</div>
 <div class="map-name" data-en="Urban Warfare" data-fa="جنگ شهری">Urban Warfare</div>
-<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
-<div class="map-card locked">
+<div class="map-card playable" onclick="selectMap(3)">
 <div class="map-icon">❄️</div>
 <div class="map-name" data-en="Arctic Base" data-fa="پایگاه قطبی">Arctic Base</div>
-<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
 </div>
 </div>
 <button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
@@ -262,7 +261,7 @@ function showMenu(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
-function selectMap(idx) { if(idx === 0) startGame(); }
+function selectMap(idx) { currentMap = idx; startGame(); }
 
 function updateSens(v) {
   MOUSE_SENS = v * 0.001;
@@ -480,6 +479,7 @@ function loadArcticMap() {
 }
 
 const mapLoaders = [loadTestMap, loadDesertMap, loadUrbanMap, loadArcticMap];
+loadTestMap(); // Load default map behind menu
 
 // ===== FPS GUN MODEL =====
 const gunGroup = new THREE.Group();
@@ -579,11 +579,17 @@ function shoot() {
 const pauseOvl = document.getElementById('pause-overlay');
 
 function startGame() {
+  clearMap();
+  mapLoaders[currentMap]();
   document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
   document.getElementById('crosshair').style.display = 'block';
   document.getElementById('debug').style.display = 'block';
   gameStarted = true;
   ammo = maxAmmo;
+  yaw = 0; pitch = 0;
+  player.position.set(0, PLAYER_HEIGHT, 0);
+  player.rotation.y = 0;
+  pitchObj.rotation.x = 0;
   renderer.domElement.requestPointerLock();
 }
 
