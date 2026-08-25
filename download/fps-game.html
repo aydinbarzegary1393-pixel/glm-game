@@ -452,8 +452,8 @@ function startGame() {
   renderer.domElement.requestPointerLock();
 }
 
-document.addEventListener('click', function(e) {
-  if (gameStarted && isLocked) {
+document.addEventListener('mousedown', function(e) {
+  if (gameStarted && isLocked && e.button === 0) {
     shoot();
   } else if (gameStarted && !isLocked) {
     renderer.domElement.requestPointerLock();
