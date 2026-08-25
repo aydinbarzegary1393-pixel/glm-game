@@ -1,1 +1,388 @@
-<!DOCTYPE html><html lang=
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPS Game</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#000;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#fff;user-select:none}
+canvas{display:block}
+
+/* ===== MENU SYSTEM ===== */
+.menu-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center}
+.menu-overlay.hidden{display:none}
+
+/* Main Menu */
+#main-menu{background:url('https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c021ed7594c0.png') center/cover no-repeat}
+#main-menu::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.65)}
+#main-menu .menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
+#main-menu h1{font-size:52px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px;text-shadow:0 0 30px rgba(79,195,247,0.5);color:#4fc3f7}
+#main-menu .subtitle{font-size:14px;color:#aaa;margin-bottom:40px;letter-spacing:3px}
+
+.menu-btn{display:block;width:280px;margin:12px auto;padding:14px 0;background:rgba(255,255,255,0.08);border:1px solid rgba(79,195,247,0.3);border-radius:8px;color:#fff;font-size:18px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s}
+.menu-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
+.menu-btn:active{transform:scale(0.98)}
+.menu-btn.back-btn{font-size:14px;width:200px;margin-top:30px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.15)}
+
+/* Map Select */
+#map-menu{background:rgba(10,10,15,0.97)}
+#map-menu .menu-content{text-align:center}
+#map-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:560px;margin:0 auto}
+.map-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.3s;text-align:center;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.map-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.1);transform:translateY(-3px)}
+.map-card.locked{opacity:0.4;cursor:not-allowed;pointer-events:none}
+.map-card .map-icon{font-size:36px;margin-bottom:10px}
+.map-card .map-name{font-size:16px;font-weight:700;letter-spacing:1px}
+.map-card .map-status{font-size:12px;color:#888;margin-top:6px;letter-spacing:1px}
+.map-card.playable .map-status{color:#4fc3f7}
+
+/* Settings */
+#settings-menu{background:rgba(10,10,15,0.97)}
+#settings-menu .menu-content{text-align:center;max-width:400px}
+#settings-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+
+.setting-group{margin:20px 0;text-align:left}
+.setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
+.setting-row{display:flex;align-items:center;gap:12px}
+
+input[type=range]{-webkit-appearance:none;flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#4fc3f7;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(79,195,247,0.5)}
+.setting-value{font-size:14px;color:#4fc3f7;min-width:35px;text-align:right;font-weight:700}
+
+.lang-btns{display:flex;gap:10px}
+.lang-btn{flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s}
+.lang-btn.active{background:rgba(79,195,247,0.2);border-color:#4fc3f7;color:#4fc3f7}
+.lang-btn:hover{border-color:#4fc3f7}
+
+/* HUD */
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7)}
+#crosshair::before{width:20px;height:2px;top:-1px;left:-10px}
+#crosshair::after{width:2px;height:20px;top:-10px;left:-1px}
+#debug{position:fixed;top:10px;left:10px;color:#0f0;font-family:monospace;font-size:13px;z-index:50;pointer-events:none;direction:ltr;text-align:left}
+
+/* Pause */
+#pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#pause-overlay.hidden{display:none}
+#pause-overlay h2{font-size:40px;color:#4fc3f7;margin-bottom:20px;letter-spacing:4px}
+#pause-overlay p{color:#aaa;font-size:16px}
+
+/* RTL for Persian */
+[dir=rtl] .menu-content{direction:rtl}
+[dir=rtl] .setting-group{text-align:right}
+</style>
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div id="main-menu" class="menu-overlay">
+<div class="menu-content">
+<h1 id="t_title">FPS GAME</h1>
+<p class="subtitle" id="t_subtitle">SHOOTER EXPERIENCE</p>
+<button class="menu-btn" id="btn-start" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
+<button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
+<button class="menu-btn" onclick="showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+</div>
+</div>
+
+<!-- MAP SELECT -->
+<div id="map-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 id="t_mapTitle" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</h2>
+<div class="map-grid">
+<div class="map-card playable" onclick="selectMap(0)">
+<div class="map-icon">🏗️</div>
+<div class="map-name">Test Map</div>
+<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
+</div>
+<div class="map-card locked">
+<div class="map-icon">🏜️</div>
+<div class="map-name" data-en="Desert Storm" data-fa="طوفان شن">Desert Storm</div>
+<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+</div>
+<div class="map-card locked">
+<div class="map-icon">🏙️</div>
+<div class="map-name" data-en="Urban Warfare" data-fa="جنگ شهری">Urban Warfare</div>
+<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+</div>
+<div class="map-card locked">
+<div class="map-icon">❄️</div>
+<div class="map-name" data-en="Arctic Base" data-fa="پایگاه قطبی">Arctic Base</div>
+<div class="map-status" data-en="COMING SOON" data-fa="به زودی">COMING SOON</div>
+</div>
+</div>
+<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 id="t_settingsTitle" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</h2>
+
+<div class="setting-group">
+<div class="setting-label" data-en="MOUSE SENSITIVITY" data-fa="حساسیت ماوس">MOUSE SENSITIVITY</div>
+<div class="setting-row">
+<input type="range" id="sens-slider" min="1" max="20" value="4" oninput="updateSens(this.value)">
+<span class="setting-value" id="sens-val">0.004</span>
+</div>
+</div>
+
+<div class="setting-group">
+<div class="setting-label" data-en="MASTER VOLUME" data-fa="صدای کلی">MASTER VOLUME</div>
+<div class="setting-row">
+<input type="range" id="vol-slider" min="0" max="100" value="70" oninput="updateVol(this.value)">
+<span class="setting-value" id="vol-val">70%</span>
+</div>
+</div>
+
+<div class="setting-group">
+<div class="setting-label" data-en="LANGUAGE / زبان" data-fa="LANGUAGE / زبان">LANGUAGE / زبان</div>
+<div class="lang-btns">
+<button class="lang-btn active" id="lang-en" onclick="setLang('en')">English</button>
+<button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
+</div>
+</div>
+
+<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause-overlay" class="hidden">
+<h2 id="t_paused" data-en="PAUSED" data-fa="توقف">PAUSED</h2>
+<p id="t_clickResume" data-en="Click to resume" data-fa="کلیک کنید برای ادامه">Click to resume</p>
+</div>
+
+<!-- GAME HUD -->
+<div id="crosshair" style="display:none"></div>
+<div id="debug" style="display:none"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== CONFIG =====
+let MOUSE_SENS = 0.002;
+const MOVE_SPEED = 8;
+const PLAYER_HEIGHT = 1.7;
+const GRAVITY = 20;
+let isLocked = false;
+let gameStarted = false;
+let yaw = 0, pitch = 0;
+let velocityY = 0;
+const keys = {w:false,a:false,s:false,d:false};
+
+// ===== TRANSLATIONS =====
+const T = {
+  en:{
+    title:'FPS GAME', subtitle:'SHOOTER EXPERIENCE',
+    start:'START GAME', mapSelect:'SELECT MAP', settings:'SETTINGS',
+    back:'BACK', paused:'PAUSED', clickResume:'Click to resume',
+    mapTitle:'SELECT MAP', settingsTitle:'SETTINGS',
+    sensitivity:'MOUSE SENSITIVITY', volume:'MASTER VOLUME',
+    playable:'PLAYABLE', comingSoon:'COMING SOON'
+  },
+  fa:{
+    title:'بازی شوتر', subtitle:'تجربه تیراندازی',
+    start:'شروع بازی', mapSelect:'انتخاب نقشه', settings:'تنظیمات',
+    back:'بازگشت', paused:'توقف', clickResume:'کلیک کنید برای ادامه',
+    mapTitle:'انتخاب نقشه', settingsTitle:'تنظیمات',
+    sensitivity:'حساسیت ماوس', volume:'صدای کلی',
+    playable:'آماده بازی', comingSoon:'به زودی'
+  }
+};
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  document.getElementById('lang-en').classList.toggle('active', lang==='en');
+  document.getElementById('lang-fa').classList.toggle('active', lang==='fa');
+  document.querySelectorAll('[data-'+lang+']').forEach(el => {
+    el.textContent = el.getAttribute('data-'+lang);
+  });
+}
+
+function showMenu(id) {
+  document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function selectMap(idx) {
+  if(idx === 0) startGame();
+}
+
+function updateSens(v) {
+  MOUSE_SENS = v * 0.001;
+  document.getElementById('sens-val').textContent = MOUSE_SENS.toFixed(3);
+}
+
+function updateVol(v) {
+  document.getElementById('vol-val').textContent = v + '%';
+}
+
+// ===== THREE.JS =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 200);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const player = new THREE.Object3D();
+player.position.set(0, PLAYER_HEIGHT, 0);
+scene.add(player);
+
+const pitchObj = new THREE.Object3D();
+player.add(pitchObj);
+pitchObj.add(camera);
+camera.position.set(0,0,0);
+
+const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(10, 20, 10);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048,2048);
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 80;
+dirLight.shadow.camera.left = -40;
+dirLight.shadow.camera.right = 40;
+dirLight.shadow.camera.top = 40;
+dirLight.shadow.camera.bottom = -40;
+scene.add(dirLight);
+
+// Ground
+const groundGeo = new THREE.PlaneGeometry(100,100,20,20);
+const groundMat = new THREE.MeshStandardMaterial({color:0x4a7c3f, roughness:0.9});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+scene.add(new THREE.GridHelper(100, 50, 0x000000, 0x2a5c1f));
+
+// Objects
+function mkBox(x,y,z,w,h,d,c) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1}));
+  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
+  scene.add(m); return m;
+}
+mkBox(0,0.75,-8,1.5,1.5,1.5,0xe74c3c);
+mkBox(-6,1,-4,2,2,2,0x3498db);
+mkBox(6,0.5,-6,1,1,4,0xf39c12);
+mkBox(0,1.5,8,3,3,3,0x9b59b6);
+mkBox(-4,0.5,5,1,1,1,0x1abc9c);
+mkBox(8,2,3,2,4,2,0xe67e22);
+mkBox(-8,0.75,-10,1.5,1.5,1.5,0x2ecc71);
+mkBox(5,1,10,2,2,1,0xe84393);
+
+function mkCyl(x,y,z,r,h,c) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),
+    new THREE.MeshStandardMaterial({color:c,roughness:0.4,metalness:0.3}));
+  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
+  scene.add(m); return m;
+}
+mkCyl(10,1,-5,0.5,2,0xc0392b);
+mkCyl(-10,1.5,5,0.7,3,0x2980b9);
+mkCyl(3,0.75,-12,0.75,1.5,0x27ae60);
+
+// ===== POINTER LOCK =====
+const blocker = document.getElementById('main-menu');
+const pauseOvl = document.getElementById('pause-overlay');
+
+function startGame() {
+  showMenu('none');
+  document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+  document.getElementById('crosshair').style.display = 'block';
+  document.getElementById('debug').style.display = 'block';
+  gameStarted = true;
+  renderer.domElement.requestPointerLock();
+}
+
+document.addEventListener('click', function() {
+  if(gameStarted && !isLocked) renderer.domElement.requestPointerLock();
+});
+
+document.addEventListener('pointerlockchange', function() {
+  isLocked = document.pointerLockElement === renderer.domElement;
+  if(!isLocked && gameStarted) {
+    pauseOvl.classList.remove('hidden');
+  } else {
+    pauseOvl.classList.add('hidden');
+  }
+});
+
+// ESC to main menu from pause
+document.addEventListener('keydown', function(e) {
+  if(e.code === 'Escape' && !isLocked && gameStarted) {
+    gameStarted = false;
+    pauseOvl.classList.add('hidden');
+    document.getElementById('crosshair').style.display = 'none';
+    document.getElementById('debug').style.display = 'none';
+    yaw = 0; pitch = 0;
+    player.position.set(0, PLAYER_HEIGHT, 0);
+    player.rotation.y = 0;
+    pitchObj.rotation.x = 0;
+    showMenu('main-menu');
+  }
+});
+
+document.addEventListener('mousemove', function(e) {
+  if(!isLocked) return;
+  yaw -= (e.movementX||0) * MOUSE_SENS;
+  pitch -= (e.movementY||0) * MOUSE_SENS;
+  pitch = Math.max(-1.55, Math.min(1.55, pitch));
+  player.rotation.y = yaw;
+  pitchObj.rotation.x = pitch;
+});
+
+document.addEventListener('keydown', function(e) {
+  switch(e.code){case'KeyW':keys.w=true;break;case'KeyA':keys.a=true;break;case'KeyS':keys.s=true;break;case'KeyD':keys.d=true;break}
+});
+document.addEventListener('keyup', function(e) {
+  switch(e.code){case'KeyW':keys.w=false;break;case'KeyA':keys.a=false;break;case'KeyS':keys.s=false;break;case'KeyD':keys.d=false;break}
+});
+
+window.addEventListener('resize', function() {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===== GAME LOOP =====
+const clock = new THREE.Clock();
+const debugEl = document.getElementById('debug');
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if(isLocked) {
+    const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    const mv = new THREE.Vector3();
+    if(keys.w) mv.add(fwd); if(keys.s) mv.sub(fwd);
+    if(keys.d) mv.add(rgt); if(keys.a) mv.sub(rgt);
+    if(mv.lengthSq()>0) mv.normalize();
+    player.position.x += mv.x * MOVE_SPEED * dt;
+    player.position.z += mv.z * MOVE_SPEED * dt;
+    velocityY -= GRAVITY * dt;
+    player.position.y += velocityY * dt;
+    if(player.position.y <= PLAYER_HEIGHT){player.position.y=PLAYER_HEIGHT;velocityY=0}
+    debugEl.innerHTML = 'Pos: '+player.position.x.toFixed(1)+', '+player.position.y.toFixed(1)+', '+player.position.z.toFixed(1)+'<br>Yaw: '+(yaw*180/Math.PI).toFixed(1)+'° Pitch: '+(pitch*180/Math.PI).toFixed(1)+'°';
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
