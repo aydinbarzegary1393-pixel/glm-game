@@ -329,8 +329,8 @@ function clearMap() {
 }
 
 function addBox(x,y,z,w,h,d,c) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-    new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1}));
+  const mat = (typeof c === 'object') ? c : new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1});
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
   mapGroup.add(m); sceneObjects.push(m);
   colliders.push({
@@ -342,8 +342,8 @@ function addBox(x,y,z,w,h,d,c) {
 }
 
 function addCyl(x,y,z,r,h,c,roughness) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),
-    new THREE.MeshStandardMaterial({color:c,roughness:roughness||0.4,metalness:0.3}));
+  const mat = (typeof c === 'object') ? c : new THREE.MeshStandardMaterial({color:c,roughness:roughness||0.4,metalness:0.3});
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16), mat);
   m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
   mapGroup.add(m); sceneObjects.push(m);
   colliders.push({
@@ -355,16 +355,16 @@ function addCyl(x,y,z,r,h,c,roughness) {
 }
 
 function setGround(color, gridColor1, gridColor2) {
-  const g = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
-    new THREE.MeshStandardMaterial({color:color,roughness:0.9}));
+  const mat = (typeof color === 'object') ? color : new THREE.MeshStandardMaterial({color:color,roughness:0.9});
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(200,200), mat);
   g.rotation.x = -Math.PI/2; g.receiveShadow = true;
   mapGroup.add(g);
   mapGroup.add(new THREE.GridHelper(200, 100, gridColor1, gridColor2));
 }
 
 function addRamp(x,y,z,w,h,d,ry,rx,c) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-    new THREE.MeshStandardMaterial({color:c,roughness:0.7}));
+  const mat = (typeof c === 'object') ? c : new THREE.MeshStandardMaterial({color:c,roughness:0.7});
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   m.position.set(x,y,z); m.rotation.set(rx||-0.2,ry||0,0);
   m.castShadow=true; m.receiveShadow=true;
   mapGroup.add(m); sceneObjects.push(m);
@@ -384,6 +384,160 @@ function addArch(x,y,z,spanW,height,thickness,color) {
 
 function addWall(x,y,z,w,h,d,c) { return addBox(x,y,z,w,h,d,c); }
 
+// ===== PROCEDURAL TEXTURE SYSTEM =====
+function makeCanvasTex(drawFn, w, h) {
+  const cv = document.createElement('canvas');
+  cv.width = w || 128; cv.height = h || 128;
+  const ctx = cv.getContext('2d'); drawFn(ctx, cv.width, cv.height);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+const tex = {};
+// Brick texture
+tex.brick = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#7a5c3a'; ctx.fillRect(0,0,w,h);
+    var bw=30, bh=14, gap=2;
+    for (var r=0; r < Math.ceil(h/bh); r++) {
+      var off = (r%2) * bw/2;
+      for (var c=-1; c < Math.ceil(w/bw)+1; c++) {
+        var v = 0.85 + Math.random()*0.3;
+        var rr = Math.floor(160*v), gg = Math.floor(100*v), bb = Math.floor(65*v);
+        ctx.fillStyle = 'rgb('+rr+','+gg+','+bb+')';
+        ctx.fillRect(c*bw+off+gap, r*bh+gap, bw-gap*2, bh-gap*2);
+      }
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.9, metalness:0.05});
+})();
+// Sand/Plaster texture
+tex.sand = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#c4a868'; ctx.fillRect(0,0,w,h);
+    for (var i=0; i < 2000; i++) {
+      var v = 0.8 + Math.random()*0.4;
+      var rr = Math.floor(196*v), gg = Math.floor(168*v), bb = Math.floor(104*v);
+      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.5)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.02});
+})();
+// Sand ground texture
+tex.sandGround = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#c2a878'; ctx.fillRect(0,0,w,h);
+    for (var i=0; i < 3000; i++) {
+      var v = 0.85 + Math.random()*0.3;
+      var rr = Math.floor(194*v), gg = Math.floor(168*v), bb = Math.floor(120*v);
+      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.4)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*3, Math.random()*3);
+    }
+  }, 128, 128);
+  t.repeat.set(20,20);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.02});
+})();
+// Concrete texture
+tex.concrete = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#8a8a8a'; ctx.fillRect(0,0,w,h);
+    for (var i=0; i < 4000; i++) {
+      var v = 0.7 + Math.random()*0.6;
+      var g = Math.floor(138*v);
+      ctx.fillStyle = 'rgba('+g+','+g+','+g+',0.3)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
+    }
+    // Cracks
+    ctx.strokeStyle = 'rgba(60,60,60,0.15)'; ctx.lineWidth = 1;
+    for (var i=0; i < 5; i++) {
+      ctx.beginPath(); ctx.moveTo(Math.random()*w, Math.random()*h);
+      ctx.lineTo(Math.random()*w, Math.random()*h); ctx.stroke();
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.85, metalness:0.1});
+})();
+// Metal floor texture
+tex.metalFloor = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#667788'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle = 'rgba(100,120,140,0.4)'; ctx.lineWidth = 1;
+    for (var i=0; i <= w; i += 32) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+    for (var i=0; i <= h; i += 32) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
+    // Rivets
+    ctx.fillStyle = 'rgba(150,170,190,0.5)';
+    for (var x=16; x < w; x+=32) for (var y=16; y < h; y+=32) {
+      ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill();
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.4, metalness:0.6});
+})();
+// Metal wall texture
+tex.metalWall = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#778899'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle = 'rgba(90,110,130,0.3)'; ctx.lineWidth = 1;
+    for (var i=0; i <= w; i += 64) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+    for (var i=0; i <= h; i += 64) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
+    for (var i=0; i < 800; i++) {
+      var g = Math.floor(100 + Math.random()*60);
+      ctx.fillStyle = 'rgba('+g+','+(g+10)+','+(g+20)+',0.15)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, 2+Math.random()*4, 1);
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.35, metalness:0.7});
+})();
+// Crate/Wood texture
+tex.crate = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#8b6914'; ctx.fillRect(0,0,w,h);
+    // Wood planks
+    ctx.strokeStyle = 'rgba(90,50,10,0.4)'; ctx.lineWidth = 2;
+    for (var i=0; i < w; i += 32) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+    // Wood grain
+    for (var i=0; i < 1500; i++) {
+      var v = 0.8 + Math.random()*0.4;
+      var rr = Math.floor(139*v), gg = Math.floor(105*v), bb = Math.floor(20*v);
+      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.3)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*8, 1);
+    }
+    // Cross braces
+    ctx.strokeStyle = 'rgba(80,50,10,0.5)'; ctx.lineWidth = 4;
+    ctx.strokeRect(8,8,w-16,h-16);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke();
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.8, metalness:0.05});
+})();
+// Dark metal texture
+tex.darkMetal = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#445566'; ctx.fillRect(0,0,w,h);
+    for (var i=0; i < 2000; i++) {
+      var g = Math.floor(60 + Math.random()*40);
+      ctx.fillStyle = 'rgba('+g+','+(g+8)+','+(g+16)+',0.2)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*3, 1+Math.random()*3);
+    }
+  }, 64, 64);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.3, metalness:0.8});
+})();
+// Concrete floor (indoor)
+tex.concreteFloor = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#555555'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle = 'rgba(70,70,70,0.3)'; ctx.lineWidth = 1;
+    for (var i=0; i <= w; i += 64) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+    for (var i=0; i <= h; i += 64) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
+    for (var i=0; i < 3000; i++) {
+      var g = Math.floor(70 + Math.random()*30);
+      ctx.fillStyle = 'rgba('+g+','+g+','+g+',0.2)';
+      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
+    }
+  }, 128, 128);
+  t.repeat.set(10,10);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.85, metalness:0.1});
+})();
+
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
   const r = PLAYER_RADIUS;
@@ -400,6 +554,24 @@ function checkCollision(px, py, pz) {
     }
   }
   return null;
+}
+
+// Find highest surface the player can stand on
+function getGroundY(px, py, pz) {
+  const r = PLAYER_RADIUS;
+  const feetY = py - PLAYER_HEIGHT;
+  let best = -999;
+  for (let i = 0; i < colliders.length; i++) {
+    const c = colliders[i];
+    if (px + r > c.minX && px - r < c.maxX &&
+        pz + r > c.minZ && pz - r < c.maxZ) {
+      // Surface must be reachable: player feet near or below top, above bottom
+      if (feetY <= c.maxY + 0.05 && feetY >= c.minY - 0.1 && c.maxY > best) {
+        best = c.maxY;
+      }
+    }
+  }
+  return best;
 }
 
 // ===== MAPS =====
@@ -429,11 +601,11 @@ function loadTestMap() {
 function loadVertigoMap() {
   scene.background = new THREE.Color(0x8faabe);
   scene.fog = new THREE.Fog(0x8faabe, 40, 140);
-  setGround(0x555566, 0x333344, 0x444455);
-  var METAL=0x778899, DARK=0x445566, CONCRETE=0x888899, YELLOW=0xddbb33, CRATE=0x8b6914, RUST=0x885533, BLUE_STEEL=0x6688aa;
+  setGround(tex.metalFloor, 0x333344, 0x444455);
+  var METAL=tex.metalWall, DARK=tex.darkMetal, CONCRETE=tex.concrete, YELLOW=0xddbb33, CRATE=tex.crate, RUST=0x885533, BLUE_STEEL=0x6688aa;
 
   // ====== T SPAWN (top level) ======
-  addWall(0, -0.1, -30, 12, 0.3, 12, METAL);
+  addWall(0, -0.1, -30, 12, 0.3, 12, tex.metalFloor);
   addWall(0, 2, -36, 12, 4.5, 0.5, CONCRETE);
   addWall(-6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
   addWall(6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
@@ -455,7 +627,7 @@ function loadVertigoMap() {
   addCyl(5, 2, -14, 0.12, 4, METAL, 0.2);
 
   // ====== A SITE (upper platform) ======
-  addWall(0, -0.1, -6, 28, 0.3, 14, METAL);
+  addWall(0, -0.1, -6, 28, 0.3, 14, tex.metalFloor);
   addWall(0, 2.5, -13, 28, 5, 0.5, CONCRETE);
   addWall(-14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
   addWall(14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
@@ -491,7 +663,7 @@ function loadVertigoMap() {
   addCyl(13, 1.5, -8, 0.04, 3, RUST, 0.8);
 
   // ====== CT MID CONNECTOR ======
-  addWall(1, -0.1, 4, 5, 0.3, 8, METAL);
+  addWall(1, -0.1, 4, 5, 0.3, 8, tex.metalFloor);
   addWall(-1.75, 2, 4, 0.5, 4, 8, CONCRETE);
   addWall(3.75, 2, 4, 0.5, 4, 8, CONCRETE);
   addWall(1, 4, 4, 5, 0.15, 0.15, DARK);
@@ -503,7 +675,7 @@ function loadVertigoMap() {
   addCyl(3, 2, 6, 0.12, 4, METAL, 0.2);
 
   // ====== CT SPAWN ======
-  addWall(1, -0.1, 12, 12, 0.3, 10, METAL);
+  addWall(1, -0.1, 12, 12, 0.3, 10, tex.metalFloor);
   addWall(1, 2.5, 17, 12, 5, 0.5, CONCRETE);
   addWall(-5.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
   addWall(7.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
@@ -511,7 +683,7 @@ function loadVertigoMap() {
   addBox(4, 0.5, 10, 1.2, 1, 1.2, CRATE);
 
   // ====== B STAIRS (CT to B site, going down) ======
-  addWall(5, -2.5, 20, 4, 0.25, 6, METAL);
+  addWall(5, -2.5, 20, 4, 0.25, 6, tex.metalFloor);
   for (var i = 0; i < 6; i++) {
     addWall(5, -0.3 + i * (-0.5), 17.5 + i, 4, 0.2, 1, METAL);
   }
@@ -521,7 +693,7 @@ function loadVertigoMap() {
   addWall(3.3, 2.5, 18, 0.1, 0.1, 4, DARK);
 
   // ====== B SITE (lower level) ======
-  addWall(0, -3.1, 28, 22, 0.3, 14, METAL);
+  addWall(0, -3.1, 28, 22, 0.3, 14, tex.metalFloor);
   addWall(0, -0.6, 21, 22, 5, 0.5, CONCRETE);
   addWall(0, -0.6, 35, 22, 5, 0.5, CONCRETE);
   addWall(-11.25, -0.6, 28, 0.5, 5, 14, CONCRETE);
@@ -565,8 +737,8 @@ function loadVertigoMap() {
 function loadDustMap() {
   scene.background = new THREE.Color(0xd4b88c);
   scene.fog = new THREE.Fog(0xd4b88c, 35, 110);
-  setGround(0xc2a878, 0x9e8060, 0xb09870);
-  var SAND=0xc4a868, DARK_SAND=0x9e8a5a, BRICK=0x8b6e4e, CRATE=0x8b6914, STONE=0xa09080, BARREL=0x555555;
+  setGround(tex.sandGround, 0x9e8060, 0xb09870);
+  var SAND=tex.sand, DARK_SAND=tex.sand, BRICK=tex.brick, CRATE=tex.crate, STONE=tex.concrete, BARREL=0x555555;
 
   // ====== T SPAWN ======
   addWall(0, 2, 28, 20, 4.5, 0.6, SAND);
@@ -674,8 +846,8 @@ function loadDustMap() {
 function loadShootMap() {
   scene.background = new THREE.Color(0x8899aa);
   scene.fog = new THREE.Fog(0x8899aa, 15, 60);
-  setGround(0x555555, 0x444444, 0x4a4a4a);
-  var WALL=0x8a8a8a, WALL2=0x777777, CRATE=0x8b6914, METAL=0x667788, RUST=0x884422, WOOD=0x6b4226, FLOOR=0x666666, BARREL_D=0x444444;
+  setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
+  var WALL=tex.concrete, WALL2=tex.concrete, CRATE=tex.crate, METAL=tex.metalWall, RUST=0x884422, WOOD=tex.crate, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
 
   // ====== OUTER BUILDING ======
   addWall(0, -0.1, 0, 32, 0.25, 42, FLOOR);
@@ -969,14 +1141,22 @@ function animate() {
 
     const moving = mv.lengthSq() > 0;
 
-    // Jump
-    if (keys.space && player.position.y <= PLAYER_HEIGHT + 0.01) {
+    // Jump (only if standing on ground or a surface)
+    var onGround = (player.position.y - PLAYER_HEIGHT <= getGroundY(player.position.x, player.position.y, player.position.z) + 0.05);
+    if (keys.space && onGround && velocityY <= 0) {
       velocityY = JUMP_FORCE;
     }
     // Gravity
     velocityY -= GRAVITY * dt;
     player.position.y += velocityY * dt;
-    if(player.position.y <= PLAYER_HEIGHT) { player.position.y = PLAYER_HEIGHT; velocityY = 0; }
+    // Ground collision: stand on boxes/floors
+    var groundTop = getGroundY(player.position.x, player.position.y, player.position.z);
+    if (groundTop > -998 && player.position.y - PLAYER_HEIGHT <= groundTop + 0.05) {
+      player.position.y = groundTop + PLAYER_HEIGHT;
+      velocityY = 0;
+    }
+    // Fallback: default ground at y=0
+    if (player.position.y <= PLAYER_HEIGHT) { player.position.y = PLAYER_HEIGHT; velocityY = 0; }
 
     // Footstep sounds
     if (moving) {
