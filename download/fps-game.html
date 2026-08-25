@@ -59,9 +59,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #muzzle-flash.fire{animation:flash 0.08s ease-out}
 @keyframes flash{0%{opacity:1;transform:translate(-50%,-30%) scale(1)}100%{opacity:0;transform:translate(-50%,-30%) scale(1.5)}}
 
-/* Gun recoil */
-.gun-recoil{animation:recoil 0.12s ease-out}
-@keyframes recoil{0%{transform:translateY(0)}30%{transform:translateY(8px)}100%{transform:translateY(0)}}
+/* Gun recoil handled in JS */
 
 /* Pause */
 #pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;display:flex;align-items:center;justify-content:center;flex-direction:column}
@@ -176,6 +174,7 @@ const FOOTSTEP_INTERVAL = 0.45;
 let canShoot = true;
 let ammo = 30;
 let maxAmmo = 30;
+let recoilAmount = 0;
 
 // ===== AUDIO SYSTEM (Web Audio API) =====
 let audioCtx = null;
@@ -415,10 +414,8 @@ function shoot() {
   muzzleLight.intensity = 3;
   setTimeout(() => { muzzleLight.intensity = 0; }, 50);
 
-  // Gun recoil
-  gunGroup.classList.remove('gun-recoil');
-  void gunGroup.offsetWidth;
-  gunGroup.classList.add('gun-recoil');
+  // Gun recoil (Three.js, not DOM)
+  recoilAmount = 0.06;
 
   // Raycast
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -543,16 +540,22 @@ function animate() {
       footstepTimer = 0;
     }
 
+    // Gun recoil
+    if (recoilAmount > 0) {
+      recoilAmount *= 0.85;
+      if (recoilAmount < 0.001) recoilAmount = 0;
+    }
+
     // Gun bob when walking
+    let bobY = 0, bobX = 0;
     if (moving) {
       const bobSpeed = 10;
       const bobAmount = 0.008;
-      gunGroup.position.y = -0.22 + Math.sin(clock.elapsedTime * bobSpeed) * bobAmount;
-      gunGroup.position.x = 0.25 + Math.cos(clock.elapsedTime * bobSpeed * 0.5) * bobAmount * 0.5;
-    } else {
-      gunGroup.position.y += (-0.22 - gunGroup.position.y) * 0.1;
-      gunGroup.position.x += (0.25 - gunGroup.position.x) * 0.1;
+      bobY = Math.sin(clock.elapsedTime * bobSpeed) * bobAmount;
+      bobX = Math.cos(clock.elapsedTime * bobSpeed * 0.5) * bobAmount * 0.5;
     }
+    gunGroup.position.y = -0.22 + bobY + recoilAmount;
+    gunGroup.position.x = 0.25 + bobX;
 
     // Debug + ammo HUD
     debugEl.innerHTML =
