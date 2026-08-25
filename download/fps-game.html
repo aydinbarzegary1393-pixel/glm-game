@@ -163,11 +163,12 @@ const MOVE_SPEED = 8;
 const PLAYER_HEIGHT = 1.7;
 const PLAYER_RADIUS = 0.35;
 const GRAVITY = 20;
+const JUMP_FORCE = 8;
 let isLocked = false;
 let gameStarted = false;
 let yaw = 0, pitch = 0;
 let velocityY = 0;
-const keys = {w:false,a:false,s:false,d:false};
+const keys = {w:false,a:false,s:false,d:false,space:false};
 let isMoving = false;
 let footstepTimer = 0;
 const FOOTSTEP_INTERVAL = 0.45;
@@ -386,12 +387,16 @@ function addWall(x,y,z,w,h,d,c) { return addBox(x,y,z,w,h,d,c); }
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
   const r = PLAYER_RADIUS;
+  const feetY = py - PLAYER_HEIGHT;
   for (let i = 0; i < colliders.length; i++) {
     const c = colliders[i];
     if (px + r > c.minX && px - r < c.maxX &&
-        py - PLAYER_HEIGHT < c.maxY && py > c.minY &&
         pz + r > c.minZ && pz - r < c.maxZ) {
-      return c;
+      // Only block if collider extends at least 0.3 above player feet
+      // This prevents thin floor slabs from blocking movement
+      if (c.maxY > feetY + 0.3 && c.minY < py) {
+        return c;
+      }
     }
   }
   return null;
@@ -916,10 +921,10 @@ document.addEventListener('mousemove', function(e) {
 });
 
 document.addEventListener('keydown', function(e) {
-  switch(e.code){case'KeyW':keys.w=true;break;case'KeyA':keys.a=true;break;case'KeyS':keys.s=true;break;case'KeyD':keys.d=true;break}
+  switch(e.code){case'KeyW':keys.w=true;break;case'KeyA':keys.a=true;break;case'KeyS':keys.s=true;break;case'KeyD':keys.d=true;break;case'Space':keys.space=true;e.preventDefault();break}
 });
 document.addEventListener('keyup', function(e) {
-  switch(e.code){case'KeyW':keys.w=false;break;case'KeyA':keys.a=false;break;case'KeyS':keys.s=false;break;case'KeyD':keys.d=false;break}
+  switch(e.code){case'KeyW':keys.w=false;break;case'KeyA':keys.a=false;break;case'KeyS':keys.s=false;break;case'KeyD':keys.d=false;break;case'Space':keys.space=false;break}
 });
 
 window.addEventListener('resize', function() {
@@ -964,6 +969,10 @@ function animate() {
 
     const moving = mv.lengthSq() > 0;
 
+    // Jump
+    if (keys.space && player.position.y <= PLAYER_HEIGHT + 0.01) {
+      velocityY = JUMP_FORCE;
+    }
     // Gravity
     velocityY -= GRAVITY * dt;
     player.position.y += velocityY * dt;

@@ -1,0 +1,1012 @@
+     1→     1→<!DOCTYPE html>
+     2→     2→<html lang="en">
+     3→     3→<head>
+     4→     4→<meta charset="UTF-8">
+     5→     5→<meta name="viewport" content="width=device-width, initial-scale=1.0">
+     6→     6→<title>FPS Game</title>
+     7→     7→<style>
+     8→     8→*{margin:0;padding:0;box-sizing:border-box}
+     9→     9→body{overflow:hidden;background:#000;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#fff;user-select:none}
+    10→    10→canvas{display:block}
+    11→    11→
+    12→    12→/* ===== MENU SYSTEM ===== */
+    13→    13→.menu-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:url('https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c021ed7594c0.png') center/cover no-repeat}
+    14→    14→.menu-overlay::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.65)}
+    15→    15→.menu-overlay.hidden{display:none}
+    16→    16→.menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
+    17→    17→#main-menu h1{font-size:52px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px;text-shadow:0 0 30px rgba(79,195,247,0.5);color:#4fc3f7}
+    18→    18→#main-menu .subtitle{font-size:14px;color:#aaa;margin-bottom:40px;letter-spacing:3px}
+    19→    19→
+    20→    20→.menu-btn{display:block;width:280px;margin:12px auto;padding:14px 0;background:rgba(255,255,255,0.08);border:1px solid rgba(79,195,247,0.3);border-radius:8px;color:#fff;font-size:18px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s}
+    21→    21→.menu-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
+    22→    22→.menu-btn:active{transform:scale(0.98)}
+    23→    23→.menu-btn.back-btn{font-size:14px;width:200px;margin-top:30px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.15)}
+    24→    24→
+    25→    25→/* Map Select */
+    26→    26→#map-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+    27→    27→.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:560px;margin:0 auto}
+    28→    28→.map-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.3s;text-align:center;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    29→    29→.map-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.1);transform:translateY(-3px)}
+    30→    30→.map-card.locked{opacity:0.4;cursor:not-allowed;pointer-events:none}
+    31→    31→.map-card .map-icon{font-size:36px;margin-bottom:10px}
+    32→    32→.map-card .map-name{font-size:16px;font-weight:700;letter-spacing:1px}
+    33→    33→.map-card .map-status{font-size:12px;color:#888;margin-top:6px;letter-spacing:1px}
+    34→    34→.map-card.playable .map-status{color:#4fc3f7}
+    35→    35→
+    36→    36→/* Settings */
+    37→    37→#settings-menu .menu-content{max-width:400px}
+    38→    38→#settings-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+    39→    39→.setting-group{margin:20px 0;text-align:left}
+    40→    40→.setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
+    41→    41→.setting-row{display:flex;align-items:center;gap:12px}
+    42→    42→input[type=range]{-webkit-appearance:none;flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;outline:none}
+    43→    43→input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#4fc3f7;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(79,195,247,0.5)}
+    44→    44→.setting-value{font-size:14px;color:#4fc3f7;min-width:35px;text-align:right;font-weight:700}
+    45→    45→.lang-btns{display:flex;gap:10px}
+    46→    46→.lang-btn{flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s}
+    47→    47→.lang-btn.active{background:rgba(79,195,247,0.2);border-color:#4fc3f7;color:#4fc3f7}
+    48→    48→.lang-btn:hover{border-color:#4fc3f7}
+    49→    49→
+    50→    50→/* HUD */
+    51→    51→#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none}
+    52→    52→#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7)}
+    53→    53→#crosshair::before{width:20px;height:2px;top:-1px;left:-10px}
+    54→    54→#crosshair::after{width:2px;height:20px;top:-10px;left:-1px}
+    55→    55→#debug{position:fixed;top:10px;left:10px;color:#0f0;font-family:monospace;font-size:13px;z-index:50;pointer-events:none;direction:ltr;text-align:left}
+    56→    56→
+    57→    57→/* Muzzle flash */
+    58→    58→#muzzle-flash{position:fixed;top:50%;left:50%;width:60px;height:60px;transform:translate(-50%,-30%);z-index:45;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(255,220,80,0.9),rgba(255,120,0,0.5),transparent 70%);border-radius:50%}
+    59→    59→#muzzle-flash.fire{animation:flash 0.08s ease-out}
+    60→    60→@keyframes flash{0%{opacity:1;transform:translate(-50%,-30%) scale(1)}100%{opacity:0;transform:translate(-50%,-30%) scale(1.5)}}
+    61→    61→
+    62→    62→/* Gun recoil handled in JS */
+    63→    63→
+    64→    64→/* Pause */
+    65→    65→#pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;display:flex;align-items:center;justify-content:center;flex-direction:column}
+    66→    66→#pause-overlay.hidden{display:none}
+    67→    67→#pause-overlay h2{font-size:40px;color:#4fc3f7;margin-bottom:20px;letter-spacing:4px}
+    68→    68→#pause-overlay p{color:#aaa;font-size:16px}
+    69→    69→
+    70→    70→/* RTL for Persian */
+    71→    71→[dir=rtl] .menu-content{direction:rtl}
+    72→    72→[dir=rtl] .setting-group{text-align:right}
+    73→    73→</style>
+    74→    74→</head>
+    75→    75→<body>
+    76→    76→
+    77→    77→<!-- MAIN MENU -->
+    78→    78→<div id="main-menu" class="menu-overlay">
+    79→    79→<div class="menu-content">
+    80→    80→<h1 id="t_title" data-en="FPS GAME" data-fa="بازی شوتر">FPS GAME</h1>
+    81→    81→<p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
+    82→    82→<button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
+    83→    83→<button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
+    84→    84→<button class="menu-btn" onclick="showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+    85→    85→</div>
+    86→    86→</div>
+    87→    87→
+    88→    88→<!-- MAP SELECT -->
+    89→    89→<div id="map-menu" class="menu-overlay hidden">
+    90→    90→<div class="menu-content">
+    91→    91→<h2 data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</h2>
+    92→    92→<div class="map-grid">
+    93→    93→<div class="map-card playable" onclick="selectMap(0)"><div class="map-icon">🏗️</div>
+    94→    94→<div class="map-name">Test Map</div>
+    95→    95→<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
+    96→    96→</div>
+    97→    97→<div class="map-card playable" onclick="selectMap(1)">
+    98→    98→<div class="map-icon">📜</div>
+    99→    99→<div class="map-name" data-en="Vertigo" data-fa="ورتیگو">Vertigo</div>
+   100→   100→<div class="map-status" data-en="CONSTRUCTION SITE" data-fa="ساحت خرابی">CONSTRUCTION SITE</div>
+   101→   101→</div>
+   102→   102→<div class="map-card playable" onclick="selectMap(2)">
+   103→   103→<div class="map-icon">🏜️</div>
+   104→   104→<div class="map-name" data-en="Dust 2" data-fa="داست دو">Dust 2</div>
+   105→   105→<div class="map-status" data-en="DESERT CLASSIC" data-fa="کلاسیک بیابانی">DESERT CLASSIC</div>
+   106→   106→</div>
+   107→   107→<div class="map-card playable" onclick="selectMap(3)">
+   108→   108→<div class="map-icon">💥</div>
+   109→   109→<div class="map-name" data-en="Shoot House" data-fa="شوت هاوس">Shoot House</div>
+   110→   110→<div class="map-status" data-en="CLOSE QUARTERS" data-fa="نبرد نزدیک">CLOSE QUARTERS</div>
+   111→   111→</div>
+   112→   112→</div>
+   113→   113→<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+   114→   114→</div>
+   115→   115→</div>
+   116→   116→
+   117→   117→<!-- SETTINGS -->
+   118→   118→<div id="settings-menu" class="menu-overlay hidden">
+   119→   119→<div class="menu-content">
+   120→   120→<h2 data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</h2>
+   121→   121→<div class="setting-group">
+   122→   122→<div class="setting-label" data-en="MOUSE SENSITIVITY" data-fa="حساسیت ماوس">MOUSE SENSITIVITY</div>
+   123→   123→<div class="setting-row">
+   124→   124→<input type="range" id="sens-slider" min="1" max="20" value="4" oninput="updateSens(this.value)">
+   125→   125→<span class="setting-value" id="sens-val">0.004</span>
+   126→   126→</div>
+   127→   127→</div>
+   128→   128→<div class="setting-group">
+   129→   129→<div class="setting-label" data-en="MASTER VOLUME" data-fa="صدای کلی">MASTER VOLUME</div>
+   130→   130→<div class="setting-row">
+   131→   131→<input type="range" id="vol-slider" min="0" max="100" value="70" oninput="updateVol(this.value)">
+   132→   132→<span class="setting-value" id="vol-val">70%</span>
+   133→   133→</div>
+   134→   134→</div>
+   135→   135→<div class="setting-group">
+   136→   136→<div class="setting-label" data-en="LANGUAGE / زبان" data-fa="LANGUAGE / زبان">LANGUAGE / زبان</div>
+   137→   137→<div class="lang-btns">
+   138→   138→<button class="lang-btn active" id="lang-en" onclick="setLang('en')">English</button>
+   139→   139→<button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
+   140→   140→</div>
+   141→   141→</div>
+   142→   142→<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+   143→   143→</div>
+   144→   144→</div>
+   145→   145→
+   146→   146→<!-- PAUSE -->
+   147→   147→<div id="pause-overlay" class="hidden">
+   148→   148→<h2 data-en="PAUSED" data-fa="توقف">PAUSED</h2>
+   149→   149→<p data-en="Click to resume" data-fa="کلیک کنید برای ادامه">Click to resume</p>
+   150→   150→</div>
+   151→   151→
+   152→   152→<!-- GAME HUD -->
+   153→   153→<div id="crosshair" style="display:none"></div>
+   154→   154→<div id="muzzle-flash"></div>
+   155→   155→<div id="debug" style="display:none"></div>
+   156→   156→
+   157→   157→<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+   158→   158→<script>
+   159→   159→// ===== CONFIG =====
+   160→   160→let MOUSE_SENS = 0.004;
+   161→   161→let masterVolume = 0.7;
+   162→   162→const MOVE_SPEED = 8;
+   163→   163→const PLAYER_HEIGHT = 1.7;
+   164→   164→const PLAYER_RADIUS = 0.35;
+   165→   165→const GRAVITY = 20;
+   166→   166→let isLocked = false;
+   167→   167→let gameStarted = false;
+   168→   168→let yaw = 0, pitch = 0;
+   169→   169→let velocityY = 0;
+   170→   170→const keys = {w:false,a:false,s:false,d:false};
+   171→   171→let isMoving = false;
+   172→   172→let footstepTimer = 0;
+   173→   173→const FOOTSTEP_INTERVAL = 0.45;
+   174→   174→let canShoot = true;
+   175→   175→let ammo = 30;
+   176→   176→let maxAmmo = 30;
+   177→   177→let recoilAmount = 0;
+   178→   178→
+   179→   179→// ===== AUDIO SYSTEM (Web Audio API) =====
+   180→   180→let audioCtx = null;
+   181→   181→let gunAudioCtx = null;
+   182→   182→
+   183→   183→function ensureAudio() {
+   184→   184→  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+   185→   185→}
+   186→   186→
+   187→   187→function playFootstep() {
+   188→   188→  ensureAudio();
+   189→   189→  const vol = masterVolume * 0.3;
+   190→   190→  if (vol <= 0) return;
+   191→   191→  // Create short noise burst for footstep
+   192→   192→  const bufferSize = audioCtx.sampleRate * 0.08;
+   193→   193→  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+   194→   194→  const data = buffer.getChannelData(0);
+   195→   195→  for (let i = 0; i < bufferSize; i++) {
+   196→   196→    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+   197→   197→  }
+   198→   198→  const src = audioCtx.createBufferSource();
+   199→   199→  src.buffer = buffer;
+   200→   200→  const filter = audioCtx.createBiquadFilter();
+   201→   201→  filter.type = 'lowpass';
+   202→   202→  filter.frequency.value = 800;
+   203→   203→  const gain = audioCtx.createGain();
+   204→   204→  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+   205→   205→  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+   206→   206→  src.connect(filter).connect(gain).connect(audioCtx.destination);
+   207→   207→  src.start();
+   208→   208→}
+   209→   209→
+   210→   210→function playGunshot() {
+   211→   211→  ensureAudio();
+   212→   212→  const vol = masterVolume * 0.6;
+   213→   213→  if (vol <= 0) return;
+   214→   214→  const dur = 0.15;
+   215→   215→  const bufferSize = audioCtx.sampleRate * dur;
+   216→   216→  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+   217→   217→  const data = buffer.getChannelData(0);
+   218→   218→  for (let i = 0; i < bufferSize; i++) {
+   219→   219→    const t = i / audioCtx.sampleRate;
+   220→   220→    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 30) * 1.5;
+   221→   221→  }
+   222→   222→  const src = audioCtx.createBufferSource();
+   223→   223→  src.buffer = buffer;
+   224→   224→  // Low thump
+   225→   225→  const osc = audioCtx.createOscillator();
+   226→   226→  osc.type = 'sine';
+   227→   227→  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+   228→   228→  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+   229→   229→  const oscGain = audioCtx.createGain();
+   230→   230→  oscGain.gain.setValueAtTime(vol * 0.8, audioCtx.currentTime);
+   231→   231→  oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+   232→   232→  // Noise part
+   233→   233→  const noiseGain = audioCtx.createGain();
+   234→   234→  noiseGain.gain.setValueAtTime(vol, audioCtx.currentTime);
+   235→   235→  noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+   236→   236→  const filter = audioCtx.createBiquadFilter();
+   237→   237→  filter.type = 'bandpass';
+   238→   238→  filter.frequency.value = 1000;
+   239→   239→  filter.Q.value = 0.5;
+   240→   240→  src.connect(filter).connect(noiseGain).connect(audioCtx.destination);
+   241→   241→  osc.connect(oscGain).connect(audioCtx.destination);
+   242→   242→  src.start();
+   243→   243→  osc.start();
+   244→   244→  osc.stop(audioCtx.currentTime + 0.1);
+   245→   245→}
+   246→   246→
+   247→   247→// ===== TRANSLATIONS =====
+   248→   248→let currentLang = 'en';
+   249→   249→
+   250→   250→function setLang(lang) {
+   251→   251→  currentLang = lang;
+   252→   252→  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+   253→   253→  document.getElementById('lang-en').classList.toggle('active', lang==='en');
+   254→   254→  document.getElementById('lang-fa').classList.toggle('active', lang==='fa');
+   255→   255→  document.querySelectorAll('[data-'+lang+']').forEach(el => {
+   256→   256→    el.textContent = el.getAttribute('data-'+lang);
+   257→   257→  });
+   258→   258→}
+   259→   259→
+   260→   260→function showMenu(id) {
+   261→   261→  document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+   262→   262→  document.getElementById(id).classList.remove('hidden');
+   263→   263→}
+   264→   264→
+   265→   265→function selectMap(idx) { currentMap = idx; startGame(); }
+   266→   266→
+   267→   267→function updateSens(v) {
+   268→   268→  MOUSE_SENS = v * 0.001;
+   269→   269→  document.getElementById('sens-val').textContent = MOUSE_SENS.toFixed(3);
+   270→   270→}
+   271→   271→
+   272→   272→function updateVol(v) {
+   273→   273→  masterVolume = v / 100;
+   274→   274→  document.getElementById('vol-val').textContent = v + '%';
+   275→   275→}
+   276→   276→
+   277→   277→// ===== THREE.JS SETUP =====
+   278→   278→const scene = new THREE.Scene();
+   279→   279→scene.background = new THREE.Color(0x87CEEB);
+   280→   280→scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+   281→   281→
+   282→   282→const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 200);
+   283→   283→const renderer = new THREE.WebGLRenderer({antialias:true});
+   284→   284→renderer.setSize(window.innerWidth, window.innerHeight);
+   285→   285→renderer.shadowMap.enabled = true;
+   286→   286→renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+   287→   287→renderer.domElement.style.position = 'fixed';
+   288→   288→renderer.domElement.style.top = '0';
+   289→   289→renderer.domElement.style.left = '0';
+   290→   290→renderer.domElement.style.zIndex = '1';
+   291→   291→document.body.appendChild(renderer.domElement);
+   292→   292→
+   293→   293→const player = new THREE.Object3D();
+   294→   294→player.position.set(0, PLAYER_HEIGHT, 0);
+   295→   295→scene.add(player);
+   296→   296→
+   297→   297→const pitchObj = new THREE.Object3D();
+   298→   298→player.add(pitchObj);
+   299→   299→pitchObj.add(camera);
+   300→   300→camera.position.set(0,0,0);
+   301→   301→
+   302→   302→// Lights
+   303→   303→scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+   304→   304→const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+   305→   305→dirLight.position.set(10, 20, 10);
+   306→   306→dirLight.castShadow = true;
+   307→   307→dirLight.shadow.mapSize.set(2048,2048);
+   308→   308→const sc = dirLight.shadow.camera;
+   309→   309→sc.near=0.5;sc.far=80;sc.left=-40;sc.right=40;sc.top=40;sc.bottom=-40;
+   310→   310→scene.add(dirLight);
+   311→   311→
+   312→   312→// ===== MAP SYSTEM =====
+   313→   313→const mapGroup = new THREE.Group();
+   314→   314→scene.add(mapGroup);
+   315→   315→const sceneObjects = [];
+   316→   316→const colliders = []; // {minX, maxX, minY, maxY, minZ, maxZ}
+   317→   317→let currentMap = 0;
+   318→   318→
+   319→   319→function clearMap() {
+   320→   320→  while(mapGroup.children.length > 0) {
+   321→   321→    const child = mapGroup.children[0];
+   322→   322→    mapGroup.remove(child);
+   323→   323→    if (child.geometry) child.geometry.dispose();
+   324→   324→    if (child.material) child.material.dispose();
+   325→   325→  }
+   326→   326→  sceneObjects.length = 0;
+   327→   327→  colliders.length = 0;
+   328→   328→}
+   329→   329→
+   330→   330→function addBox(x,y,z,w,h,d,c) {
+   331→   331→  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+   332→   332→    new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1}));
+   333→   333→  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
+   334→   334→  mapGroup.add(m); sceneObjects.push(m);
+   335→   335→  colliders.push({
+   336→   336→    minX: x-w/2, maxX: x+w/2,
+   337→   337→    minY: y-h/2, maxY: y+h/2,
+   338→   338→    minZ: z-d/2, maxZ: z+d/2
+   339→   339→  });
+   340→   340→  return m;
+   341→   341→}
+   342→   342→
+   343→   343→function addCyl(x,y,z,r,h,c,roughness) {
+   344→   344→  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),
+   345→   345→    new THREE.MeshStandardMaterial({color:c,roughness:roughness||0.4,metalness:0.3}));
+   346→   346→  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true;
+   347→   347→  mapGroup.add(m); sceneObjects.push(m);
+   348→   348→  colliders.push({
+   349→   349→    minX: x-r, maxX: x+r,
+   350→   350→    minY: y-h/2, maxY: y+h/2,
+   351→   351→    minZ: z-r, maxZ: z+r
+   352→   352→  });
+   353→   353→  return m;
+   354→   354→}
+   355→   355→
+   356→   356→function setGround(color, gridColor1, gridColor2) {
+   357→   357→  const g = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
+   358→   358→    new THREE.MeshStandardMaterial({color:color,roughness:0.9}));
+   359→   359→  g.rotation.x = -Math.PI/2; g.receiveShadow = true;
+   360→   360→  mapGroup.add(g);
+   361→   361→  mapGroup.add(new THREE.GridHelper(200, 100, gridColor1, gridColor2));
+   362→   362→}
+   363→   363→
+   364→   364→function addRamp(x,y,z,w,h,d,ry,rx,c) {
+   365→   365→  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+   366→   366→    new THREE.MeshStandardMaterial({color:c,roughness:0.7}));
+   367→   367→  m.position.set(x,y,z); m.rotation.set(rx||-0.2,ry||0,0);
+   368→   368→  m.castShadow=true; m.receiveShadow=true;
+   369→   369→  mapGroup.add(m); sceneObjects.push(m);
+   370→   370→  colliders.push({
+   371→   371→    minX: x-w/2, maxX: x+w/2,
+   372→   372→    minY: y-h/2, maxY: y+h/2,
+   373→   373→    minZ: z-d/2, maxZ: z+d/2
+   374→   374→  });
+   375→   375→  return m;
+   376→   376→}
+   377→   377→
+   378→   378→function addArch(x,y,z,spanW,height,thickness,color) {
+   379→   379→  addBox(x-spanW/2+thickness/2, y+height/2, z, thickness, height, thickness, color);
+   380→   380→  addBox(x+spanW/2-thickness/2, y+height/2, z, thickness, height, thickness, color);
+   381→   381→  addBox(x, y+height, z, spanW, thickness*0.8, thickness, color);
+   382→   382→}
+   383→   383→
+   384→   384→function addWall(x,y,z,w,h,d,c) { return addBox(x,y,z,w,h,d,c); }
+   385→   385→
+   386→   386→// ===== COLLISION DETECTION =====
+   387→   387→function checkCollision(px, py, pz) {
+   388→   388→  const r = PLAYER_RADIUS;
+   389→   389→  for (let i = 0; i < colliders.length; i++) {
+   390→   390→    const c = colliders[i];
+   391→   391→    if (px + r > c.minX && px - r < c.maxX &&
+   392→   392→        py - PLAYER_HEIGHT < c.maxY && py > c.minY &&
+   393→   393→        pz + r > c.minZ && pz - r < c.maxZ) {
+   394→   394→      return c;
+   395→   395→    }
+   396→   396→  }
+   397→   397→  return null;
+   398→   398→}
+   399→   399→
+   400→   400→// ===== MAPS =====
+   401→   401→
+   402→   402→// ----- TEST MAP -----
+   403→   403→function loadTestMap() {
+   404→   404→  scene.background = new THREE.Color(0x87CEEB);
+   405→   405→  scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+   406→   406→  setGround(0x4a7c3f, 0x000000, 0x2a5c1f);
+   407→   407→  addBox(0,0.75,-8,1.5,1.5,1.5,0xe74c3c);
+   408→   408→  addBox(-6,1,-4,2,2,2,0x3498db);
+   409→   409→  addBox(6,0.5,-6,1,1,4,0xf39c12);
+   410→   410→  addBox(0,1.5,8,3,3,3,0x9b59b6);
+   411→   411→  addBox(-4,0.5,5,1,1,1,0x1abc9c);
+   412→   412→  addBox(8,2,3,2,4,2,0xe67e22);
+   413→   413→  addBox(-8,0.75,-10,1.5,1.5,1.5,0x2ecc71);
+   414→   414→  addBox(5,1,10,2,2,1,0xe84393);
+   415→   415→  addCyl(10,1,-5,0.5,2,0xc0392b);
+   416→   416→  addCyl(-10,1.5,5,0.7,3,0x2980b9);
+   417→   417→  addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
+   418→   418→  player.position.set(0, PLAYER_HEIGHT, 0);
+   419→   419→}
+   420→   420→
+   421→   421→// ----- VERTIGO (CS:GO) -----
+   422→   422→// Under-construction skyscraper: T Spawn (top) -> A Ramp -> A Site (upper)
+   423→   423→// CT Spawn (mid) -> B Stairs -> B Site (lower), elevator shaft between
+   424→   424→function loadVertigoMap() {
+   425→   425→  scene.background = new THREE.Color(0x8faabe);
+   426→   426→  scene.fog = new THREE.Fog(0x8faabe, 40, 140);
+   427→   427→  setGround(0x555566, 0x333344, 0x444455);
+   428→   428→  var METAL=0x778899, DARK=0x445566, CONCRETE=0x888899, YELLOW=0xddbb33, CRATE=0x8b6914, RUST=0x885533, BLUE_STEEL=0x6688aa;
+   429→   429→
+   430→   430→  // ====== T SPAWN (top level) ======
+   431→   431→  addWall(0, -0.1, -30, 12, 0.3, 12, METAL);
+   432→   432→  addWall(0, 2, -36, 12, 4.5, 0.5, CONCRETE);
+   433→   433→  addWall(-6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
+   434→   434→  addWall(6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
+   435→   435→  addWall(-3.5, 2, -24, 5, 4.5, 0.5, CONCRETE);
+   436→   436→  addBox(3, 0.5, -34, 1, 1, 1, CRATE);
+   437→   437→  addBox(-2, 0.5, -28, 1.2, 1, 1.2, CRATE);
+   438→   438→
+   439→   439→  // ====== A RAMP (sloping down from T to A site) ======
+   440→   440→  addRamp(3, 0.5, -18, 4, 0.2, 12, 0, 0.22, METAL);
+   441→   441→  addWall(6, 2, -18, 0.3, 4, 12, DARK);
+   442→   442→  addWall(0, 2, -18, 0.3, 4, 12, DARK);
+   443→   443→  addWall(3, 1.5, -22, 6, 0.15, 0.15, DARK);
+   444→   444→  addWall(3, 2.5, -22, 6, 0.15, 0.15, DARK);
+   445→   445→  addWall(3, 1.5, -15, 6, 0.15, 0.15, DARK);
+   446→   446→  addWall(3, 2.5, -15, 6, 0.15, 0.15, DARK);
+   447→   447→  addCyl(1, 2, -22, 0.12, 4, METAL, 0.2);
+   448→   448→  addCyl(5, 2, -22, 0.12, 4, METAL, 0.2);
+   449→   449→  addCyl(1, 2, -14, 0.12, 4, METAL, 0.2);
+   450→   450→  addCyl(5, 2, -14, 0.12, 4, METAL, 0.2);
+   451→   451→
+   452→   452→  // ====== A SITE (upper platform) ======
+   453→   453→  addWall(0, -0.1, -6, 28, 0.3, 14, METAL);
+   454→   454→  addWall(0, 2.5, -13, 28, 5, 0.5, CONCRETE);
+   455→   455→  addWall(-14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
+   456→   456→  addWall(14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
+   457→   457→  addWall(-5, 2.5, 1, 8, 5, 0.5, CONCRETE);
+   458→   458→  addWall(8, 2.5, 1, 10, 5, 0.5, CONCRETE);
+   459→   459→  // A plant area
+   460→   460→  addWall(-5, 0.1, -5, 6, 0.15, 6, YELLOW);
+   461→   461→  // Construction materials
+   462→   462→  addBox(-8, 0.75, -4, 1.5, 1.5, 1.5, CRATE);
+   463→   463→  addBox(-6.5, 0.75, -4, 1.5, 1.5, 1.5, CRATE);
+   464→   464→  addBox(-7.25, 2.15, -4, 1.2, 1, 1.2, CRATE);
+   465→   465→  addBox(8, 0.5, -3, 2, 1, 3, CRATE);
+   466→   466→  addBox(9.5, 0.5, -3, 1, 1, 1, CRATE);
+   467→   467→  addBox(9, 1.4, -3, 0.8, 0.8, 0.8, CRATE);
+   468→   468→  addBox(-3, 0.5, -9, 1.2, 1, 1.2, CRATE);
+   469→   469→  addBox(10, 0.75, -8, 1.5, 1.5, 1.5, CRATE);
+   470→   470→  addBox(3, 0.5, -10, 1, 1, 2, CRATE);
+   471→   471→  // Scaffolding
+   472→   472→  addCyl(-11, 2.5, -3, 0.15, 5, METAL, 0.2);
+   473→   473→  addCyl(-11, 2.5, -9, 0.15, 5, METAL, 0.2);
+   474→   474→  addCyl(11, 2.5, -3, 0.15, 5, METAL, 0.2);
+   475→   475→  addCyl(11, 2.5, -9, 0.15, 5, METAL, 0.2);
+   476→   476→  addWall(-11, 4.5, -6, 0.15, 0.15, 6, DARK);
+   477→   477→  addWall(11, 4.5, -6, 0.15, 0.15, 6, DARK);
+   478→   478→  addWall(0, 4.5, -3, 22, 0.15, 0.15, DARK);
+   479→   479→  addWall(0, 4.5, -9, 22, 0.15, 0.15, DARK);
+   480→   480→  // Yellow edge warnings
+   481→   481→  addWall(-14, 0.2, -6, 0.1, 0.2, 14, YELLOW);
+   482→   482→  addWall(14, 0.2, -6, 0.1, 0.2, 14, YELLOW);
+   483→   483→  addWall(0, 0.2, -12.8, 28, 0.2, 0.1, YELLOW);
+   484→   484→  // Rebar
+   485→   485→  addCyl(-13, 1.5, -10, 0.04, 3, RUST, 0.8);
+   486→   486→  addCyl(13, 1.5, -8, 0.04, 3, RUST, 0.8);
+   487→   487→
+   488→   488→  // ====== CT MID CONNECTOR ======
+   489→   489→  addWall(1, -0.1, 4, 5, 0.3, 8, METAL);
+   490→   490→  addWall(-1.75, 2, 4, 0.5, 4, 8, CONCRETE);
+   491→   491→  addWall(3.75, 2, 4, 0.5, 4, 8, CONCRETE);
+   492→   492→  addWall(1, 4, 4, 5, 0.15, 0.15, DARK);
+   493→   493→  addWall(1, 4, 2, 5, 0.15, 0.15, DARK);
+   494→   494→  addWall(1, 4, 6, 5, 0.15, 0.15, DARK);
+   495→   495→  addCyl(-1, 2, 2, 0.12, 4, METAL, 0.2);
+   496→   496→  addCyl(3, 2, 2, 0.12, 4, METAL, 0.2);
+   497→   497→  addCyl(-1, 2, 6, 0.12, 4, METAL, 0.2);
+   498→   498→  addCyl(3, 2, 6, 0.12, 4, METAL, 0.2);
+   499→   499→
+   500→   500→  // ====== CT SPAWN ======
+   501→   501→  addWall(1, -0.1, 12, 12, 0.3, 10, METAL);
+   502→   502→  addWall(1, 2.5, 17, 12, 5, 0.5, CONCRETE);
+   503→   503→  addWall(-5.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
+   504→   504→  addWall(7.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
+   505→   505→  addBox(-2, 0.5, 14, 1.5, 1, 1.5, CRATE);
+   506→   506→  addBox(4, 0.5, 10, 1.2, 1, 1.2, CRATE);
+   507→   507→
+   508→   508→  // ====== B STAIRS (CT to B site, going down) ======
+   509→   509→  addWall(5, -2.5, 20, 4, 0.25, 6, METAL);
+   510→   510→  for (var i = 0; i < 6; i++) {
+   511→   511→    addWall(5, -0.3 + i * (-0.5), 17.5 + i, 4, 0.2, 1, METAL);
+   512→   512→  }
+   513→   513→  addWall(3, 0, 20, 0.4, 5, 8, CONCRETE);
+   514→   514→  addWall(7, 0, 20, 0.4, 5, 8, CONCRETE);
+   515→   515→  addWall(3.3, 1.5, 18, 0.1, 0.1, 4, DARK);
+   516→   516→  addWall(3.3, 2.5, 18, 0.1, 0.1, 4, DARK);
+   517→   517→
+   518→   518→  // ====== B SITE (lower level) ======
+   519→   519→  addWall(0, -3.1, 28, 22, 0.3, 14, METAL);
+   520→   520→  addWall(0, -0.6, 21, 22, 5, 0.5, CONCRETE);
+   521→   521→  addWall(0, -0.6, 35, 22, 5, 0.5, CONCRETE);
+   522→   522→  addWall(-11.25, -0.6, 28, 0.5, 5, 14, CONCRETE);
+   523→   523→  addWall(11.25, -0.6, 28, 0.5, 5, 14, CONCRETE);
+   524→   524→  addWall(8, -0.6, 21, 8, 5, 0.5, CONCRETE);
+   525→   525→  addWall(-2, -2.9, 28, 5, 0.15, 5, YELLOW);
+   526→   526→  addBox(-7, -2.4, 24, 1.5, 1.5, 1.5, CRATE);
+   527→   527→  addBox(-5.5, -2.4, 24, 1.5, 1.5, 1.5, CRATE);
+   528→   528→  addBox(-6.25, -1, 24, 1.2, 1, 1.2, CRATE);
+   529→   529→  addBox(6, -2.4, 30, 2, 1.5, 2, CRATE);
+   530→   530→  addBox(7.5, -2.4, 30, 1.5, 1.5, 1.5, CRATE);
+   531→   531→  addBox(-3, -2.4, 32, 1, 1, 2, CRATE);
+   532→   532→  addBox(8, -2.4, 26, 1.5, 1.5, 1.5, CRATE);
+   533→   533→  addBox(-8, -2.4, 30, 1.2, 1, 1.2, CRATE);
+   534→   534→  addCyl(-10, -0.6, 24, 0.15, 5, METAL, 0.2);
+   535→   535→  addCyl(-10, -0.6, 32, 0.15, 5, METAL, 0.2);
+   536→   536→  addCyl(10, -0.6, 24, 0.15, 5, METAL, 0.2);
+   537→   537→  addCyl(10, -0.6, 32, 0.15, 5, METAL, 0.2);
+   538→   538→  addWall(0, 1.5, 24, 20, 0.15, 0.15, DARK);
+   539→   539→  addWall(0, 1.5, 32, 20, 0.15, 0.15, DARK);
+   540→   540→  addWall(-10, 0, 28, 0.15, 0.15, 8, DARK);
+   541→   541→  addWall(10, 0, 28, 0.15, 0.15, 8, DARK);
+   542→   542→  addBox(9, -2.5, 33, 1.5, 1.2, 1, BLUE_STEEL);
+   543→   543→  addWall(-11, -2.9, 28, 0.1, 0.2, 14, YELLOW);
+   544→   544→  addWall(11, -2.9, 28, 0.1, 0.2, 14, YELLOW);
+   545→   545→  addWall(0, -2.9, 21, 22, 0.2, 0.1, YELLOW);
+   546→   546→  addWall(0, -2.9, 34.8, 22, 0.2, 0.1, YELLOW);
+   547→   547→
+   548→   548→  // ====== ELEVATOR SHAFT ======
+   549→   549→  addWall(8, 0, -1, 3, 6, 0.3, DARK);
+   550→   550→  addWall(10, 0, -1, 0.3, 6, 3, DARK);
+   551→   551→  addWall(6, 0, -1, 0.3, 6, 3, DARK);
+   552→   552→  addWall(8, -3, -1, 3.5, 0.3, 3.5, DARK);
+   553→   553→
+   554→   554→  player.position.set(0, PLAYER_HEIGHT, -30);
+   555→   555→}
+   556→   556→
+   557→   557→// ----- DUST 2 (CS:GO) -----
+   558→   558→// Classic: T Spawn -> Long A / Mid / B Tunnels
+   559→   559→// A Site with long doors, pit, boxes. B Site with car, platforms
+   560→   560→function loadDustMap() {
+   561→   561→  scene.background = new THREE.Color(0xd4b88c);
+   562→   562→  scene.fog = new THREE.Fog(0xd4b88c, 35, 110);
+   563→   563→  setGround(0xc2a878, 0x9e8060, 0xb09870);
+   564→   564→  var SAND=0xc4a868, DARK_SAND=0x9e8a5a, BRICK=0x8b6e4e, CRATE=0x8b6914, STONE=0xa09080, BARREL=0x555555;
+   565→   565→
+   566→   566→  // ====== T SPAWN ======
+   567→   567→  addWall(0, 2, 28, 20, 4.5, 0.6, SAND);
+   568→   568→  addWall(-10.3, 2, 23, 0.6, 4.5, 12, SAND);
+   569→   569→  addWall(10.3, 2, 23, 0.6, 4.5, 12, SAND);
+   570→   570→  addWall(0, 0.02, 22, 6, 0.05, 3, 0xcc3333);
+   571→   571→  addBox(-7, 0.5, 26, 1.2, 1, 1.2, CRATE);
+   572→   572→  addBox(7, 0.5, 26, 1.2, 1, 1.2, CRATE);
+   573→   573→
+   574→   574→  // ====== LONG A (corridor from T to A site) ======
+   575→   575→  addWall(-5, 2, 13, 0.6, 4.5, 14, SAND);
+   576→   576→  addWall(-1, 2, 13, 0.6, 4.5, 14, SAND);
+   577→   577→  addWall(-3, -0.5, 10, 2, 1, 8, DARK_SAND);
+   578→   578→  addWall(-1.3, 0.5, 10, 0.6, 2.5, 8, SAND);
+   579→   579→  addArch(-3, 0, 16, 2.5, 3.5, 0.7, SAND);
+   580→   580→  addArch(-3, 0, 10, 2.5, 3.5, 0.7, SAND);
+   581→   581→  addBox(-4, 0.5, 15, 1, 1, 1, CRATE);
+   582→   582→  addBox(-2, 0.5, 12, 1.2, 1, 1.2, CRATE);
+   583→   583→  // Long A Doors
+   584→   584→  addWall(-5.5, 2, 8, 1, 4.5, 0.5, BRICK);
+   585→   585→  addWall(-1.5, 2, 8, 1, 4.5, 0.5, BRICK);
+   586→   586→  addWall(-3.5, 3.8, 8, 3, 0.6, 0.5, BRICK);
+   587→   587→  // Car near Long A doors
+   588→   588→  addBox(-2.5, 0.6, 8.5, 2.5, 1.2, 1.5, 0x666666);
+   589→   589→  addBox(-2.5, 1.5, 8.5, 2, 0.5, 1.3, 0x555555);
+   590→   590→
+   591→   591→  // ====== A SITE ======
+   592→   592→  addWall(-5, 2, 8.3, 16, 4.5, 0.6, SAND);
+   593→   593→  addWall(-13.3, 2, 3, 0.6, 4.5, 12, SAND);
+   594→   594→  addWall(3.3, 2, 3, 0.6, 4.5, 8, SAND);
+   595→   595→  addWall(-5, 2, -2.3, 16, 4.5, 0.6, SAND);
+   596→   596→  // Catwalk entrance
+   597→   597→  addWall(2, 2, -1, 1.3, 4.5, 3, SAND);
+   598→   598→  // A site boxes
+   599→   599→  addBox(-8, 0.75, 2, 1.5, 1.5, 1.5, CRATE);
+   600→   600→  addBox(-6.5, 0.75, 2, 1.5, 1.5, 1.5, CRATE);
+   601→   601→  addBox(-7.25, 2.15, 2, 1.2, 1, 1.2, CRATE);
+   602→   602→  addBox(-3, 0.5, 5, 1, 1, 2, CRATE);
+   603→   603→  addBox(-10, 0.5, 5, 2, 1, 1, CRATE);
+   604→   604→  addBox(-4, 0.5, 0, 1.2, 1, 1.2, CRATE);
+   605→   605→  addBox(-11, 0.75, -1, 1.5, 1.5, 1.5, CRATE);
+   606→   606→  addWall(-7, 0.02, 3, 4, 0.05, 3, 0xcc3333);
+   607→   607→  addCyl(-1, 0.6, 5, 0.4, 1.2, BARREL, 0.3);
+   608→   608→  addCyl(-1.9, 0.6, 5, 0.4, 1.2, BARREL, 0.3);
+   609→   609→
+   610→   610→  // ====== MID ======
+   611→   611→  addWall(8, 2, 8, 0.6, 4.5, 14, SAND);
+   612→   612→  addWall(12, 2, 8, 0.6, 4.5, 14, SAND);
+   613→   613→  addWall(8.3, 2, 3, 1.2, 4.5, 0.5, BRICK);
+   614→   614→  addWall(11.7, 2, 3, 1.2, 4.5, 0.5, BRICK);
+   615→   615→  addWall(10, 3.8, 3, 2.5, 0.6, 0.5, BRICK);
+   616→   616→  addArch(10, 0, 8, 3, 3.5, 0.7, SAND);
+   617→   617→  addArch(10, 0, 13, 3, 3.5, 0.7, SAND);
+   618→   618→  addBox(9, 0.5, 10, 1.2, 1, 1.2, CRATE);
+   619→   619→  addBox(11, 0.5, 6, 1.2, 1, 1.2, CRATE);
+   620→   620→  addBox(10, 1.3, 6, 0.8, 0.8, 0.8, CRATE);
+   621→   621→
+   622→   622→  // ====== CATWALK (mid to A site) ======
+   623→   623→  addWall(3.5, 0.1, 1, 2.5, 0.2, 4, STONE);
+   624→   624→  addWall(2.3, 2, 1, 0.5, 4, 4, SAND);
+   625→   625→  addWall(4.7, 2, 1, 0.5, 4, 4, SAND);
+   626→   626→  addWall(2.5, 1.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
+   627→   627→  addWall(2.5, 2.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
+   628→   628→
+   629→   629→  // ====== B TUNNELS ======
+   630→   630→  addWall(10, 2, 22, 0.6, 4.5, 14, SAND);
+   631→   631→  addWall(16, 2, 22, 0.6, 4.5, 14, SAND);
+   632→   632→  addWall(13, 4.5, 22, 6, 0.3, 14, DARK_SAND);
+   633→   633→  addWall(13, 2, 15, 6, 4.5, 0.6, SAND);
+   634→   634→  addBox(12, 0.5, 18, 1, 1, 1, CRATE);
+   635→   635→  addBox(14, 0.5, 20, 1.2, 1, 1.2, CRATE);
+   636→   636→  addBox(13, 1.3, 20, 0.8, 0.8, 0.8, CRATE);
+   637→   637→  addArch(13, 0, 17, 4, 3.5, 0.7, SAND);
+   638→   638→
+   639→   639→  // ====== B SITE ======
+   640→   640→  addWall(20, 2, 8.3, 14, 4.5, 0.6, SAND);
+   641→   641→  addWall(13.3, 2, 12, 0.6, 4.5, 10, SAND);
+   642→   642→  addWall(26.3, 2, 12, 0.6, 4.5, 10, SAND);
+   643→   643→  addWall(20, 2, 16.3, 14, 4.5, 0.6, SAND);
+   644→   644→  // B plat (raised platform)
+   645→   645→  addWall(22, 0.25, 14, 4, 0.5, 3, STONE);
+   646→   646→  addWall(22, 2, 15.3, 4, 4, 0.4, SAND);
+   647→   647→  addBox(16, 0.75, 10, 1.5, 1.5, 1.5, CRATE);
+   648→   648→  addBox(17.5, 0.75, 10, 1.5, 1.5, 1.5, CRATE);
+   649→   649→  addBox(16.75, 2.15, 10, 1.2, 1, 1.2, CRATE);
+   650→   650→  addBox(24, 0.75, 12, 1.5, 1.5, 1.5, CRATE);
+   651→   651→  addBox(18, 0.5, 14, 1, 1, 2, CRATE);
+   652→   652→  addWall(19, 0.02, 12, 3, 0.05, 3, 0xcc3333);
+   653→   653→  addCyl(15, 0.6, 14, 0.4, 1.2, BARREL, 0.3);
+   654→   654→  addCyl(15.9, 0.6, 14, 0.4, 1.2, BARREL, 0.3);
+   655→   655→  addCyl(24, 0.6, 10, 0.4, 1.2, BARREL, 0.3);
+   656→   656→
+   657→   657→  // ====== CT SPAWN ======
+   658→   658→  addWall(9, 0.1, 1, 10, 0.2, 6, STONE);
+   659→   659→  addWall(4.3, 2, 1, 0.5, 4, 6, SAND);
+   660→   660→  addWall(13.7, 2, 1, 0.5, 4, 6, SAND);
+   661→   661→  addWall(4.3, 2, -1, 0.5, 4, 3, SAND);
+   662→   662→  addWall(1.5, 2, -2.5, 3, 4, 0.5, SAND);
+   663→   663→
+   664→   664→  player.position.set(0, PLAYER_HEIGHT, 24);
+   665→   665→}
+   666→   666→
+   667→   667→// ----- SHOOT HOUSE (CQB training) -----
+   668→   668→// Close quarters indoor facility with rooms, corridors, doorways
+   669→   669→function loadShootMap() {
+   670→   670→  scene.background = new THREE.Color(0x8899aa);
+   671→   671→  scene.fog = new THREE.Fog(0x8899aa, 15, 60);
+   672→   672→  setGround(0x555555, 0x444444, 0x4a4a4a);
+   673→   673→  var WALL=0x8a8a8a, WALL2=0x777777, CRATE=0x8b6914, METAL=0x667788, RUST=0x884422, WOOD=0x6b4226, FLOOR=0x666666, BARREL_D=0x444444;
+   674→   674→
+   675→   675→  // ====== OUTER BUILDING ======
+   676→   676→  addWall(0, -0.1, 0, 32, 0.25, 42, FLOOR);
+   677→   677→  addWall(0, 2.5, -21, 32, 5, 0.6, WALL);
+   678→   678→  addWall(0, 2.5, 21, 32, 5, 0.6, WALL);
+   679→   679→  addWall(-16.3, 2.5, 0, 0.6, 5, 42, WALL);
+   680→   680→  addWall(16.3, 2.5, 0, 0.6, 5, 42, WALL);
+   681→   681→
+   682→   682→  // ====== ENTRANCE HALL ======
+   683→   683→  addWall(-8, 2, -14, 0.4, 4.5, 8, WALL2);
+   684→   684→  addWall(-12, 2, -10, 8, 4.5, 0.4, WALL2);
+   685→   685→  addWall(-8, 2, -18, 0.4, 4.5, 4, WALL2);
+   686→   686→  addWall(8, 2, -14, 0.4, 4.5, 8, WALL2);
+   687→   687→  addWall(12, 2, -10, 8, 4.5, 0.4, WALL2);
+   688→   688→  addWall(8, 2, -18, 0.4, 4.5, 4, WALL2);
+   689→   689→  addBox(-4, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
+   690→   690→  addBox(-2.5, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
+   691→   691→  addBox(-3.25, 2.15, -17, 1.2, 1, 1.2, CRATE);
+   692→   692→  addBox(4, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
+   693→   693→  addBox(5.5, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
+   694→   694→  addBox(4.75, 2.15, -17, 1.2, 1, 1.2, CRATE);
+   695→   695→  addBox(-10, 0.5, -13, 1, 1, 2, CRATE);
+   696→   696→  addBox(-11, 0.5, -16, 1.2, 1, 1.2, CRATE);
+   697→   697→  addBox(-13, 0.5, -12, 1, 1, 1, CRATE);
+   698→   698→  addBox(10, 0.5, -13, 1, 1, 2, CRATE);
+   699→   699→  addBox(11, 0.5, -16, 1.2, 1, 1.2, CRATE);
+   700→   700→  addBox(13, 0.5, -12, 1, 1, 1, CRATE);
+   701→   701→
+   702→   702→  // ====== CENTER CORRIDOR ======
+   703→   703→  addWall(-4, 2, -4, 6, 4.5, 0.4, WALL2);
+   704→   704→  addWall(4, 2, -4, 6, 4.5, 0.4, WALL2);
+   705→   705→  addBox(0, 0.5, -6, 2, 1, 1, CRATE);
+   706→   706→  addBox(-2, 0.5, -2, 1.2, 1, 1.2, CRATE);
+   707→   707→  addBox(2, 0.5, -2, 1.2, 1, 1.2, CRATE);
+   708→   708→  addCyl(-10, 0.6, -5, 0.4, 1.2, BARREL_D, 0.3);
+   709→   709→  addCyl(10, 0.6, -5, 0.4, 1.2, BARREL_D, 0.3);
+   710→   710→
+   711→   711→  // ====== MAIN ARENA ======
+   712→   712→  addWall(-10, 2, 4, 0.4, 4.5, 10, WALL2);
+   713→   713→  addWall(-14, 2, 4, 8, 4.5, 0.4, WALL2);
+   714→   714→  addWall(-10, 2, 8, 8, 4.5, 0.4, WALL2);
+   715→   715→  addWall(-10, 2, 0, 4, 4.5, 0.4, WALL2);
+   716→   716→  addWall(10, 2, 4, 0.4, 4.5, 10, WALL2);
+   717→   717→  addWall(14, 2, 4, 8, 4.5, 0.4, WALL2);
+   718→   718→  addWall(10, 2, 8, 8, 4.5, 0.4, WALL2);
+   719→   719→  addWall(10, 2, 0, 4, 4.5, 0.4, WALL2);
+   720→   720→  addBox(-12, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
+   721→   721→  addBox(-13.5, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
+   722→   722→  addBox(-12.75, 2.15, 3, 1.2, 1, 1.2, CRATE);
+   723→   723→  addBox(-12, 0.5, 6, 1, 1, 2, CRATE);
+   724→   724→  addBox(-14, 0.5, 6, 1.2, 1, 1.2, CRATE);
+   725→   725→  addBox(12, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
+   726→   726→  addBox(13.5, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
+   727→   727→  addBox(12.75, 2.15, 3, 1.2, 1, 1.2, CRATE);
+   728→   728→  addBox(12, 0.5, 6, 1, 1, 2, CRATE);
+   729→   729→  addBox(14, 0.5, 6, 1.2, 1, 1.2, CRATE);
+   730→   730→  addBox(0, 1, 6, 2, 2, 2, METAL);
+   731→   731→  addBox(0, 2.3, 6, 1.5, 0.3, 1.5, RUST);
+   732→   732→  addBox(-5, 0.5, 4, 1.2, 1, 1.2, CRATE);
+   733→   733→  addBox(5, 0.5, 4, 1.2, 1, 1.2, CRATE);
+   734→   734→  addBox(-3, 0.5, 9, 1, 1, 1, CRATE);
+   735→   735→  addBox(3, 0.5, 9, 1, 1, 1, CRATE);
+   736→   736→
+   737→   737→  // ====== BACK CORRIDORS ======
+   738→   738→  addWall(-6, 2, 16, 0.4, 4.5, 10, WALL2);
+   739→   739→  addWall(-10, 2, 12, 8, 4.5, 0.4, WALL2);
+   740→   740→  addWall(6, 2, 16, 0.4, 4.5, 10, WALL2);
+   741→   741→  addWall(10, 2, 12, 8, 4.5, 0.4, WALL2);
+   742→   742→  addWall(0, 2, 19, 14, 4.5, 0.4, WALL2);
+   743→   743→  addBox(-8, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
+   744→   744→  addBox(-6.5, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
+   745→   745→  addBox(-7.25, 2.15, 15, 1.2, 1, 1.2, CRATE);
+   746→   746→  addBox(8, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
+   747→   747→  addBox(6.5, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
+   748→   748→  addBox(7.25, 2.15, 15, 1.2, 1, 1.2, CRATE);
+   749→   749→  addBox(-3, 0.5, 17, 1.2, 1, 1.2, CRATE);
+   750→   750→  addBox(3, 0.5, 17, 1.2, 1, 1.2, CRATE);
+   751→   751→  addBox(0, 0.5, 18, 2, 1, 1, CRATE);
+   752→   752→  addCyl(-12, 0.6, 10, 0.4, 1.2, RUST, 0.3);
+   753→   753→  addCyl(-12.9, 0.6, 10, 0.4, 1.2, RUST, 0.3);
+   754→   754→  addCyl(12, 0.6, 10, 0.4, 1.2, RUST, 0.3);
+   755→   755→  addCyl(12.9, 0.6, 10, 0.4, 1.2, RUST, 0.3);
+   756→   756→  addBox(-14, 0.15, 17, 2, 0.3, 2, WOOD);
+   757→   757→  addBox(14, 0.15, 17, 2, 0.3, 2, WOOD);
+   758→   758→
+   759→   759→  player.position.set(0, PLAYER_HEIGHT, -18);
+   760→   760→}
+   761→   761→
+   762→   762→const mapLoaders = [loadTestMap, loadVertigoMap, loadDustMap, loadShootMap];
+   763→   763→loadTestMap(); // Load default map behind menu
+   764→   764→
+   765→   765→// ===== FPS GUN MODEL =====
+   766→   766→const gunGroup = new THREE.Group();
+   767→   767→
+   768→   768→// Main body
+   769→   769→const gunBody = new THREE.Mesh(
+   770→   770→  new THREE.BoxGeometry(0.08, 0.12, 0.5),
+   771→   771→  new THREE.MeshStandardMaterial({color:0x2c2c2c, roughness:0.3, metalness:0.8})
+   772→   772→);
+   773→   773→gunGroup.add(gunBody);
+   774→   774→
+   775→   775→// Barrel
+   776→   776→const barrel = new THREE.Mesh(
+   777→   777→  new THREE.BoxGeometry(0.04, 0.04, 0.35),
+   778→   778→  new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.2, metalness:0.9})
+   779→   779→);
+   780→   780→barrel.position.set(0, 0.02, -0.35);
+   781→   781→gunGroup.add(barrel);
+   782→   782→
+   783→   783→// Handle/grip
+   784→   784→const grip = new THREE.Mesh(
+   785→   785→  new THREE.BoxGeometry(0.07, 0.18, 0.08),
+   786→   786→  new THREE.MeshStandardMaterial({color:0x3d2b1f, roughness:0.8, metalness:0.1})
+   787→   787→);
+   788→   788→grip.position.set(0, -0.13, 0.1);
+   789→   789→grip.rotation.x = 0.2;
+   790→   790→gunGroup.add(grip);
+   791→   791→
+   792→   792→// Magazine
+   793→   793→const mag = new THREE.Mesh(
+   794→   794→  new THREE.BoxGeometry(0.06, 0.15, 0.06),
+   795→   795→  new THREE.MeshStandardMaterial({color:0x333333, roughness:0.4, metalness:0.7})
+   796→   796→);
+   797→   797→mag.position.set(0, -0.12, -0.02);
+   798→   798→gunGroup.add(mag);
+   799→   799→
+   800→   800→// Sight
+   801→   801→const sight = new THREE.Mesh(
+   802→   802→  new THREE.BoxGeometry(0.03, 0.04, 0.03),
+   803→   803→  new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.3, metalness:0.9})
+   804→   804→);
+   805→   805→sight.position.set(0, 0.09, -0.15);
+   806→   806→gunGroup.add(sight);
+   807→   807→
+   808→   808→// Muzzle flash light
+   809→   809→const muzzleLight = new THREE.PointLight(0xffaa00, 0, 8);
+   810→   810→muzzleLight.position.set(0, 0.02, -0.55);
+   811→   811→gunGroup.add(muzzleLight);
+   812→   812→
+   813→   813→// Position gun in view
+   814→   814→gunGroup.position.set(0.25, -0.22, -0.4);
+   815→   815→camera.add(gunGroup);
+   816→   816→
+   817→   817→// ===== SHOOTING =====
+   818→   818→const raycaster = new THREE.Raycaster();
+   819→   819→const muzzleFlashEl = document.getElementById('muzzle-flash');
+   820→   820→
+   821→   821→function shoot() {
+   822→   822→  if (!canShoot || ammo <= 0) return;
+   823→   823→  canShoot = false;
+   824→   824→  ammo--;
+   825→   825→
+   826→   826→  // Sound
+   827→   827→  playGunshot();
+   828→   828→
+   829→   829→  // Muzzle flash
+   830→   830→  muzzleFlashEl.classList.remove('fire');
+   831→   831→  void muzzleFlashEl.offsetWidth;
+   832→   832→  muzzleFlashEl.classList.add('fire');
+   833→   833→  muzzleLight.intensity = 3;
+   834→   834→  setTimeout(() => { muzzleLight.intensity = 0; }, 50);
+   835→   835→
+   836→   836→  // Gun recoil (Three.js, not DOM)
+   837→   837→  recoilAmount = 0.06;
+   838→   838→
+   839→   839→  // Raycast
+   840→   840→  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+   841→   841→  const hits = raycaster.intersectObjects(sceneObjects);
+   842→   842→  if (hits.length > 0) {
+   843→   843→    const hit = hits[0];
+   844→   844→    // Bullet hole effect
+   845→   845→    const holeGeo = new THREE.CircleGeometry(0.08, 8);
+   846→   846→    const holeMat = new THREE.MeshBasicMaterial({color:0x111111, side:THREE.DoubleSide});
+   847→   847→    const hole = new THREE.Mesh(holeGeo, holeMat);
+   848→   848→    hole.position.copy(hit.point);
+   849→   849→    hole.lookAt(hit.point.clone().add(hit.face.normal));
+   850→   850→    hole.position.add(hit.face.normal.clone().multiplyScalar(0.01));
+   851→   851→    scene.add(hole);
+   852→   852→    sceneObjects.push(hole);
+   853→   853→  }
+   854→   854→
+   855→   855→  // Fire rate cooldown
+   856→   856→  setTimeout(() => { canShoot = true; }, 120);
+   857→   857→}
+   858→   858→
+   859→   859→// ===== POINTER LOCK =====
+   860→   860→const pauseOvl = document.getElementById('pause-overlay');
+   861→   861→
+   862→   862→function startGame() {
+   863→   863→  clearMap();
+   864→   864→  mapLoaders[currentMap]();
+   865→   865→  document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+   866→   866→  document.getElementById('crosshair').style.display = 'block';
+   867→   867→  document.getElementById('debug').style.display = 'block';
+   868→   868→  gameStarted = true;
+   869→   869→  ammo = maxAmmo;
+   870→   870→  yaw = 0; pitch = 0;
+   871→   871→  player.position.set(0, PLAYER_HEIGHT, 0);
+   872→   872→  player.rotation.y = 0;
+   873→   873→  pitchObj.rotation.x = 0;
+   874→   874→  renderer.domElement.requestPointerLock();
+   875→   875→}
+   876→   876→
+   877→   877→document.addEventListener('mousedown', function(e) {
+   878→   878→  if (gameStarted && isLocked && e.button === 0) {
+   879→   879→    shoot();
+   880→   880→  } else if (gameStarted && !isLocked) {
+   881→   881→    renderer.domElement.requestPointerLock();
+   882→   882→  }
+   883→   883→});
+   884→   884→
+   885→   885→document.addEventListener('pointerlockchange', function() {
+   886→   886→  isLocked = document.pointerLockElement === renderer.domElement;
+   887→   887→  if (!isLocked && gameStarted) {
+   888→   888→    pauseOvl.classList.remove('hidden');
+   889→   889→  } else {
+   890→   890→    pauseOvl.classList.add('hidden');
+   891→   891→  }
+   892→   892→});
+   893→   893→
+   894→   894→// ESC = main menu
+   895→   895→document.addEventListener('keydown', function(e) {
+   896→   896→  if (e.code === 'Escape' && !isLocked && gameStarted) {
+   897→   897→    gameStarted = false;
+   898→   898→    pauseOvl.classList.add('hidden');
+   899→   899→    document.getElementById('crosshair').style.display = 'none';
+   900→   900→    document.getElementById('debug').style.display = 'none';
+   901→   901→    yaw = 0; pitch = 0;
+   902→   902→    player.position.set(0, PLAYER_HEIGHT, 0);
+   903→   903→    player.rotation.y = 0;
+   904→   904→    pitchObj.rotation.x = 0;
+   905→   905→    showMenu('main-menu');
+   906→   906→  }
+   907→   907→});
+   908→   908→
+   909→   909→document.addEventListener('mousemove', function(e) {
+   910→   910→  if (!isLocked) return;
+   911→   911→  yaw -= (e.movementX||0) * MOUSE_SENS;
+   912→   912→  pitch -= (e.movementY||0) * MOUSE_SENS;
+   913→   913→  pitch = Math.max(-1.55, Math.min(1.55, pitch));
+   914→   914→  player.rotation.y = yaw;
+   915→   915→  pitchObj.rotation.x = pitch;
+   916→   916→});
+   917→   917→
+   918→   918→document.addEventListener('keydown', function(e) {
+   919→   919→  switch(e.code){case'KeyW':keys.w=true;break;case'KeyA':keys.a=true;break;case'KeyS':keys.s=true;break;case'KeyD':keys.d=true;break}
+   920→   920→});
+   921→   921→document.addEventListener('keyup', function(e) {
+   922→   922→  switch(e.code){case'KeyW':keys.w=false;break;case'KeyA':keys.a=false;break;case'KeyS':keys.s=false;break;case'KeyD':keys.d=false;break}
+   923→   923→});
+   924→   924→
+   925→   925→window.addEventListener('resize', function() {
+   926→   926→  camera.aspect = window.innerWidth/window.innerHeight;
+   927→   927→  camera.updateProjectionMatrix();
+   928→   928→  renderer.setSize(window.innerWidth, window.innerHeight);
+   929→   929→});
+   930→   930→
+   931→   931→// ===== GAME LOOP =====
+   932→   932→const clock = new THREE.Clock();
+   933→   933→const debugEl = document.getElementById('debug');
+   934→   934→
+   935→   935→function animate() {
+   936→   936→  requestAnimationFrame(animate);
+   937→   937→  const dt = Math.min(clock.getDelta(), 0.05);
+   938→   938→
+   939→   939→  if (isLocked) {
+   940→   940→    // Movement
+   941→   941→    const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+   942→   942→    const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+   943→   943→    const mv = new THREE.Vector3();
+   944→   944→    if(keys.w) mv.add(fwd); if(keys.s) mv.sub(fwd);
+   945→   945→    if(keys.d) mv.add(rgt); if(keys.a) mv.sub(rgt);
+   946→   946→    if(mv.lengthSq()>0) mv.normalize();
+   947→   947→
+   948→   948→    const speed = MOVE_SPEED * dt;
+   949→   949→    const px = player.position.x;
+   950→   950→    const py = player.position.y;
+   951→   951→    const pz = player.position.z;
+   952→   952→
+   953→   953→    // Try X movement (with collision)
+   954→   954→    let newX = px + mv.x * speed;
+   955→   955→    if (!checkCollision(newX, py, pz)) {
+   956→   956→      player.position.x = newX;
+   957→   957→    }
+   958→   958→
+   959→   959→    // Try Z movement (with collision)
+   960→   960→    let newZ = pz + mv.z * speed;
+   961→   961→    if (!checkCollision(player.position.x, py, newZ)) {
+   962→   962→      player.position.z = newZ;
+   963→   963→    }
+   964→   964→
+   965→   965→    const moving = mv.lengthSq() > 0;
+   966→   966→
+   967→   967→    // Gravity
+   968→   968→    velocityY -= GRAVITY * dt;
+   969→   969→    player.position.y += velocityY * dt;
+   970→   970→    if(player.position.y <= PLAYER_HEIGHT) { player.position.y = PLAYER_HEIGHT; velocityY = 0; }
+   971→   971→
+   972→   972→    // Footstep sounds
+   973→   973→    if (moving) {
+   974→   974→      footstepTimer -= dt;
+   975→   975→      if (footstepTimer <= 0) {
+   976→   976→        playFootstep();
+   977→   977→        footstepTimer = FOOTSTEP_INTERVAL;
+   978→   978→      }
+   979→   979→    } else {
+   980→   980→      footstepTimer = 0;
+   981→   981→    }
+   982→   982→
+   983→   983→    // Gun recoil
+   984→   984→    if (recoilAmount > 0) {
+   985→   985→      recoilAmount *= 0.85;
+   986→   986→      if (recoilAmount < 0.001) recoilAmount = 0;
+   987→   987→    }
+   988→   988→
+   989→   989→    // Gun bob when walking
+   990→   990→    let bobY = 0, bobX = 0;
+   991→   991→    if (moving) {
+   992→   992→      const bobSpeed = 10;
+   993→   993→      const bobAmount = 0.008;
+   994→   994→      bobY = Math.sin(clock.elapsedTime * bobSpeed) * bobAmount;
+   995→   995→      bobX = Math.cos(clock.elapsedTime * bobSpeed * 0.5) * bobAmount * 0.5;
+   996→   996→    }
+   997→   997→    gunGroup.position.y = -0.22 + bobY + recoilAmount;
+   998→   998→    gunGroup.position.x = 0.25 + bobX;
+   999→   999→
+  1000→  1000→    // Debug + ammo HUD
+  1001→  1001→    debugEl.innerHTML =
+  1002→  1002→      'Pos: '+player.position.x.toFixed(1)+', '+player.position.y.toFixed(1)+', '+player.position.z.toFixed(1)+
+  1003→  1003→      '<br>Yaw: '+(yaw*180/Math.PI).toFixed(1)+'°  Pitch: '+(pitch*180/Math.PI).toFixed(1)+'°'+
+  1004→  1004→      '<br>Ammo: ' + ammo + ' / ' + maxAmmo;
+  1005→  1005→  }
+  1006→  1006→
+  1007→  1007→  renderer.render(scene, camera);
+  1008→  1008→}
+  1009→  1009→animate();
+  1010→  1010→</script>
+  1011→  1011→</body>
+  1012→  1012→</html>
