@@ -62,13 +62,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 /* Gun recoil handled in JS */
 
 /* Pause */
-#pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#pause-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;background:url('https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c021ed7594c0.png') center/cover no-repeat}
+#pause-overlay::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.7)}
 #pause-overlay.hidden{display:none}
-#pause-overlay h2{font-size:40px;color:#4fc3f7;margin-bottom:20px;letter-spacing:4px}
-#pause-overlay p{color:#aaa;font-size:16px}
+#pause-overlay .pause-content{position:relative;z-index:1;text-align:center}
+#pause-overlay h2{font-size:46px;color:#4fc3f7;margin-bottom:8px;letter-spacing:5px;text-shadow:0 0 25px rgba(79,195,247,0.5)}
+#pause-overlay .pause-sub{color:#888;font-size:14px;margin-bottom:30px;letter-spacing:2px}
+.pause-btn{display:block;width:260px;margin:10px auto;padding:13px 0;background:rgba(255,255,255,0.08);border:2px solid rgba(79,195,247,0.3);border-radius:10px;color:#fff;font-size:17px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s;position:relative;overflow:hidden}
+.pause-btn::before{content:'';position:absolute;inset:3px;border:1px solid rgba(255,255,255,0.06);border-radius:7px;pointer-events:none}
+.pause-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
+.pause-btn:active{transform:scale(0.97)}
+.pause-btn.exit-btn{margin-top:20px;border-color:rgba(255,80,80,0.3);color:#ff8888}
+.pause-btn.exit-btn:hover{background:rgba(255,80,80,0.2);border-color:#ff5555;box-shadow:0 0 20px rgba(255,80,80,0.3)}
 
 /* RTL for Persian */
 [dir=rtl] .menu-content{direction:rtl}
+[dir=rtl] .pause-content{direction:rtl}
 [dir=rtl] .setting-group{text-align:right}
 </style>
 </head>
@@ -145,8 +154,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 <!-- PAUSE -->
 <div id="pause-overlay" class="hidden">
+<div class="pause-content">
 <h2 data-en="PAUSED" data-fa="توقف">PAUSED</h2>
-<p data-en="Click to resume" data-fa="کلیک کنید برای ادامه">Click to resume</p>
+<p class="pause-sub" data-en="GAME PAUSED" data-fa="بازی متوقف شد">GAME PAUSED</p>
+<button class="pause-btn" onclick="resumeGame()" data-en="RESUME" data-fa="ادامه بازی">RESUME</button>
+<button class="pause-btn" onclick="openSettingsFromPause()" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="pause-btn exit-btn" onclick="exitToMenu()" data-en="EXIT TO MENU" data-fa="خروج به منو">EXIT TO MENU</button>
+</div>
 </div>
 
 <!-- GAME HUD -->
@@ -1040,6 +1054,7 @@ function startGame() {
   clearMap();
   mapLoaders[currentMap]();
   document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+  pauseOvl.classList.add('hidden');
   document.getElementById('crosshair').style.display = 'block';
   document.getElementById('debug').style.display = 'block';
   gameStarted = true;
@@ -1051,10 +1066,33 @@ function startGame() {
   renderer.domElement.requestPointerLock();
 }
 
+function resumeGame() {
+  pauseOvl.classList.add('hidden');
+  renderer.domElement.requestPointerLock();
+}
+
+function openSettingsFromPause() {
+  pauseOvl.classList.add('hidden');
+  showMenu('settings-menu');
+  gameStarted = false;
+}
+
+function exitToMenu() {
+  gameStarted = false;
+  pauseOvl.classList.add('hidden');
+  document.getElementById('crosshair').style.display = 'none';
+  document.getElementById('debug').style.display = 'none';
+  yaw = 0; pitch = 0;
+  player.position.set(0, PLAYER_HEIGHT, 0);
+  player.rotation.y = 0;
+  pitchObj.rotation.x = 0;
+  showMenu('main-menu');
+}
+
 document.addEventListener('mousedown', function(e) {
   if (gameStarted && isLocked && e.button === 0) {
     shoot();
-  } else if (gameStarted && !isLocked) {
+  } else if (gameStarted && !isLocked && !e.target.closest('#pause-overlay')) {
     renderer.domElement.requestPointerLock();
   }
 });
