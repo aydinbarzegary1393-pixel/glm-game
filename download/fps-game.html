@@ -79,9 +79,50 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 [dir=rtl] .menu-content{direction:rtl}
 [dir=rtl] .pause-content{direction:rtl}
 [dir=rtl] .setting-group{text-align:right}
+
+/* Device Select */
+#device-menu .device-cards{display:flex;gap:20px;justify-content:center;margin-top:20px}
+#device-menu .device-card{width:160px;padding:30px 20px;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.1);border-radius:16px;cursor:pointer;transition:all 0.3s;text-align:center}
+#device-menu .device-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.12);transform:translateY(-4px);box-shadow:0 8px 30px rgba(79,195,247,0.2)}
+#device-menu .device-card .d-icon{font-size:48px;margin-bottom:12px}
+#device-menu .device-card .d-label{font-size:18px;font-weight:700;letter-spacing:1px}
+#device-menu .device-card .d-desc{font-size:11px;color:#888;margin-top:8px;letter-spacing:0.5px}
+
+/* Mobile Controls */
+#mobile-controls{display:none;position:fixed;inset:0;z-index:100;pointer-events:none}
+#joystick-zone{position:absolute;left:0;bottom:0;width:45%;height:50%;pointer-events:auto;touch-action:none}
+#joystick-base{position:absolute;left:30px;bottom:30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15)}
+#joystick-stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.35);transition:none}
+#mobile-btns{position:absolute;right:15px;bottom:20px;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:10px}
+.m-action{width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+.m-action:active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4)}
+#btn-fire-m{width:80px;height:80px;font-size:28px;background:rgba(255,60,60,0.15);border-color:rgba(255,60,60,0.4);color:#ff6666}
+#btn-fire-m:active{background:rgba(255,60,60,0.35)}
+#mobile-btns .btn-row{display:flex;gap:10px}
+#reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
 </style>
 </head>
 <body>
+
+<!-- DEVICE SELECT -->
+<div id="device-menu" class="menu-overlay">
+<div class="menu-content">
+<h2 data-en="CHOOSE DEVICE" data-fa="انتخاب دستگاه">CHOOSE DEVICE</h2>
+<p class="subtitle" data-en="SELECT YOUR PLATFORM" data-fa="پلتفرم خود را انتخاب کنید">SELECT YOUR PLATFORM</p>
+<div class="device-cards">
+<div class="device-card" onclick="selectDevice('pc')">
+<div class="d-icon">⭐</div>
+<div class="d-label" data-en="PC" data-fa="کامپیوتر">PC</div>
+<div class="d-desc" data-en="Mouse + Keyboard" data-fa="ماوس و کیبورد">Mouse + Keyboard</div>
+</div>
+<div class="device-card" onclick="selectDevice('mobile')">
+<div class="d-icon">📱</div>
+<div class="d-label" data-en="MOBILE" data-fa="موبایل">MOBILE</div>
+<div class="d-desc" data-en="Touch Controls" data-fa="کنترل لمسی">Touch Controls</div>
+</div>
+</div>
+</div>
+</div>
 
 <!-- MAIN MENU -->
 <div id="main-menu" class="menu-overlay">
@@ -148,10 +189,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
 </div>
 </div>
-<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+<button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
-
 <!-- PAUSE -->
 <div id="pause-overlay" class="hidden">
 <div class="pause-content">
@@ -166,7 +206,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <!-- GAME HUD -->
 <div id="crosshair" style="display:none"></div>
 <div id="muzzle-flash"></div>
+<div id="reload-hud" data-en="RELOADING..." data-fa="در حال شارژ...">RELOADING...</div>
 <div id="debug" style="display:none"></div>
+
+<!-- MOBILE CONTROLS -->
+<div id="mobile-controls">
+<div id="joystick-zone">
+<div id="joystick-base"><div id="joystick-stick"></div></div>
+</div>
+<div id="mobile-btns">
+<div class="btn-row">
+<button class="m-action" id="btn-jump-m" data-en="JUMP" data-fa="پرش">JUMP</button>
+<button class="m-action" id="btn-reload-m" data-en="R" data-fa="R">R</button>
+</div>
+<button class="m-action" id="btn-fire-m">FIRE</button>
+</div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -190,6 +245,9 @@ let canShoot = true;
 let ammo = 30;
 let maxAmmo = 30;
 let recoilAmount = 0;
+let isReloading = false;
+let isMobileDevice = false;
+let deviceChosen = false;
 
 // ===== AUDIO SYSTEM (Web Audio API) =====
 let audioCtx = null;
@@ -257,6 +315,152 @@ function playGunshot() {
   src.start();
   osc.start();
   osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playReloadSound() {
+  ensureAudio();
+  const vol = masterVolume * 0.4;
+  if (vol <= 0) return;
+  // Click sound
+  var buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+  var d = buf.getChannelData(0);
+  for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.1));
+  var s = audioCtx.createBufferSource(); s.buffer = buf;
+  var g = audioCtx.createGain(); g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  var f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 2;
+  s.connect(f).connect(g).connect(audioCtx.destination); s.start();
+  // Magazine slide sound after delay
+  setTimeout(function() {
+    var buf2 = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+    var d2 = buf2.getChannelData(0);
+    for (var i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d2.length * 0.15)) * 0.6;
+    var s2 = audioCtx.createBufferSource(); s2.buffer = buf2;
+    var g2 = audioCtx.createGain(); g2.gain.setValueAtTime(vol * 0.7, audioCtx.currentTime);
+    var f2 = audioCtx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1500; f2.Q.value = 1;
+    s2.connect(f2).connect(g2).connect(audioCtx.destination); s2.start();
+  }, 300);
+}
+
+function startReload() {
+  if (isReloading || ammo === maxAmmo) return;
+  isReloading = true;
+  canShoot = false;
+  playReloadSound();
+  document.getElementById('reload-hud').style.display = 'block';
+  setTimeout(function() {
+    ammo = maxAmmo;
+    isReloading = false;
+    canShoot = true;
+    document.getElementById('reload-hud').style.display = 'none';
+  }, 1800);
+}
+
+// ===== DEVICE SELECT & MOBILE =====
+function selectDevice(dev) {
+  isMobileDevice = (dev === 'mobile');
+  deviceChosen = true;
+  if (isMobileDevice) {
+    try { document.documentElement.requestFullscreen(); } catch(e) {}
+  }
+  showMenu('main-menu');
+  // Apply current language to new elements
+  setLang(currentLang);
+}
+
+// Joystick state
+var joyTouchId = null, joyBaseX = 0, joyBaseY = 0;
+var joyInputX = 0, joyInputY = 0; // -1 to 1
+var JOY_RADIUS = 45;
+var joyStick = null, joyBase = null;
+
+function initJoystick() {
+  joyStick = document.getElementById('joystick-stick');
+  joyBase = document.getElementById('joystick-base');
+  var zone = document.getElementById('joystick-zone');
+  zone.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    var t = e.changedTouches[0];
+    joyTouchId = t.identifier;
+    var rect = joyBase.getBoundingClientRect();
+    joyBaseX = rect.left + rect.width / 2;
+    joyBaseY = rect.top + rect.height / 2;
+  }, {passive: false});
+  zone.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.identifier === joyTouchId) {
+        var dx = t.clientX - joyBaseX;
+        var dy = t.clientY - joyBaseY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > JOY_RADIUS) { dx = dx / dist * JOY_RADIUS; dy = dy / dist * JOY_RADIUS; }
+        joyInputX = dx / JOY_RADIUS;
+        joyInputY = dy / JOY_RADIUS;
+        joyStick.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      }
+    }
+  }, {passive: false});
+  var resetJoy = function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyTouchId) {
+        joyTouchId = null; joyInputX = 0; joyInputY = 0;
+        joyStick.style.transform = 'translate(0,0)';
+      }
+    }
+  };
+  zone.addEventListener('touchend', resetJoy);
+  zone.addEventListener('touchcancel', resetJoy);
+
+  // Mobile buttons
+  document.getElementById('btn-fire-m').addEventListener('touchstart', function(e) {
+    e.preventDefault(); if (gameStarted) shoot();
+  }, {passive: false});
+  document.getElementById('btn-jump-m').addEventListener('touchstart', function(e) {
+    e.preventDefault(); keys.space = true;
+  }, {passive: false});
+  document.getElementById('btn-jump-m').addEventListener('touchend', function(e) {
+    e.preventDefault(); keys.space = false;
+  }, {passive: false});
+  document.getElementById('btn-reload-m').addEventListener('touchstart', function(e) {
+    e.preventDefault(); startReload();
+  }, {passive: false});
+
+  // Mobile look (touch on canvas for aiming)
+  var lookTouchId = null, lastLookX = 0, lastLookY = 0;
+  renderer.domElement.addEventListener('touchstart', function(e) {
+    if (!gameStarted) return;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      // Only track touches not on controls
+      if (t.clientX < window.innerWidth * 0.55) continue;
+      if (t.clientY < window.innerHeight * 0.5) continue;
+      lookTouchId = t.identifier;
+      lastLookX = t.clientX; lastLookY = t.clientY;
+      break;
+    }
+  }, {passive: true});
+  renderer.domElement.addEventListener('touchmove', function(e) {
+    if (!gameStarted || lookTouchId === null) return;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.identifier === lookTouchId) {
+        var dx = t.clientX - lastLookX;
+        var dy = t.clientY - lastLookY;
+        yaw -= dx * MOUSE_SENS;
+        pitch -= dy * MOUSE_SENS;
+        pitch = Math.max(-1.55, Math.min(1.55, pitch));
+        player.rotation.y = yaw;
+        pitchObj.rotation.x = pitch;
+        lastLookX = t.clientX; lastLookY = t.clientY;
+        break;
+      }
+    }
+  }, {passive: true});
+  renderer.domElement.addEventListener('touchend', function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
+    }
+  }, {passive: true});
 }
 
 // ===== TRANSLATIONS =====
@@ -575,12 +779,15 @@ function getGroundY(px, py, pz) {
   const r = PLAYER_RADIUS;
   const feetY = py - PLAYER_HEIGHT;
   let best = -999;
+  const STEP_UP = 0.4;
   for (let i = 0; i < colliders.length; i++) {
     const c = colliders[i];
     if (px + r > c.minX && px - r < c.maxX &&
         pz + r > c.minZ && pz - r < c.maxZ) {
-      // Surface must be reachable: player feet near or below top, above bottom
-      if (feetY <= c.maxY + 0.05 && feetY >= c.minY - 0.1 && c.maxY > best) {
+      // Only count surfaces near the TOP of the collider (player stands on it)
+      // Not walls where feet are at the BOTTOM
+      if (feetY >= c.maxY - STEP_UP && feetY <= c.maxY + 0.1 &&
+          c.minY < py && c.maxY > best) {
         best = c.maxY;
       }
     }
@@ -1010,7 +1217,7 @@ const raycaster = new THREE.Raycaster();
 const muzzleFlashEl = document.getElementById('muzzle-flash');
 
 function shoot() {
-  if (!canShoot || ammo <= 0) return;
+  if (!canShoot || isReloading || ammo <= 0) return;
   canShoot = false;
   ammo--;
 
@@ -1059,22 +1266,47 @@ function startGame() {
   document.getElementById('debug').style.display = 'block';
   gameStarted = true;
   ammo = maxAmmo;
+  isReloading = false;
+  document.getElementById('reload-hud').style.display = 'none';
   yaw = 0; pitch = 0;
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0;
   pitchObj.rotation.x = 0;
-  renderer.domElement.requestPointerLock();
+  if (isMobileDevice) {
+    document.getElementById('mobile-controls').style.display = 'block';
+    if (!joyStick) initJoystick();
+  } else {
+    renderer.domElement.requestPointerLock();
+  }
 }
+
+let returnToGame = false;
 
 function resumeGame() {
   pauseOvl.classList.add('hidden');
-  renderer.domElement.requestPointerLock();
+  if (isMobileDevice) {
+    document.getElementById('mobile-controls').style.display = 'block';
+  } else {
+    renderer.domElement.requestPointerLock();
+  }
 }
 
 function openSettingsFromPause() {
+  returnToGame = true;
   pauseOvl.classList.add('hidden');
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   showMenu('settings-menu');
-  gameStarted = false;
+}
+
+function backFromSettings() {
+  if (returnToGame) {
+    returnToGame = false;
+    document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+    pauseOvl.classList.remove('hidden');
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'block';
+  } else {
+    showMenu('main-menu');
+  }
 }
 
 function exitToMenu() {
@@ -1082,6 +1314,8 @@ function exitToMenu() {
   pauseOvl.classList.add('hidden');
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('debug').style.display = 'none';
+  document.getElementById('reload-hud').style.display = 'none';
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   yaw = 0; pitch = 0;
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0;
@@ -1092,14 +1326,14 @@ function exitToMenu() {
 document.addEventListener('mousedown', function(e) {
   if (gameStarted && isLocked && e.button === 0) {
     shoot();
-  } else if (gameStarted && !isLocked && !e.target.closest('#pause-overlay')) {
+  } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay')) {
     renderer.domElement.requestPointerLock();
   }
 });
 
 document.addEventListener('pointerlockchange', function() {
   isLocked = document.pointerLockElement === renderer.domElement;
-  if (!isLocked && gameStarted) {
+  if (!isLocked && gameStarted && !isMobileDevice) {
     pauseOvl.classList.remove('hidden');
   } else {
     pauseOvl.classList.add('hidden');
@@ -1113,12 +1347,14 @@ document.addEventListener('keydown', function(e) {
     pauseOvl.classList.add('hidden');
     document.getElementById('crosshair').style.display = 'none';
     document.getElementById('debug').style.display = 'none';
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
     yaw = 0; pitch = 0;
     player.position.set(0, PLAYER_HEIGHT, 0);
     player.rotation.y = 0;
     pitchObj.rotation.x = 0;
     showMenu('main-menu');
   }
+  if (e.code === 'KeyR' && gameStarted) startReload();
 });
 
 document.addEventListener('mousemove', function(e) {
@@ -1151,13 +1387,18 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (isLocked) {
+  if (isLocked || (isMobileDevice && gameStarted)) {
     // Movement
     const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
     const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
     const mv = new THREE.Vector3();
     if(keys.w) mv.add(fwd); if(keys.s) mv.sub(fwd);
     if(keys.d) mv.add(rgt); if(keys.a) mv.sub(rgt);
+    // Mobile joystick input
+    if (isMobileDevice && (Math.abs(joyInputX) > 0.1 || Math.abs(joyInputY) > 0.1)) {
+      mv.add(fwd.clone().multiplyScalar(-joyInputY));
+      mv.add(rgt.clone().multiplyScalar(joyInputX));
+    }
     if(mv.lengthSq()>0) mv.normalize();
 
     const speed = MOVE_SPEED * dt;
@@ -1180,21 +1421,22 @@ function animate() {
     const moving = mv.lengthSq() > 0;
 
     // Jump (only if standing on ground or a surface)
-    var onGround = (player.position.y - PLAYER_HEIGHT <= getGroundY(player.position.x, player.position.y, player.position.z) + 0.05);
-    if (keys.space && onGround && velocityY <= 0) {
+    var rawGround = getGroundY(player.position.x, player.position.y, player.position.z);
+    var groundLevel = rawGround > -998 ? rawGround : 0;
+    var onGround = (player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05 && velocityY <= 0.1);
+    if (keys.space && onGround) {
       velocityY = JUMP_FORCE;
     }
     // Gravity
     velocityY -= GRAVITY * dt;
     player.position.y += velocityY * dt;
     // Ground collision: stand on boxes/floors
-    var groundTop = getGroundY(player.position.x, player.position.y, player.position.z);
-    if (groundTop > -998 && player.position.y - PLAYER_HEIGHT <= groundTop + 0.05) {
-      player.position.y = groundTop + PLAYER_HEIGHT;
+    rawGround = getGroundY(player.position.x, player.position.y, player.position.z);
+    groundLevel = rawGround > -998 ? rawGround : 0;
+    if (player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05) {
+      player.position.y = groundLevel + PLAYER_HEIGHT;
       velocityY = 0;
     }
-    // Fallback: default ground at y=0
-    if (player.position.y <= PLAYER_HEIGHT) { player.position.y = PLAYER_HEIGHT; velocityY = 0; }
 
     // Footstep sounds
     if (moving) {
@@ -1228,7 +1470,7 @@ function animate() {
     debugEl.innerHTML =
       'Pos: '+player.position.x.toFixed(1)+', '+player.position.y.toFixed(1)+', '+player.position.z.toFixed(1)+
       '<br>Yaw: '+(yaw*180/Math.PI).toFixed(1)+'°  Pitch: '+(pitch*180/Math.PI).toFixed(1)+'°'+
-      '<br>Ammo: ' + ammo + ' / ' + maxAmmo;
+      '<br>Ammo: ' + ammo + ' / ' + maxAmmo + (isReloading ? ' <span style="color:#ffaa00">[RELOADING]</span>' : '');
   }
 
   renderer.render(scene, camera);
