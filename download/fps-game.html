@@ -134,7 +134,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
-<button class="menu-btn" onclick="showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="menu-btn" onclick="updateDeviceButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
 
@@ -190,6 +190,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="lang-btns">
 <button class="lang-btn active" id="lang-en" onclick="setLang('en')">English</button>
 <button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
+</div>
+</div>
+<div class="setting-group">
+<div class="setting-label" data-en="DEVICE / دستگاه" data-fa="DEVICE / دستگاه">DEVICE / دستگاه</div>
+<div class="lang-btns">
+<button class="lang-btn" id="dev-pc" onclick="changeDevice('pc')" data-en="PC" data-fa="کامپیوتر">PC</button>
+<button class="lang-btn" id="dev-mobile" onclick="changeDevice('mobile')" data-en="MOBILE" data-fa="موبایل">MOBILE</button>
 </div>
 </div>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
@@ -370,6 +377,29 @@ function selectDevice(dev) {
   showMenu('main-menu');
   // Apply current language to new elements
   setLang(currentLang);
+}
+
+function updateDeviceButtons() {
+  document.getElementById('dev-pc').classList.toggle('active', !isMobileDevice);
+  document.getElementById('dev-mobile').classList.toggle('active', isMobileDevice);
+}
+
+function changeDevice(dev) {
+  var wasMobile = isMobileDevice;
+  isMobileDevice = (dev === 'mobile');
+  deviceChosen = true;
+  updateDeviceButtons();
+  // If switching to mobile and game is running, show mobile controls
+  if (isMobileDevice && gameStarted) {
+    document.getElementById('mobile-controls').style.display = 'block';
+    if (!joyStick) initJoystick();
+    // Exit pointer lock if active
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  // If switching to PC and game is running, hide mobile controls
+  if (!isMobileDevice && gameStarted) {
+    document.getElementById('mobile-controls').style.display = 'none';
+  }
 }
 
 // Joystick state
@@ -1376,6 +1406,7 @@ function openSettingsFromPause() {
   returnToGame = true;
   pauseOvl.classList.add('hidden');
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+  updateDeviceButtons();
   showMenu('settings-menu');
 }
 
