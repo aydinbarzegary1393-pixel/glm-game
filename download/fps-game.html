@@ -553,10 +553,20 @@ scene.add(dirLight);
 // ===== MAP SYSTEM =====
 const mapGroup = new THREE.Group();
 scene.add(mapGroup);
+const bulletHoles = new THREE.Group();
+scene.add(bulletHoles);
 const sceneObjects = [];
 const colliders = []; // {minX, maxX, minY, maxY, minZ, maxZ}
 let currentMap = 0;
 
+function clearBulletHoles() {
+  while(bulletHoles.children.length > 0) {
+    const c = bulletHoles.children[0];
+    bulletHoles.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
 function clearMap() {
   while(mapGroup.children.length > 0) {
     const child = mapGroup.children[0];
@@ -566,6 +576,7 @@ function clearMap() {
   }
   sceneObjects.length = 0;
   colliders.length = 0;
+  clearBulletHoles();
 }
 
 function addBox(x,y,z,w,h,d,c) {
@@ -599,6 +610,7 @@ function setGround(color, gridColor1, gridColor2) {
   const g = new THREE.Mesh(new THREE.PlaneGeometry(200,200), mat);
   g.rotation.x = -Math.PI/2; g.receiveShadow = true;
   mapGroup.add(g);
+  sceneObjects.push(g); // allow bullet holes on ground
   mapGroup.add(new THREE.GridHelper(200, 100, gridColor1, gridColor2));
 }
 
@@ -777,6 +789,28 @@ tex.concreteFloor = (function() {
   t.repeat.set(10,10);
   return new THREE.MeshStandardMaterial({map:t, roughness:0.85, metalness:0.1});
 })();
+// Hedge texture (for Test Map boundary)
+tex.hedge = (function() {
+  const t = makeCanvasTex(function(ctx, w, h) {
+    ctx.fillStyle = '#2d5a1e'; ctx.fillRect(0,0,w,h);
+    for (var i=0; i < 3000; i++) {
+      var v = 0.7 + Math.random()*0.6;
+      var rr = Math.floor(45*v), gg = Math.floor(90*v), bb = Math.floor(30*v);
+      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.5)';
+      var s = 2+Math.random()*5;
+      ctx.fillRect(Math.random()*w, Math.random()*h, s, s);
+    }
+    // Leaf shapes
+    for (var i=0; i < 200; i++) {
+      var v = 0.6 + Math.random()*0.8;
+      var rr = Math.floor(35*v), gg = Math.floor(110*v), bb = Math.floor(25*v);
+      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.6)';
+      var x = Math.random()*w, y = Math.random()*h;
+      ctx.beginPath(); ctx.ellipse(x,y,2+Math.random()*3,1+Math.random()*2,Math.random()*Math.PI,0,Math.PI*2); ctx.fill();
+    }
+  }, 128, 128);
+  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.0});
+})();
 
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
@@ -835,12 +869,11 @@ function loadTestMap() {
   addCyl(10,1,-5,0.5,2,0xc0392b);
   addCyl(-10,1.5,5,0.7,3,0x2980b9);
   addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
-  // Boundary walls
-  var BW = 0x3a6b2a; // dark green to blend with ground
-  addWall(0, 2.5, -20, 42, 5, 0.5, BW);
-  addWall(0, 2.5, 20, 42, 5, 0.5, BW);
-  addWall(-20, 2.5, 0, 0.5, 5, 42, BW);
-  addWall(20, 2.5, 0, 0.5, 5, 42, BW);
+  // Boundary walls (hedge)
+  addWall(0, 2.5, -20, 42, 5, 0.8, tex.hedge);
+  addWall(0, 2.5, 20, 42, 5, 0.8, tex.hedge);
+  addWall(-20, 2.5, 0, 0.8, 5, 42, tex.hedge);
+  addWall(20, 2.5, 0, 0.8, 5, 42, tex.hedge);
   player.position.set(0, PLAYER_HEIGHT, 0);
 }
 
@@ -978,11 +1011,10 @@ function loadVertigoMap() {
   addWall(8, -3, -1, 3.5, 0.3, 3.5, DARK);
 
   // Boundary walls (building exterior)
-  var BE = 0x444455;
-  addWall(0, 0, -38, 32, 12, 0.6, BE); // north
-  addWall(0, -1.5, 37, 24, 12, 0.6, BE); // south
-  addWall(-16, -1.5, 0, 0.6, 12, 76, BE); // west
-  addWall(16, -1.5, 0, 0.6, 12, 76, BE); // east
+  addWall(0, 0, -38, 32, 12, 0.6, tex.metalWall); // north
+  addWall(0, -1.5, 37, 24, 12, 0.6, tex.metalWall); // south
+  addWall(-16, -1.5, 0, 0.6, 12, 76, tex.metalWall); // west
+  addWall(16, -1.5, 0, 0.6, 12, 76, tex.metalWall); // east
 
   player.position.set(0, PLAYER_HEIGHT, -30);
 }
@@ -1095,11 +1127,10 @@ function loadDustMap() {
   addWall(1.5, 2, -2.5, 3, 4, 0.5, SAND);
 
   // Boundary walls
-  var BW2 = 0xb09870; // sand colored
-  addWall(6.5, 2.5, -4, 43, 5, 0.6, BW2); // north
-  addWall(6.5, 2.5, 30, 43, 5, 0.6, BW2); // south
-  addWall(-15, 2.5, 13, 0.6, 5, 34, BW2); // west
-  addWall(28, 2.5, 13, 0.6, 5, 34, BW2); // east
+  addWall(6.5, 2.5, -4, 43, 5, 0.6, tex.sand); // north
+  addWall(6.5, 2.5, 30, 43, 5, 0.6, tex.sand); // south
+  addWall(-15, 2.5, 13, 0.6, 5, 34, tex.sand); // west
+  addWall(28, 2.5, 13, 0.6, 5, 34, tex.sand); // east
 
   player.position.set(0, PLAYER_HEIGHT, 24);
 }
@@ -1281,15 +1312,22 @@ function shoot() {
   const hits = raycaster.intersectObjects(sceneObjects);
   if (hits.length > 0) {
     const hit = hits[0];
-    // Bullet hole effect
-    const holeGeo = new THREE.CircleGeometry(0.08, 8);
-    const holeMat = new THREE.MeshBasicMaterial({color:0x111111, side:THREE.DoubleSide});
-    const hole = new THREE.Mesh(holeGeo, holeMat);
-    hole.position.copy(hit.point);
-    hole.lookAt(hit.point.clone().add(hit.face.normal));
-    hole.position.add(hit.face.normal.clone().multiplyScalar(0.01));
-    scene.add(hole);
-    sceneObjects.push(hole);
+    const n = hit.face.normal;
+    // Bullet hole: dark center + lighter ring
+    const holeGroup = new THREE.Group();
+    const coreGeo = new THREE.CircleGeometry(0.06, 8);
+    const coreMat = new THREE.MeshBasicMaterial({color:0x111111, side:THREE.DoubleSide, depthWrite:false});
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    holeGroup.add(core);
+    const ringGeo = new THREE.RingGeometry(0.06, 0.1, 12);
+    const ringMat = new THREE.MeshBasicMaterial({color:0x333333, side:THREE.DoubleSide, depthWrite:false, transparent:true, opacity:0.6});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    holeGroup.add(ring);
+    holeGroup.position.copy(hit.point);
+    holeGroup.lookAt(hit.point.clone().add(n));
+    holeGroup.position.add(n.clone().multiplyScalar(0.02));
+    holeGroup.renderOrder = 999;
+    bulletHoles.add(holeGroup);
   }
 
   // Fire rate cooldown
@@ -1362,6 +1400,7 @@ function exitToMenu() {
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0;
   pitchObj.rotation.x = 0;
+  clearBulletHoles();
   showMenu('main-menu');
 }
 
