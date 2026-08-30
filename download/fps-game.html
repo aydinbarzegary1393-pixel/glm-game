@@ -52,7 +52,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7)}
 #crosshair::before{width:20px;height:2px;top:-1px;left:-10px}
 #crosshair::after{width:2px;height:20px;top:-10px;left:-1px}
-#debug{position:fixed;bottom:30px;right:30px;color:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:28px;font-weight:700;z-index:50;pointer-events:none;direction:ltr;text-align:right;text-shadow:0 0 10px rgba(0,0,0,0.9),0 0 20px rgba(0,0,0,0.7),2px 2px 4px rgba(0,0,0,0.8)}
+#debug{position:fixed;top:20px;left:20px;color:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:28px;font-weight:700;z-index:50;pointer-events:none;direction:ltr;text-align:left;text-shadow:0 0 10px rgba(0,0,0,0.9),0 0 20px rgba(0,0,0,0.7),2px 2px 4px rgba(0,0,0,0.8)}
 
 /* Muzzle flash */
 #muzzle-flash{position:fixed;top:50%;left:50%;width:60px;height:60px;transform:translate(-50%,-30%);z-index:45;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(255,220,80,0.9),rgba(255,120,0,0.5),transparent 70%);border-radius:50%}
@@ -1312,7 +1312,8 @@ function shoot() {
   const hits = raycaster.intersectObjects(sceneObjects);
   if (hits.length > 0) {
     const hit = hits[0];
-    const n = hit.face.normal;
+    // Convert face normal to world space (fixes rotated objects like ground plane)
+    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
     // Bullet hole: dark center + lighter ring
     const holeGroup = new THREE.Group();
     const coreGeo = new THREE.CircleGeometry(0.06, 8);
