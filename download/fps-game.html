@@ -163,7 +163,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="map-status" data-en="CLOSE QUARTERS" data-fa="نبرد نزدیک">CLOSE QUARTERS</div>
 </div>
 </div>
-<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+<button class="menu-btn back-btn" onclick="backFromMapMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 
@@ -209,6 +209,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="pause-sub" data-en="GAME PAUSED" data-fa="بازی متوقف شد">GAME PAUSED</p>
 <button class="pause-btn" onclick="resumeGame()" data-en="RESUME" data-fa="ادامه بازی">RESUME</button>
 <button class="pause-btn" onclick="openSettingsFromPause()" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="pause-btn" onclick="changeMapFromPause()" data-en="CHANGE MAP" data-fa="تغییر نقشه">CHANGE MAP</button>
 <button class="pause-btn exit-btn" onclick="exitToMenu()" data-en="EXIT TO MENU" data-fa="خروج به منو">EXIT TO MENU</button>
 </div>
 </div>
@@ -258,6 +259,7 @@ let ammo = 30;
 let maxAmmo = 30;
 let recoilAmount = 0;
 let isReloading = false;
+let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
 
@@ -357,6 +359,7 @@ function startReload() {
   if (isReloading || ammo === maxAmmo) return;
   isReloading = true;
   canShoot = false;
+  reloadAnimTime = 1800;
   playReloadSound();
   document.getElementById('reload-hud').style.display = 'block';
   setTimeout(function() {
@@ -385,10 +388,12 @@ function updateDeviceButtons() {
 }
 
 function changeDevice(dev) {
-  var wasMobile = isMobileDevice;
   isMobileDevice = (dev === 'mobile');
   deviceChosen = true;
   updateDeviceButtons();
+  if (isMobileDevice) {
+    try { document.documentElement.requestFullscreen(); } catch(e) {}
+  }
   // If switching to mobile and game is running, show mobile controls
   if (isMobileDevice && gameStarted) {
     document.getElementById('mobile-controls').style.display = 'block';
@@ -1392,6 +1397,7 @@ function startGame() {
 }
 
 let returnToGame = false;
+let changeMapReturn = false;
 
 function resumeGame() {
   pauseOvl.classList.add('hidden');
@@ -1408,6 +1414,24 @@ function openSettingsFromPause() {
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   updateDeviceButtons();
   showMenu('settings-menu');
+}
+
+function changeMapFromPause() {
+  changeMapReturn = true;
+  pauseOvl.classList.add('hidden');
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+  showMenu('map-menu');
+}
+
+function backFromMapMenu() {
+  if (changeMapReturn) {
+    changeMapReturn = false;
+    document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+    pauseOvl.classList.remove('hidden');
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'block';
+  } else {
+    showMenu('main-menu');
+  }
 }
 
 function backFromSettings() {
@@ -1576,7 +1600,26 @@ function animate() {
       bobY = Math.sin(clock.elapsedTime * bobSpeed) * bobAmount;
       bobX = Math.cos(clock.elapsedTime * bobSpeed * 0.5) * bobAmount * 0.5;
     }
-    gunGroup.position.y = -0.22 + bobY + recoilAmount;
+    // Reload animation
+    var reloadDrop = 0;
+    if (reloadAnimTime > 0) {
+      reloadAnimTime -= dt * 1000;
+      if (reloadAnimTime < 0) reloadAnimTime = 0;
+      var rProg = 1 - (reloadAnimTime / 1800);
+      var rAngle;
+      if (rProg < 0.35) {
+        rAngle = (rProg / 0.35) * (Math.PI / 2);
+      } else if (rProg < 0.65) {
+        rAngle = Math.PI / 2;
+      } else {
+        rAngle = (1 - (rProg - 0.65) / 0.35) * (Math.PI / 2);
+      }
+      gunGroup.rotation.z = -rAngle;
+      reloadDrop = Math.sin(rProg * Math.PI) * 0.12;
+    } else {
+      gunGroup.rotation.z = 0;
+    }
+    gunGroup.position.y = -0.22 + bobY + recoilAmount - reloadDrop;
     gunGroup.position.x = 0.25 + bobX;
 
     // Ammo HUD
