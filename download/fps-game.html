@@ -1326,7 +1326,7 @@ function exitToMenu() {
 document.addEventListener('mousedown', function(e) {
   if (gameStarted && isLocked && e.button === 0) {
     shoot();
-  } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay')) {
+  } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay') && !e.target.closest('.menu-overlay')) {
     renderer.domElement.requestPointerLock();
   }
 });
