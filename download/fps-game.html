@@ -654,6 +654,18 @@ function clearBulletHoles() {
 }
 
 // ===== ENEMY SYSTEM =====
+function checkEnemyWall(px, pz) {
+  var r = 0.5;
+  for (var i = 0; i < colliders.length; i++) {
+    var c = colliders[i];
+    if (c.maxY - c.minY < 0.5) continue;
+    if (c.maxY < 0.3 || c.minY > 2.2) continue;
+    if (px + r > c.minX && px - r < c.maxX &&
+        pz + r > c.minZ && pz - r < c.maxZ) return true;
+  }
+  return false;
+}
+
 function createEnemy(x, z) {
   const enemy = {
     group: new THREE.Group(),
@@ -664,9 +676,9 @@ function createEnemy(x, z) {
     leftLeg: null, rightLeg: null,
     bodyMat: null
   };
-  const bMat = new THREE.MeshStandardMaterial({color:0x5a7a4a, roughness:0.8, metalness:0.1});
+  const bMat = new THREE.MeshStandardMaterial({map:tex.zombieSkin, roughness:0.9, metalness:0.05});
   enemy.bodyMat = bMat;
-  const dMat = new THREE.MeshStandardMaterial({color:0x3a5a2a, roughness:0.85, metalness:0.05});
+  const dMat = new THREE.MeshStandardMaterial({map:tex.zombieDark, roughness:0.9, metalness:0.05});
   const eyeMat = new THREE.MeshBasicMaterial({color:0xff2200});
   var body = new THREE.Mesh(new THREE.BoxGeometry(0.6,1.0,0.35), bMat);
   body.position.set(0,1.1,0); enemy.group.add(body);
@@ -711,12 +723,16 @@ function spawnEnemies() {
   var count = DIFFICULTY_COUNTS[difficulty];
   var px = player.position.x, pz = player.position.z;
   for (var i = 0; i < count; i++) {
-    var angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
-    var dist = 12 + Math.random() * 15;
-    var ex = px + Math.cos(angle) * dist;
-    var ez = pz + Math.sin(angle) * dist;
-    ex = Math.max(-35, Math.min(35, ex));
-    ez = Math.max(-35, Math.min(35, ez));
+    var angle, dist, ex, ez, attempts = 0;
+    do {
+      angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+      dist = 8 + Math.random() * 10;
+      ex = px + Math.cos(angle) * dist;
+      ez = pz + Math.sin(angle) * dist;
+      ex = Math.max(-15, Math.min(15, ex));
+      ez = Math.max(-15, Math.min(15, ez));
+      attempts++;
+    } while (checkEnemyWall(ex, ez) && attempts < 10);
     createEnemy(ex, ez);
   }
 }
@@ -735,8 +751,8 @@ function updateEnemies(dt) {
       var nx = dx/dist, nz = dz/dist;
       var newX = e.group.position.x + nx*speed;
       var newZ = e.group.position.z + nz*speed;
-      if (!checkCollision(newX, PLAYER_HEIGHT, e.group.position.z)) e.group.position.x = newX;
-      if (!checkCollision(e.group.position.x, PLAYER_HEIGHT, newZ)) e.group.position.z = newZ;
+      if (!checkEnemyWall(newX, e.group.position.z)) e.group.position.x = newX;
+      if (!checkEnemyWall(e.group.position.x, newZ)) e.group.position.z = newZ;
       e.animTime += dt * 6;
       e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
       e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
@@ -1056,6 +1072,23 @@ tex.hedge = (function() {
   }, 128, 128);
   return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.0});
 })();
+
+// Zombie skin texture
+var _zCanvas = document.createElement('canvas'); _zCanvas.width=128; _zCanvas.height=128;
+var _zCtx = _zCanvas.getContext('2d');
+_zCtx.fillStyle='#6b8a5e'; _zCtx.fillRect(0,0,128,128);
+for(var _i=0;_i<800;_i++){var _v=0.6+Math.random()*0.5;_zCtx.fillStyle='rgba('+Math.floor(80*_v)+','+Math.floor(100*_v)+','+Math.floor(60*_v)+',0.4)';_zCtx.fillRect(Math.random()*128,Math.random()*128,2+Math.random()*6,2+Math.random()*6)}
+for(var _i=0;_i<400;_i++){var _v=0.9+Math.random()*0.3;_zCtx.fillStyle='rgba('+Math.floor(140*_v)+','+Math.floor(160*_v)+','+Math.floor(120*_v)+',0.3)';_zCtx.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*4,1+Math.random()*4)}
+_zCtx.strokeStyle='rgba(50,70,40,0.2)';_zCtx.lineWidth=1;
+for(var _i=0;_i<15;_i++){_zCtx.beginPath();var _sx=Math.random()*128,_sy=Math.random()*128;_zCtx.moveTo(_sx,_sy);for(var _j=0;_j<3;_j++){_sx+=(Math.random()-0.5)*30;_sy+=Math.random()*20;_zCtx.lineTo(_sx,_sy)}_zCtx.stroke()}
+tex.zombieSkin=(function(){var t=new THREE.CanvasTexture(_zCanvas);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t})();
+
+// Zombie dark skin (limbs)
+var _zdCanvas=document.createElement('canvas');_zdCanvas.width=64;_zdCanvas.height=64;
+var _zdCtx=_zdCanvas.getContext('2d');
+_zdCtx.fillStyle='#4a6a3a';_zdCtx.fillRect(0,0,64,64);
+for(var _i=0;_i<600;_i++){var _v=0.5+Math.random()*0.5;_zdCtx.fillStyle='rgba('+Math.floor(60*_v)+','+Math.floor(85*_v)+','+Math.floor(45*_v)+',0.4)';_zdCtx.fillRect(Math.random()*64,Math.random()*64,2+Math.random()*5,2+Math.random()*5)}
+tex.zombieDark=(function(){var t=new THREE.CanvasTexture(_zdCanvas);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t})();
 
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
