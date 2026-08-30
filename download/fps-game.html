@@ -103,6 +103,20 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #btn-pause-m{position:absolute;top:15px;right:15px;pointer-events:auto;z-index:4;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.4);color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;line-height:1}
 #btn-pause-m:active{background:rgba(255,255,255,0.15)}
 #reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
+/* Health Bar */
+#health-bar-container{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:50;pointer-events:none;display:none;align-items:center;gap:8px}
+#health-bar-bg{width:200px;height:14px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:7px;overflow:hidden}
+#health-bar-fill{width:100%;height:100%;background:#2ecc71;transition:width 0.3s;border-radius:7px}
+#health-text{color:#fff;font-size:16px;font-weight:700;text-shadow:0 0 8px rgba(0,0,0,0.8)}
+/* Damage Flash */
+#damage-flash{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(180,0,0,0.4));transition:opacity 0.15s}
+#damage-flash.show{opacity:1}
+/* Death Screen */
+#death-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(60,0,0,0.88)}
+#death-screen.hidden{display:none}
+#death-screen h2{font-size:58px;color:#ff2222;margin-bottom:10px;letter-spacing:8px;text-shadow:0 0 40px rgba(255,0,0,0.6),0 0 80px rgba(255,0,0,0.3)}
+#death-screen .death-sub{color:rgba(255,150,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
+#death-screen .pause-btn{width:280px}
 </style>
 </head>
 <body>
@@ -134,7 +148,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
-<button class="menu-btn" onclick="updateDeviceButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
 
@@ -199,6 +213,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="dev-mobile" onclick="changeDevice('mobile')" data-en="MOBILE" data-fa="موبایل">MOBILE</button>
 </div>
 </div>
+<div class="setting-group">
+<div class="setting-label" data-en="DIFFICULTY / سختی" data-fa="DIFFICULTY / سختی">DIFFICULTY / سختی</div>
+<div class="lang-btns" style="flex-wrap:wrap">
+<button class="lang-btn" id="diff-0" onclick="setDifficulty(0)" data-en="EASY" data-fa="آسون">EASY</button>
+<button class="lang-btn active" id="diff-1" onclick="setDifficulty(1)" data-en="MEDIUM" data-fa="متوسط">MEDIUM</button>
+<button class="lang-btn" id="diff-2" onclick="setDifficulty(2)" data-en="HARD" data-fa="سخت">HARD</button>
+<button class="lang-btn" id="diff-3" onclick="setDifficulty(3)" data-en="IMPOSSIBLE" data-fa="غیر ممکن">IMPOSSIBLE</button>
+</div>
+</div>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -214,10 +237,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 </div>
 
+<!-- DEATH SCREEN -->
+<div id="death-screen" class="hidden">
+<div style="position:relative;z-index:1;text-align:center">
+<h2 data-en="YOU DIED" data-fa="تو مردی">YOU DIED</h2>
+<p class="death-sub" data-en="GAME OVER" data-fa="بازی تمام شد">GAME OVER</p>
+<button class="pause-btn" onclick="restartGame()" data-en="PLAY AGAIN" data-fa="بازی دوباره">PLAY AGAIN</button>
+<button class="pause-btn exit-btn" onclick="backToMenuFromDeath()" data-en="MAIN MENU" data-fa="منوی اصلی">MAIN MENU</button>
+</div>
+</div>
+
 <!-- GAME HUD -->
 <div id="crosshair" style="display:none"></div>
 <div id="muzzle-flash"></div>
 <div id="reload-hud" data-en="RELOADING..." data-fa="در حال شارژ...">RELOADING...</div>
+<div id="health-bar-container">
+<div id="health-bar-bg"><div id="health-bar-fill"></div></div>
+<span id="health-text">100</span>
+</div>
+<div id="damage-flash"></div>
 <div id="debug" style="display:none"></div>
 
 <!-- MOBILE CONTROLS -->
@@ -262,6 +300,18 @@ let isReloading = false;
 let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
+
+// ===== ENEMY & HEALTH =====
+let playerHealth = 100;
+const MAX_HEALTH = 100;
+let difficulty = 1;
+const DIFFICULTY_COUNTS = [1, 5, 10, 20];
+const ENEMY_MAX_HP = 5;
+const ENEMY_DMG = 10;
+const ENEMY_SPEED = 3;
+const ENEMY_ATK_RANGE = 1.8;
+const ENEMY_ATK_CD = 1.0;
+const enemies = [];
 
 // ===== AUDIO SYSTEM (Web Audio API) =====
 let audioCtx = null;
@@ -602,6 +652,166 @@ function clearBulletHoles() {
     if (c.material) c.material.dispose();
   }
 }
+
+// ===== ENEMY SYSTEM =====
+function createEnemy(x, z) {
+  const enemy = {
+    group: new THREE.Group(),
+    health: ENEMY_MAX_HP,
+    attackTimer: ENEMY_ATK_CD,
+    animTime: Math.random() * Math.PI * 2,
+    leftArm: null, rightArm: null,
+    leftLeg: null, rightLeg: null,
+    bodyMat: null
+  };
+  const bMat = new THREE.MeshStandardMaterial({color:0x5a7a4a, roughness:0.8, metalness:0.1});
+  enemy.bodyMat = bMat;
+  const dMat = new THREE.MeshStandardMaterial({color:0x3a5a2a, roughness:0.85, metalness:0.05});
+  const eyeMat = new THREE.MeshBasicMaterial({color:0xff2200});
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.6,1.0,0.35), bMat);
+  body.position.set(0,1.1,0); enemy.group.add(body);
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.4,0.35), bMat);
+  head.position.set(0,1.85,0); enemy.group.add(head);
+  var eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6), eyeMat);
+  eyeL.position.set(-0.1,1.9,-0.17); enemy.group.add(eyeL);
+  var eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6), eyeMat);
+  eyeR.position.set(0.1,1.9,-0.17); enemy.group.add(eyeR);
+  var la = new THREE.Group(); la.position.set(-0.45,1.5,0);
+  var laM = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.55,0.14), dMat);
+  laM.position.y = -0.275; la.add(laM); enemy.group.add(la); enemy.leftArm = la;
+  var ra = new THREE.Group(); ra.position.set(0.45,1.5,0);
+  var raM = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.55,0.14), dMat);
+  raM.position.y = -0.275; ra.add(raM); enemy.group.add(ra); enemy.rightArm = ra;
+  var ll = new THREE.Group(); ll.position.set(-0.15,0.55,0);
+  var llM = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.55,0.18), dMat);
+  llM.position.y = -0.275; ll.add(llM); enemy.group.add(ll); enemy.leftLeg = ll;
+  var rl = new THREE.Group(); rl.position.set(0.15,0.55,0);
+  var rlM = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.55,0.18), dMat);
+  rlM.position.y = -0.275; rl.add(rlM); enemy.group.add(rl); enemy.rightLeg = rl;
+  enemy.group.traverse(function(ch) { if (ch.isMesh) ch.userData.enemyRef = enemy; });
+  enemy.group.position.set(x, 0, z);
+  scene.add(enemy.group);
+  enemies.push(enemy);
+  return enemy;
+}
+
+function clearEnemies() {
+  for (var i = enemies.length - 1; i >= 0; i--) {
+    scene.remove(enemies[i].group);
+    enemies[i].group.traverse(function(ch) {
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    });
+  }
+  enemies.length = 0;
+}
+
+function spawnEnemies() {
+  clearEnemies();
+  var count = DIFFICULTY_COUNTS[difficulty];
+  var px = player.position.x, pz = player.position.z;
+  for (var i = 0; i < count; i++) {
+    var angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    var dist = 12 + Math.random() * 15;
+    var ex = px + Math.cos(angle) * dist;
+    var ez = pz + Math.sin(angle) * dist;
+    ex = Math.max(-35, Math.min(35, ex));
+    ez = Math.max(-35, Math.min(35, ez));
+    createEnemy(ex, ez);
+  }
+}
+
+function updateEnemies(dt) {
+  var pPos = player.position;
+  for (var i = enemies.length - 1; i >= 0; i--) {
+    var e = enemies[i];
+    var dx = pPos.x - e.group.position.x;
+    var dz = pPos.z - e.group.position.z;
+    var dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < 0.1) dist = 0.1;
+    e.group.rotation.y = Math.atan2(dx, dz);
+    if (dist > ENEMY_ATK_RANGE) {
+      var speed = ENEMY_SPEED * dt;
+      var nx = dx/dist, nz = dz/dist;
+      var newX = e.group.position.x + nx*speed;
+      var newZ = e.group.position.z + nz*speed;
+      if (!checkCollision(newX, PLAYER_HEIGHT, e.group.position.z)) e.group.position.x = newX;
+      if (!checkCollision(e.group.position.x, PLAYER_HEIGHT, newZ)) e.group.position.z = newZ;
+      e.animTime += dt * 6;
+      e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
+      e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
+      e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
+      e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+    } else {
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; damagePlayer(ENEMY_DMG); }
+      e.animTime += dt * 8;
+      e.leftArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
+      e.rightArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
+      e.leftLeg.rotation.x = 0;
+      e.rightLeg.rotation.x = 0;
+    }
+  }
+}
+
+function damagePlayer(amount) {
+  if (playerHealth <= 0) return;
+  playerHealth -= amount;
+  if (playerHealth < 0) playerHealth = 0;
+  updateHealthBar();
+  var df = document.getElementById('damage-flash');
+  df.classList.add('show');
+  setTimeout(function() { df.classList.remove('show'); }, 200);
+  if (playerHealth <= 0) playerDie();
+}
+
+function updateHealthBar() {
+  var pct = (playerHealth / MAX_HEALTH) * 100;
+  document.getElementById('health-bar-fill').style.width = pct + '%';
+  document.getElementById('health-text').textContent = playerHealth;
+  var fill = document.getElementById('health-bar-fill');
+  if (pct > 60) fill.style.background = '#2ecc71';
+  else if (pct > 30) fill.style.background = '#f39c12';
+  else fill.style.background = '#e74c3c';
+}
+
+function playerDie() {
+  gameStarted = false;
+  document.getElementById('death-screen').classList.remove('hidden');
+  document.getElementById('crosshair').style.display = 'none';
+  document.getElementById('debug').style.display = 'none';
+  document.getElementById('health-bar-container').style.display = 'none';
+  document.getElementById('reload-hud').style.display = 'none';
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+function restartGame() {
+  document.getElementById('death-screen').classList.add('hidden');
+  startGame();
+}
+
+function backToMenuFromDeath() {
+  document.getElementById('death-screen').classList.add('hidden');
+  clearEnemies();
+  exitToMenu();
+}
+
+function setDifficulty(d) {
+  difficulty = d;
+  document.getElementById('diff-0').classList.toggle('active', d===0);
+  document.getElementById('diff-1').classList.toggle('active', d===1);
+  document.getElementById('diff-2').classList.toggle('active', d===2);
+  document.getElementById('diff-3').classList.toggle('active', d===3);
+}
+
+function updateDifficultyButtons() {
+  document.getElementById('diff-0').classList.toggle('active', difficulty===0);
+  document.getElementById('diff-1').classList.toggle('active', difficulty===1);
+  document.getElementById('diff-2').classList.toggle('active', difficulty===2);
+  document.getElementById('diff-3').classList.toggle('active', difficulty===3);
+}
+
 function clearMap() {
   while(mapGroup.children.length > 0) {
     const child = mapGroup.children[0];
@@ -1344,26 +1554,44 @@ function shoot() {
 
   // Raycast
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const hits = raycaster.intersectObjects(sceneObjects);
+  var allTargets = sceneObjects.slice();
+  for (var ei = 0; ei < enemies.length; ei++) {
+    enemies[ei].group.traverse(function(ch) { if (ch.isMesh) allTargets.push(ch); });
+  }
+  const hits = raycaster.intersectObjects(allTargets);
   if (hits.length > 0) {
     const hit = hits[0];
-    // Convert face normal to world space (fixes rotated objects like ground plane)
-    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
-    // Bullet hole: dark center + lighter ring
-    const holeGroup = new THREE.Group();
-    const coreGeo = new THREE.CircleGeometry(0.06, 8);
-    const coreMat = new THREE.MeshBasicMaterial({color:0x111111, side:THREE.DoubleSide, depthWrite:false});
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    holeGroup.add(core);
-    const ringGeo = new THREE.RingGeometry(0.06, 0.1, 12);
-    const ringMat = new THREE.MeshBasicMaterial({color:0x333333, side:THREE.DoubleSide, depthWrite:false, transparent:true, opacity:0.6});
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    holeGroup.add(ring);
-    holeGroup.position.copy(hit.point);
-    holeGroup.lookAt(hit.point.clone().add(n));
-    holeGroup.position.add(n.clone().multiplyScalar(0.02));
-    holeGroup.renderOrder = 999;
-    bulletHoles.add(holeGroup);
+    if (hit.object.userData.enemyRef) {
+      const enemy = hit.object.userData.enemyRef;
+      enemy.health--;
+      enemy.bodyMat.emissive.setHex(0x660000);
+      setTimeout(function() { if (enemy.bodyMat) enemy.bodyMat.emissive.setHex(0x000000); }, 100);
+      if (enemy.health <= 0) {
+        scene.remove(enemy.group);
+        enemy.group.traverse(function(ch) {
+          if (ch.geometry) ch.geometry.dispose();
+          if (ch.material) ch.material.dispose();
+        });
+        var idx = enemies.indexOf(enemy);
+        if (idx > -1) enemies.splice(idx, 1);
+      }
+    } else {
+      const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
+      const holeGroup = new THREE.Group();
+      const coreGeo = new THREE.CircleGeometry(0.06, 8);
+      const coreMat = new THREE.MeshBasicMaterial({color:0x111111, side:THREE.DoubleSide, depthWrite:false});
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      holeGroup.add(core);
+      const ringGeo = new THREE.RingGeometry(0.06, 0.1, 12);
+      const ringMat = new THREE.MeshBasicMaterial({color:0x333333, side:THREE.DoubleSide, depthWrite:false, transparent:true, opacity:0.6});
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      holeGroup.add(ring);
+      holeGroup.position.copy(hit.point);
+      holeGroup.lookAt(hit.point.clone().add(n));
+      holeGroup.position.add(n.clone().multiplyScalar(0.02));
+      holeGroup.renderOrder = 999;
+      bulletHoles.add(holeGroup);
+    }
   }
 
   // Fire rate cooldown
@@ -1383,7 +1611,13 @@ function startGame() {
   gameStarted = true;
   ammo = maxAmmo;
   isReloading = false;
+  reloadAnimTime = 0;
+  gunGroup.rotation.z = 0;
+  playerHealth = MAX_HEALTH;
+  updateHealthBar();
   document.getElementById('reload-hud').style.display = 'none';
+  document.getElementById('health-bar-container').style.display = 'flex';
+  document.getElementById('death-screen').classList.add('hidden');
   yaw = 0; pitch = 0;
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0;
@@ -1394,6 +1628,7 @@ function startGame() {
   } else {
     renderer.domElement.requestPointerLock();
   }
+  spawnEnemies();
 }
 
 let returnToGame = false;
@@ -1413,6 +1648,7 @@ function openSettingsFromPause() {
   pauseOvl.classList.add('hidden');
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   updateDeviceButtons();
+  updateDifficultyButtons();
   showMenu('settings-menu');
 }
 
@@ -1451,19 +1687,21 @@ function exitToMenu() {
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('debug').style.display = 'none';
   document.getElementById('reload-hud').style.display = 'none';
+  document.getElementById('health-bar-container').style.display = 'none';
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   yaw = 0; pitch = 0;
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0;
   pitchObj.rotation.x = 0;
   clearBulletHoles();
+  clearEnemies();
   showMenu('main-menu');
 }
 
 document.addEventListener('mousedown', function(e) {
   if (gameStarted && isLocked && e.button === 0) {
     shoot();
-  } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay') && !e.target.closest('.menu-overlay')) {
+  } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay') && !e.target.closest('.menu-overlay') && !e.target.closest('#death-screen')) {
     renderer.domElement.requestPointerLock();
   }
 });
@@ -1484,11 +1722,14 @@ document.addEventListener('keydown', function(e) {
     pauseOvl.classList.add('hidden');
     document.getElementById('crosshair').style.display = 'none';
     document.getElementById('debug').style.display = 'none';
+    document.getElementById('health-bar-container').style.display = 'none';
     if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
     yaw = 0; pitch = 0;
     player.position.set(0, PLAYER_HEIGHT, 0);
     player.rotation.y = 0;
     pitchObj.rotation.x = 0;
+    clearBulletHoles();
+    clearEnemies();
     showMenu('main-menu');
   }
   if (e.code === 'KeyR' && gameStarted) startReload();
@@ -1585,6 +1826,9 @@ function animate() {
     } else {
       footstepTimer = 0;
     }
+
+    // Update enemies
+    updateEnemies(dt);
 
     // Gun recoil
     if (recoilAmount > 0) {
