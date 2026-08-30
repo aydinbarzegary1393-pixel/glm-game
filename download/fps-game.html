@@ -100,6 +100,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #btn-fire-m{width:80px;height:80px;font-size:28px;background:rgba(255,60,60,0.15);border-color:rgba(255,60,60,0.4);color:#ff6666}
 #btn-fire-m:active{background:rgba(255,60,60,0.35)}
 #mobile-btns .btn-row{display:flex;gap:10px}
+#btn-pause-m{position:absolute;top:15px;right:15px;pointer-events:auto;z-index:4;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.4);color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;line-height:1}
+#btn-pause-m:active{background:rgba(255,255,255,0.15)}
 #reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
 </style>
 </head>
@@ -216,6 +218,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="joystick-zone">
 <div id="joystick-base"><div id="joystick-stick"></div></div>
 </div>
+<button id="btn-pause-m" data-en="❚❚" data-fa="❚❚">❚❚</button>
 <div id="mobile-btns">
 <div class="btn-row">
 <button class="m-action" id="btn-jump-m" data-en="JUMP" data-fa="پرش">JUMP</button>
@@ -425,6 +428,16 @@ function initJoystick() {
   }, {passive: false});
   document.getElementById('btn-reload-m').addEventListener('touchstart', function(e) {
     e.preventDefault(); startReload();
+  }, {passive: false});
+
+  // Mobile pause button
+  document.getElementById('btn-pause-m').addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (!gameStarted) return;
+    pauseOvl.classList.remove('hidden');
+    document.getElementById('mobile-controls').style.display = 'none';
+    // Reset look touch so it doesn't continue after resume
+    lookTouchId = null;
   }, {passive: false});
 
   // Mobile look (touch on look-zone for aiming)
