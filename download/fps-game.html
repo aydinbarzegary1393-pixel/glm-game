@@ -90,10 +90,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 /* Mobile Controls */
 #mobile-controls{display:none;position:fixed;inset:0;z-index:100;pointer-events:none}
-#joystick-zone{position:absolute;left:0;bottom:0;width:45%;height:50%;pointer-events:auto;touch-action:none}
+#look-zone{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto;touch-action:none;z-index:1}
+#joystick-zone{position:absolute;left:0;bottom:0;width:45%;height:50%;pointer-events:auto;touch-action:none;z-index:2}
 #joystick-base{position:absolute;left:30px;bottom:30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15)}
 #joystick-stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.35);transition:none}
-#mobile-btns{position:absolute;right:15px;bottom:20px;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:10px}
+#mobile-btns{position:absolute;right:15px;bottom:20px;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:3}
 .m-action{width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
 .m-action:active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4)}
 #btn-fire-m{width:80px;height:80px;font-size:28px;background:rgba(255,60,60,0.15);border-color:rgba(255,60,60,0.4);color:#ff6666}
@@ -211,6 +212,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 <!-- MOBILE CONTROLS -->
 <div id="mobile-controls">
+<div id="look-zone"></div>
 <div id="joystick-zone">
 <div id="joystick-base"><div id="joystick-stick"></div></div>
 </div>
@@ -425,29 +427,31 @@ function initJoystick() {
     e.preventDefault(); startReload();
   }, {passive: false});
 
-  // Mobile look (touch on canvas for aiming)
+  // Mobile look (touch on look-zone for aiming)
   var lookTouchId = null, lastLookX = 0, lastLookY = 0;
-  renderer.domElement.addEventListener('touchstart', function(e) {
+  var lookZone = document.getElementById('look-zone');
+  var TOUCH_SENS = MOUSE_SENS * 2.5; // higher sensitivity for touch
+
+  lookZone.addEventListener('touchstart', function(e) {
+    e.preventDefault();
     if (!gameStarted) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
-      // Only track touches not on controls
-      if (t.clientX < window.innerWidth * 0.55) continue;
-      if (t.clientY < window.innerHeight * 0.5) continue;
       lookTouchId = t.identifier;
       lastLookX = t.clientX; lastLookY = t.clientY;
       break;
     }
-  }, {passive: true});
-  renderer.domElement.addEventListener('touchmove', function(e) {
+  }, {passive: false});
+  lookZone.addEventListener('touchmove', function(e) {
+    e.preventDefault();
     if (!gameStarted || lookTouchId === null) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === lookTouchId) {
         var dx = t.clientX - lastLookX;
         var dy = t.clientY - lastLookY;
-        yaw -= dx * MOUSE_SENS;
-        pitch -= dy * MOUSE_SENS;
+        yaw -= dx * TOUCH_SENS;
+        pitch -= dy * TOUCH_SENS;
         pitch = Math.max(-1.55, Math.min(1.55, pitch));
         player.rotation.y = yaw;
         pitchObj.rotation.x = pitch;
@@ -455,12 +459,17 @@ function initJoystick() {
         break;
       }
     }
-  }, {passive: true});
-  renderer.domElement.addEventListener('touchend', function(e) {
+  }, {passive: false});
+  lookZone.addEventListener('touchend', function(e) {
     for (var i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
     }
-  }, {passive: true});
+  });
+  lookZone.addEventListener('touchcancel', function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
+    }
+  });
 }
 
 // ===== TRANSLATIONS =====
