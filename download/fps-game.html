@@ -298,7 +298,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="fps-game-assets/three.min.js"></script>
 <script>
 // ===== CONFIG =====
 let MOUSE_SENS = 0.004;
@@ -692,8 +692,8 @@ function checkEnemyWall(px, pz) {
   var r = 0.5;
   for (var i = 0; i < colliders.length; i++) {
     var c = colliders[i];
-    if (c.maxY - c.minY < 0.5) continue;
-    if (c.maxY < 0.1 || c.minY > 2.5) continue;
+    if (c.maxY - c.minY < 0.35) continue;
+    if (c.maxY < -0.5 || c.minY > 2.5) continue;
     if (px + r > c.minX && px - r < c.maxX &&
         pz + r > c.minZ && pz - r < c.maxZ) return true;
   }
@@ -1192,27 +1192,29 @@ tex.hedge = (function() {
 
 // Zombie skin texture (HQ 256x256)
 tex.zombieSkin=(function(){
-  var cv=document.createElement('canvas');cv.width=256;cv.height=256;
+  var cv=document.createElement('canvas');cv.width=512;cv.height=512;
   var ctx=cv.getContext('2d');
-  ctx.fillStyle='#5a7a4a';ctx.fillRect(0,0,256,256);
-  for(var i=0;i<3000;i++){var v=0.5+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(75*v)+','+Math.floor(105*v)+','+Math.floor(55*v)+',0.35)';ctx.fillRect(Math.random()*256,Math.random()*256,3+Math.random()*12,3+Math.random()*12);}
-  for(var i=0;i<1500;i++){var v=0.8+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(120*v)+','+Math.floor(150*v)+','+Math.floor(95*v)+',0.25)';ctx.fillRect(Math.random()*256,Math.random()*256,2+Math.random()*8,2+Math.random()*8);}
-  ctx.strokeStyle='rgba(35,55,25,0.3)';ctx.lineWidth=1.5;
-  for(var i=0;i<30;i++){ctx.beginPath();var sx=Math.random()*256,sy=Math.random()*256;ctx.moveTo(sx,sy);for(var j=0;j<5;j++){sx+=(Math.random()-0.5)*40;sy+=Math.random()*25;ctx.lineTo(sx,sy);}ctx.stroke();}
-  for(var i=0;i<20;i++){ctx.fillStyle='rgba(80,30,20,0.3)';ctx.beginPath();ctx.ellipse(Math.random()*256,Math.random()*256,4+Math.random()*8,3+Math.random()*6,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
-  for(var i=0;i<5000;i++){var v=0.6+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(50*v)+','+Math.floor(70*v)+','+Math.floor(35*v)+',0.15)';ctx.fillRect(Math.random()*256,Math.random()*256,1,1);}
+  ctx.fillStyle='#5a7a4a';ctx.fillRect(0,0,512,512);
+  for(var i=0;i<5000;i++){var v=0.5+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(75*v)+','+Math.floor(105*v)+','+Math.floor(55*v)+',0.35)';ctx.fillRect(Math.random()*512,Math.random()*512,3+Math.random()*16,3+Math.random()*16);}
+  for(var i=0;i<2500;i++){var v=0.8+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(120*v)+','+Math.floor(150*v)+','+Math.floor(95*v)+',0.25)';ctx.fillRect(Math.random()*512,Math.random()*512,2+Math.random()*12,2+Math.random()*12);}
+  ctx.strokeStyle='rgba(35,55,25,0.35)';ctx.lineWidth=2;
+  for(var i=0;i<40;i++){ctx.beginPath();var sx=Math.random()*512,sy=Math.random()*512;ctx.moveTo(sx,sy);for(var j=0;j<8;j++){sx+=(Math.random()-0.5)*60;sy+=Math.random()*35;ctx.lineTo(sx,sy);}ctx.stroke();}
+  for(var i=0;i<30;i++){ctx.fillStyle='rgba(80,30,20,0.4)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,5+Math.random()*12,4+Math.random()*8,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
+  for(var i=0;i<15;i++){ctx.fillStyle='rgba(100,20,15,0.5)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,3+Math.random()*6,2+Math.random()*4,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
+  for(var i=0;i<8000;i++){var v=0.6+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(50*v)+','+Math.floor(70*v)+','+Math.floor(35*v)+',0.15)';ctx.fillRect(Math.random()*512,Math.random()*512,1,1);}
   var t=new THREE.CanvasTexture(cv);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;
 })();
 // Zombie dark skin (HQ 256x256)
 tex.zombieDark=(function(){
-  var cv=document.createElement('canvas');cv.width=256;cv.height=256;
+  var cv=document.createElement('canvas');cv.width=512;cv.height=512;
   var ctx=cv.getContext('2d');
-  ctx.fillStyle='#3a5a2a';ctx.fillRect(0,0,256,256);
-  for(var i=0;i<2500;i++){var v=0.4+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(55*v)+','+Math.floor(80*v)+','+Math.floor(38*v)+',0.35)';ctx.fillRect(Math.random()*256,Math.random()*256,3+Math.random()*10,3+Math.random()*10);}
-  for(var i=0;i<1000;i++){var v=0.3+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(30*v)+','+Math.floor(50*v)+','+Math.floor(20*v)+',0.3)';ctx.fillRect(Math.random()*256,Math.random()*256,2+Math.random()*8,2+Math.random()*8);}
-  ctx.strokeStyle='rgba(25,40,15,0.35)';ctx.lineWidth=1;
-  for(var i=0;i<20;i++){ctx.beginPath();var sx=Math.random()*256,sy=Math.random()*256;ctx.moveTo(sx,sy);for(var j=0;j<4;j++){sx+=(Math.random()-0.5)*35;sy+=Math.random()*20;ctx.lineTo(sx,sy);}ctx.stroke();}
-  for(var i=0;i<15;i++){ctx.fillStyle='rgba(60,20,15,0.4)';ctx.beginPath();ctx.ellipse(Math.random()*256,Math.random()*256,3+Math.random()*7,2+Math.random()*5,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle='#3a5a2a';ctx.fillRect(0,0,512,512);
+  for(var i=0;i<4000;i++){var v=0.4+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(55*v)+','+Math.floor(80*v)+','+Math.floor(38*v)+',0.35)';ctx.fillRect(Math.random()*512,Math.random()*512,3+Math.random()*14,3+Math.random()*14);}
+  for(var i=0;i<1500;i++){var v=0.3+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(30*v)+','+Math.floor(50*v)+','+Math.floor(20*v)+',0.3)';ctx.fillRect(Math.random()*512,Math.random()*512,2+Math.random()*10,2+Math.random()*10);}
+  ctx.strokeStyle='rgba(25,40,15,0.4)';ctx.lineWidth=1.5;
+  for(var i=0;i<30;i++){ctx.beginPath();var sx=Math.random()*512,sy=Math.random()*512;ctx.moveTo(sx,sy);for(var j=0;j<6;j++){sx+=(Math.random()-0.5)*50;sy+=Math.random()*30;ctx.lineTo(sx,sy);}ctx.stroke();}
+  for(var i=0;i<20;i++){ctx.fillStyle='rgba(60,20,15,0.5)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,4+Math.random()*10,3+Math.random()*7,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
+  for(var i=0;i<10;i++){ctx.fillStyle='rgba(90,15,10,0.4)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,2+Math.random()*5,2+Math.random()*4,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
   var t=new THREE.CanvasTexture(cv);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;
 })();
 
@@ -1239,7 +1241,7 @@ function getGroundY(px, py, pz) {
   const r = PLAYER_RADIUS;
   const feetY = py - PLAYER_HEIGHT;
   let best = -999;
-  const STEP_UP = 0.4;
+  const STEP_UP = 0.55;
   for (let i = 0; i < colliders.length; i++) {
     const c = colliders[i];
     if (px + r > c.minX && px - r < c.maxX &&
@@ -1641,30 +1643,39 @@ loadTestMap(); // Load default map behind menu
 const gunGroup = new THREE.Group();
 
 // Gun procedural textures
-var _gBCv=document.createElement('canvas');_gBCv.width=256;_gBCv.height=256;
-var _gb=_gBCv.getContext('2d');_gb.fillStyle='#2c2c2c';_gb.fillRect(0,0,256,256);
-for(var _i=0;_i<3000;_i++){var _g=Math.floor(30+Math.random()*30);_gb.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_gb.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*3,1+Math.random()*2);}
+var _gBCv=document.createElement('canvas');_gBCv.width=512;_gBCv.height=512;
+var _gb=_gBCv.getContext('2d');_gb.fillStyle='#2c2c2c';_gb.fillRect(0,0,512,512);
+for(var _i=0;_i<6000;_i++){var _g=Math.floor(30+Math.random()*30);_gb.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_gb.fillRect(Math.random()*512,Math.random()*512,1+Math.random()*4,1+Math.random()*3);}
 _gb.strokeStyle='rgba(60,60,60,0.15)';_gb.lineWidth=1;
-for(var _i=0;_i<256;_i+=32){_gb.beginPath();_gb.moveTo(_i,0);_gb.lineTo(_i,256);_gb.stroke();}
-for(var _i=0;_i<256;_i+=32){_gb.beginPath();_gb.moveTo(0,_i);_gb.lineTo(256,_i);_gb.stroke();}
+for(var _i=0;_i<512;_i+=32){_gb.beginPath();_gb.moveTo(_i,0);_gb.lineTo(_i,512);_gb.stroke();}
+for(var _i=0;_i<512;_i+=32){_gb.beginPath();_gb.moveTo(0,_i);_gb.lineTo(512,_i);_gb.stroke();}
 _gb.strokeStyle='rgba(80,80,80,0.3)';_gb.lineWidth=0.5;
-for(var _i=0;_i<20;_i++){_gb.beginPath();_gb.moveTo(Math.random()*256,Math.random()*256);_gb.lineTo(Math.random()*256,Math.random()*256);_gb.stroke();}
+for(var _i=0;_i<40;_i++){_gb.beginPath();_gb.moveTo(Math.random()*512,Math.random()*512);_gb.lineTo(Math.random()*512,Math.random()*512);_gb.stroke();}
+_gb.strokeStyle='rgba(55,55,55,0.25)';_gb.lineWidth=2;
+for(var _i=0;_i<8;_i++){var _wx=Math.random()*512,_wy=Math.random()*512,_wr=5+Math.random()*20;_gb.beginPath();_gb.arc(_wx,_wy,_wr,0,Math.PI*2);_gb.stroke();}
 var _gBT=new THREE.CanvasTexture(_gBCv);
-var _gBrCv=document.createElement('canvas');_gBrCv.width=128;_gBrCv.height=128;
-var _br=_gBrCv.getContext('2d');_br.fillStyle='#1a1a1a';_br.fillRect(0,0,128,128);
-for(var _i=0;_i<2000;_i++){var _g=Math.floor(15+Math.random()*25);_br.fillStyle='rgba('+_g+','+_g+','+_g+',0.15)';_br.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*2,1+Math.random()*4);}
+var _gBrCv=document.createElement('canvas');_gBrCv.width=256;_gBrCv.height=256;
+var _br=_gBrCv.getContext('2d');_br.fillStyle='#1a1a1a';_br.fillRect(0,0,256,256);
+for(var _i=0;_i<3000;_i++){var _g=Math.floor(15+Math.random()*25);_br.fillStyle='rgba('+_g+','+_g+','+_g+',0.15)';_br.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*3,1+Math.random()*5);}
 _br.strokeStyle='rgba(40,40,40,0.2)';_br.lineWidth=0.5;
-for(var _i=0;_i<128;_i+=16){_br.beginPath();_br.moveTo(_i,0);_br.lineTo(_i,128);_br.stroke();}
+for(var _i=0;_i<256;_i+=16){_br.beginPath();_br.moveTo(_i,0);_br.lineTo(_i,256);_br.stroke();}
+for(var _i=0;_i<256;_i+=16){_br.beginPath();_br.moveTo(0,_i);_br.lineTo(256,_i);_br.stroke();}
+_br.strokeStyle='rgba(25,30,40,0.15)';_br.lineWidth=1;
+for(var _i=0;_i<15;_i++){_br.beginPath();_br.moveTo(Math.random()*256,Math.random()*256);_br.lineTo(Math.random()*256,Math.random()*256);_br.stroke();}
 var _gBrT=new THREE.CanvasTexture(_gBrCv);
-var _gGCv=document.createElement('canvas');_gGCv.width=128;_gGCv.height=128;
-var _gr=_gGCv.getContext('2d');_gr.fillStyle='#3d2b1f';_gr.fillRect(0,0,128,128);
-for(var _i=0;_i<2000;_i++){var _v=0.7+Math.random()*0.5;_gr.fillStyle='rgba('+Math.floor(61*_v)+','+Math.floor(43*_v)+','+Math.floor(31*_v)+',0.3)';_gr.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*3,Math.random()*6);}
+var _gGCv=document.createElement('canvas');_gGCv.width=256;_gGCv.height=256;
+var _gr=_gGCv.getContext('2d');_gr.fillStyle='#3d2b1f';_gr.fillRect(0,0,256,256);
+for(var _i=0;_i<3000;_i++){var _v=0.7+Math.random()*0.5;_gr.fillStyle='rgba('+Math.floor(61*_v)+','+Math.floor(43*_v)+','+Math.floor(31*_v)+',0.3)';_gr.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*4,Math.random()*8);}
 _gr.strokeStyle='rgba(25,18,12,0.4)';_gr.lineWidth=1.5;
-for(var _i=0;_i<128;_i+=6){_gr.beginPath();_gr.moveTo(0,_i+Math.random()*2);_gr.lineTo(128,_i+Math.random()*2);_gr.stroke();}
+for(var _i=0;_i<256;_i+=5){_gr.beginPath();_gr.moveTo(0,_i+Math.random()*3);_gr.lineTo(256,_i+Math.random()*3);_gr.stroke();}
+_gr.strokeStyle='rgba(40,28,18,0.3)';_gr.lineWidth=1;
+for(var _cx=8;_cx<256;_cx+=8){for(var _cy=8;_cy<256;_cy+=8){_gr.beginPath();_gr.moveTo(_cx,_cy);_gr.lineTo(_cx+4,_cy+4);_gr.stroke();_gr.beginPath();_gr.moveTo(_cx+4,_cy);_gr.lineTo(_cx,_cy+4);_gr.stroke();}}
 var _gGT=new THREE.CanvasTexture(_gGCv);
-var _gMCv=document.createElement('canvas');_gMCv.width=64;_gMCv.height=64;
-var _mg=_gMCv.getContext('2d');_mg.fillStyle='#333333';_mg.fillRect(0,0,64,64);
-for(var _i=0;_i<1000;_i++){var _g=Math.floor(35+Math.random()*30);_mg.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_mg.fillRect(Math.random()*64,Math.random()*64,1+Math.random()*2,1+Math.random()*2);}
+var _gMCv=document.createElement('canvas');_gMCv.width=128;_gMCv.height=128;
+var _mg=_gMCv.getContext('2d');_mg.fillStyle='#333333';_mg.fillRect(0,0,128,128);
+for(var _i=0;_i<2000;_i++){var _g=Math.floor(35+Math.random()*30);_mg.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_mg.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*3,1+Math.random()*3);}
+_mg.strokeStyle='rgba(65,65,65,0.25)';_mg.lineWidth=1;
+for(var _i=0;_i<128;_i+=24){_mg.beginPath();_mg.moveTo(_i,0);_mg.lineTo(_i,128);_mg.stroke();}
 var _gMT=new THREE.CanvasTexture(_gMCv);
 
 // Main body

@@ -1,0 +1,502 @@
+     1→<!DOCTYPE html>
+     2→<html lang="en">
+     3→<head>
+     4→<meta charset="UTF-8">
+     5→<meta name="viewport" content="width=device-width, initial-scale=1.0">
+     6→<title>FPS Game</title>
+     7→<style>
+     8→*{margin:0;padding:0;box-sizing:border-box}
+     9→body{overflow:hidden;background:#000;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#fff;user-select:none}
+    10→canvas{display:block}
+    11→
+    12→/* ===== MENU SYSTEM ===== */
+    13→.menu-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0e1a 0%,#1a1a2e 30%,#16213e 60%,#0f3460 100%)}
+    14→.menu-overlay::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.65)}
+    15→.menu-overlay.hidden{display:none}
+    16→.menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
+    17→#main-menu h1{font-size:52px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px;text-shadow:0 0 30px rgba(79,195,247,0.5);color:#4fc3f7}
+    18→#main-menu .subtitle{font-size:14px;color:#aaa;margin-bottom:40px;letter-spacing:3px}
+    19→
+    20→.menu-btn{display:block;width:280px;margin:12px auto;padding:14px 0;background:rgba(255,255,255,0.08);border:1px solid rgba(79,195,247,0.3);border-radius:8px;color:#fff;font-size:18px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s}
+    21→.menu-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
+    22→.menu-btn:active{transform:scale(0.98)}
+    23→.menu-btn.back-btn{font-size:14px;width:200px;margin-top:30px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.15)}
+    24→
+    25→/* Map Select */
+    26→#map-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+    27→.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:560px;margin:0 auto}
+    28→.map-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.3s;text-align:center;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    29→.map-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.1);transform:translateY(-3px)}
+    30→.map-card.locked{opacity:0.4;cursor:not-allowed;pointer-events:none}
+    31→.map-card .map-icon{font-size:36px;margin-bottom:10px}
+    32→.map-card .map-name{font-size:16px;font-weight:700;letter-spacing:1px}
+    33→.map-card .map-status{font-size:12px;color:#888;margin-top:6px;letter-spacing:1px}
+    34→.map-card.playable .map-status{color:#4fc3f7}
+    35→
+    36→/* Settings */
+    37→#settings-menu .menu-content{max-width:400px}
+    38→#settings-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+    39→.setting-group{margin:20px 0;text-align:left}
+    40→.setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
+    41→.setting-row{display:flex;align-items:center;gap:12px}
+    42→input[type=range]{-webkit-appearance:none;flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;outline:none}
+    43→input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#4fc3f7;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(79,195,247,0.5)}
+    44→.setting-value{font-size:14px;color:#4fc3f7;min-width:35px;text-align:right;font-weight:700}
+    45→.lang-btns{display:flex;gap:10px}
+    46→.lang-btn{flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s}
+    47→.lang-btn.active{background:rgba(79,195,247,0.2);border-color:#4fc3f7;color:#4fc3f7}
+    48→.lang-btn:hover{border-color:#4fc3f7}
+    49→
+    50→/* HUD */
+    51→#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none}
+    52→#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7)}
+    53→#crosshair::before{width:20px;height:2px;top:-1px;left:-10px}
+    54→#crosshair::after{width:2px;height:20px;top:-10px;left:-1px}
+    55→#debug{position:fixed;top:20px;left:20px;color:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:28px;font-weight:700;z-index:50;pointer-events:none;direction:ltr;text-align:left;text-shadow:0 0 10px rgba(0,0,0,0.9),0 0 20px rgba(0,0,0,0.7),2px 2px 4px rgba(0,0,0,0.8)}
+    56→
+    57→/* Muzzle flash */
+    58→#muzzle-flash{position:fixed;top:50%;left:50%;width:60px;height:60px;transform:translate(-50%,-30%);z-index:45;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(255,220,80,0.9),rgba(255,120,0,0.5),transparent 70%);border-radius:50%}
+    59→#muzzle-flash.fire{animation:flash 0.08s ease-out}
+    60→@keyframes flash{0%{opacity:1;transform:translate(-50%,-30%) scale(1)}100%{opacity:0;transform:translate(-50%,-30%) scale(1.5)}}
+    61→
+    62→/* Gun recoil handled in JS */
+    63→
+    64→/* Pause */
+    65→#pause-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(135deg,#0a0e1a 0%,#1a1a2e 30%,#16213e 60%,#0f3460 100%)}
+    66→#pause-overlay::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.7)}
+    67→#pause-overlay.hidden{display:none}
+    68→#pause-overlay .pause-content{position:relative;z-index:1;text-align:center}
+    69→#pause-overlay h2{font-size:46px;color:#4fc3f7;margin-bottom:8px;letter-spacing:5px;text-shadow:0 0 25px rgba(79,195,247,0.5)}
+    70→#pause-overlay .pause-sub{color:#888;font-size:14px;margin-bottom:30px;letter-spacing:2px}
+    71→.pause-btn{display:block;width:260px;margin:10px auto;padding:13px 0;background:rgba(255,255,255,0.08);border:2px solid rgba(79,195,247,0.3);border-radius:10px;color:#fff;font-size:17px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s;position:relative;overflow:hidden}
+    72→.pause-btn::before{content:'';position:absolute;inset:3px;border:1px solid rgba(255,255,255,0.06);border-radius:7px;pointer-events:none}
+    73→.pause-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
+    74→.pause-btn:active{transform:scale(0.97)}
+    75→.pause-btn.exit-btn{margin-top:20px;border-color:rgba(255,80,80,0.3);color:#ff8888}
+    76→.pause-btn.exit-btn:hover{background:rgba(255,80,80,0.2);border-color:#ff5555;box-shadow:0 0 20px rgba(255,80,80,0.3)}
+    77→
+    78→/* RTL for Persian */
+    79→[dir=rtl] .menu-content{direction:rtl}
+    80→[dir=rtl] .pause-content{direction:rtl}
+    81→[dir=rtl] .setting-group{text-align:right}
+    82→
+    83→/* Device Select */
+    84→#device-menu .device-cards{display:flex;gap:20px;justify-content:center;margin-top:20px}
+    85→#device-menu .device-card{width:160px;padding:30px 20px;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.1);border-radius:16px;cursor:pointer;transition:all 0.3s;text-align:center}
+    86→#device-menu .device-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.12);transform:translateY(-4px);box-shadow:0 8px 30px rgba(79,195,247,0.2)}
+    87→#device-menu .device-card .d-icon{font-size:48px;margin-bottom:12px}
+    88→#device-menu .device-card .d-label{font-size:18px;font-weight:700;letter-spacing:1px}
+    89→#device-menu .device-card .d-desc{font-size:11px;color:#888;margin-top:8px;letter-spacing:0.5px}
+    90→
+    91→/* Mobile Controls */
+    92→#mobile-controls{display:none;position:fixed;inset:0;z-index:100;pointer-events:none}
+    93→#look-zone{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto;touch-action:none;z-index:1}
+    94→#joystick-zone{position:absolute;left:0;bottom:0;width:45%;height:50%;pointer-events:auto;touch-action:none;z-index:2}
+    95→#joystick-base{position:absolute;left:30px;bottom:30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15)}
+    96→#joystick-stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,0.25);border:2px solid rgba(255,255,255,0.35);transition:none}
+    97→#mobile-btns{position:absolute;right:15px;bottom:20px;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:3}
+    98→.m-action{width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+    99→.m-action:active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4)}
+   100→#btn-fire-m{width:80px;height:80px;font-size:28px;background:rgba(255,60,60,0.15);border-color:rgba(255,60,60,0.4);color:#ff6666}
+   101→#btn-fire-m:active{background:rgba(255,60,60,0.35)}
+   102→#mobile-btns .btn-row{display:flex;gap:10px}
+   103→#btn-pause-m{position:absolute;top:15px;right:15px;pointer-events:auto;z-index:4;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.4);color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;line-height:1}
+   104→#btn-pause-m:active{background:rgba(255,255,255,0.15)}
+   105→#reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
+   106→/* Health Bar */
+   107→#health-bar-container{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:50;pointer-events:none;display:none;align-items:center;gap:8px}
+   108→#health-bar-bg{width:200px;height:14px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:7px;overflow:hidden}
+   109→#health-bar-fill{width:100%;height:100%;background:#2ecc71;transition:width 0.3s;border-radius:7px}
+   110→#health-text{color:#fff;font-size:16px;font-weight:700;text-shadow:0 0 8px rgba(0,0,0,0.8)}
+   111→/* Damage Flash */
+   112→#damage-flash{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(180,0,0,0.4));transition:opacity 0.15s}
+   113→#damage-flash.show{opacity:1}
+   114→/* Death Screen */
+   115→#death-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(60,0,0,0.88)}
+   116→#death-screen.hidden{display:none}
+   117→#death-screen h2{font-size:58px;color:#ff2222;margin-bottom:10px;letter-spacing:8px;text-shadow:0 0 40px rgba(255,0,0,0.6),0 0 80px rgba(255,0,0,0.3)}
+   118→#death-screen .death-sub{color:rgba(255,150,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
+   119→#death-screen .pause-btn{width:280px}
+   120→
+   121→/* Victory Screen */
+   122→#victory-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,40,0,0.88)}
+   123→#victory-screen.hidden{display:none}
+   124→#victory-screen h2{font-size:58px;color:#2ecc71;margin-bottom:10px;letter-spacing:8px;text-shadow:0 0 40px rgba(46,204,113,0.6),0 0 80px rgba(46,204,113,0.3)}
+   125→#victory-screen .victory-sub{color:rgba(150,255,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
+   126→#victory-screen .pause-btn{width:280px}
+   127→/* Medkit Notify */
+   128→#medkit-notify{position:fixed;top:55px;left:50%;transform:translateX(-50%);z-index:55;pointer-events:none;color:#2ecc71;font-size:20px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(46,204,113,0.6);opacity:0;transition:opacity 0.3s}
+   129→#medkit-notify.show{opacity:1}
+   130→</style>
+   131→</head>
+   132→<body>
+   133→
+   134→<!-- DEVICE SELECT -->
+   135→<div id="device-menu" class="menu-overlay">
+   136→<div class="menu-content">
+   137→<h2 data-en="CHOOSE DEVICE" data-fa="انتخاب دستگاه">CHOOSE DEVICE</h2>
+   138→<p class="subtitle" data-en="SELECT YOUR PLATFORM" data-fa="پلتفرم خود را انتخاب کنید">SELECT YOUR PLATFORM</p>
+   139→<div class="device-cards">
+   140→<div class="device-card" onclick="selectDevice('pc')">
+   141→<div class="d-icon">⭐</div>
+   142→<div class="d-label" data-en="PC" data-fa="کامپیوتر">PC</div>
+   143→<div class="d-desc" data-en="Mouse + Keyboard" data-fa="ماوس و کیبورد">Mouse + Keyboard</div>
+   144→</div>
+   145→<div class="device-card" onclick="selectDevice('mobile')">
+   146→<div class="d-icon">📱</div>
+   147→<div class="d-label" data-en="MOBILE" data-fa="موبایل">MOBILE</div>
+   148→<div class="d-desc" data-en="Touch Controls" data-fa="کنترل لمسی">Touch Controls</div>
+   149→</div>
+   150→</div>
+   151→</div>
+   152→</div>
+   153→
+   154→<!-- MAIN MENU -->
+   155→<div id="main-menu" class="menu-overlay hidden">
+   156→<div class="menu-content">
+   157→<h1 id="t_title" data-en="FPS GAME" data-fa="بازی شوتر">FPS GAME</h1>
+   158→<p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
+   159→<button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
+   160→<button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
+   161→<button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+   162→</div>
+   163→</div>
+   164→
+   165→<!-- MAP SELECT -->
+   166→<div id="map-menu" class="menu-overlay hidden">
+   167→<div class="menu-content">
+   168→<h2 data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</h2>
+   169→<div class="map-grid">
+   170→<div class="map-card playable" onclick="selectMap(0)"><div class="map-icon">🏗️</div>
+   171→<div class="map-name">Test Map</div>
+   172→<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
+   173→</div>
+   174→<div class="map-card playable" onclick="selectMap(1)">
+   175→<div class="map-icon">📜</div>
+   176→<div class="map-name" data-en="Vertigo" data-fa="ورتیگو">Vertigo</div>
+   177→<div class="map-status" data-en="CONSTRUCTION SITE" data-fa="ساحت خرابی">CONSTRUCTION SITE</div>
+   178→</div>
+   179→<div class="map-card playable" onclick="selectMap(2)">
+   180→<div class="map-icon">🏜️</div>
+   181→<div class="map-name" data-en="Dust 2" data-fa="داست دو">Dust 2</div>
+   182→<div class="map-status" data-en="DESERT CLASSIC" data-fa="کلاسیک بیابانی">DESERT CLASSIC</div>
+   183→</div>
+   184→<div class="map-card playable" onclick="selectMap(3)">
+   185→<div class="map-icon">💥</div>
+   186→<div class="map-name" data-en="Shoot House" data-fa="شوت هاوس">Shoot House</div>
+   187→<div class="map-status" data-en="CLOSE QUARTERS" data-fa="نبرد نزدیک">CLOSE QUARTERS</div>
+   188→</div>
+   189→</div>
+   190→<button class="menu-btn back-btn" onclick="backFromMapMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
+   191→</div>
+   192→</div>
+   193→
+   194→<!-- SETTINGS -->
+   195→<div id="settings-menu" class="menu-overlay hidden">
+   196→<div class="menu-content">
+   197→<h2 data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</h2>
+   198→<div class="setting-group">
+   199→<div class="setting-label" data-en="MOUSE SENSITIVITY" data-fa="حساسیت ماوس">MOUSE SENSITIVITY</div>
+   200→<div class="setting-row">
+   201→<input type="range" id="sens-slider" min="1" max="20" value="4" oninput="updateSens(this.value)">
+   202→<span class="setting-value" id="sens-val">0.004</span>
+   203→</div>
+   204→</div>
+   205→<div class="setting-group">
+   206→<div class="setting-label" data-en="MASTER VOLUME" data-fa="صدای کلی">MASTER VOLUME</div>
+   207→<div class="setting-row">
+   208→<input type="range" id="vol-slider" min="0" max="100" value="70" oninput="updateVol(this.value)">
+   209→<span class="setting-value" id="vol-val">70%</span>
+   210→</div>
+   211→</div>
+   212→<div class="setting-group">
+   213→<div class="setting-label" data-en="LANGUAGE / زبان" data-fa="LANGUAGE / زبان">LANGUAGE / زبان</div>
+   214→<div class="lang-btns">
+   215→<button class="lang-btn active" id="lang-en" onclick="setLang('en')">English</button>
+   216→<button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
+   217→</div>
+   218→</div>
+   219→<div class="setting-group">
+   220→<div class="setting-label" data-en="DEVICE / دستگاه" data-fa="DEVICE / دستگاه">DEVICE / دستگاه</div>
+   221→<div class="lang-btns">
+   222→<button class="lang-btn" id="dev-pc" onclick="changeDevice('pc')" data-en="PC" data-fa="کامپیوتر">PC</button>
+   223→<button class="lang-btn" id="dev-mobile" onclick="changeDevice('mobile')" data-en="MOBILE" data-fa="موبایل">MOBILE</button>
+   224→</div>
+   225→</div>
+   226→<div class="setting-group">
+   227→<div class="setting-label" data-en="DIFFICULTY / سختی" data-fa="DIFFICULTY / سختی">DIFFICULTY / سختی</div>
+   228→<div class="lang-btns" style="flex-wrap:wrap">
+   229→<button class="lang-btn" id="diff-0" onclick="setDifficulty(0)" data-en="EASY" data-fa="آسون">EASY</button>
+   230→<button class="lang-btn active" id="diff-1" onclick="setDifficulty(1)" data-en="MEDIUM" data-fa="متوسط">MEDIUM</button>
+   231→<button class="lang-btn" id="diff-2" onclick="setDifficulty(2)" data-en="HARD" data-fa="سخت">HARD</button>
+   232→<button class="lang-btn" id="diff-3" onclick="setDifficulty(3)" data-en="IMPOSSIBLE" data-fa="غیر ممکن">IMPOSSIBLE</button>
+   233→</div>
+   234→</div>
+   235→<button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
+   236→</div>
+   237→</div>
+   238→<!-- PAUSE -->
+   239→<div id="pause-overlay" class="hidden">
+   240→<div class="pause-content">
+   241→<h2 data-en="PAUSED" data-fa="توقف">PAUSED</h2>
+   242→<p class="pause-sub" data-en="GAME PAUSED" data-fa="بازی متوقف شد">GAME PAUSED</p>
+   243→<button class="pause-btn" onclick="resumeGame()" data-en="RESUME" data-fa="ادامه بازی">RESUME</button>
+   244→<button class="pause-btn" onclick="openSettingsFromPause()" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+   245→<button class="pause-btn" onclick="changeMapFromPause()" data-en="CHANGE MAP" data-fa="تغییر نقشه">CHANGE MAP</button>
+   246→<button class="pause-btn exit-btn" onclick="exitToMenu()" data-en="EXIT TO MENU" data-fa="خروج به منو">EXIT TO MENU</button>
+   247→</div>
+   248→</div>
+   249→
+   250→<!-- DEATH SCREEN -->
+   251→<div id="death-screen" class="hidden">
+   252→<div style="position:relative;z-index:1;text-align:center">
+   253→<h2 data-en="YOU DIED" data-fa="تو مردی">YOU DIED</h2>
+   254→<p class="death-sub" data-en="GAME OVER" data-fa="بازی تمام شد">GAME OVER</p>
+   255→<button class="pause-btn" onclick="restartGame()" data-en="PLAY AGAIN" data-fa="بازی دوباره">PLAY AGAIN</button>
+   256→<button class="pause-btn exit-btn" onclick="backToMenuFromDeath()" data-en="MAIN MENU" data-fa="منوی اصلی">MAIN MENU</button>
+   257→</div>
+   258→</div>
+   259→
+   260→
+   261→<!-- VICTORY SCREEN -->
+   262→<div id="victory-screen" class="hidden">
+   263→<div style="position:relative;z-index:1;text-align:center">
+   264→<h2 data-en="YOU WON!" data-fa="&#x062A;&#x0648; &#x0628;&#x0631;&#x062F;&#x06CC;!">YOU WON!</h2>
+   265→<p class="victory-sub" data-en="ALL ENEMIES ELIMINATED" data-fa="&#x0647;&#x0645;&#x0647; &#x062F;&#x0634;&#x0645;&#x0646;&#x0627;&#x0646; &#x0646;&#x0627;&#x0628;&#x0648;&#x062F; &#x0634;&#x062F;&#x0646;&#x062F;">ALL ENEMIES ELIMINATED</p>
+   266→<button class="pause-btn" onclick="restartGame()" data-en="PLAY AGAIN" data-fa="&#x0628;&#x0627;&#x0632;&#x06CC; &#x062F;&#x0648;&#x0628;&#x0627;&#x0631;&#x0647;">PLAY AGAIN</button>
+   267→<button class="pause-btn exit-btn" onclick="backToMenuFromVictory()" data-en="MAIN MENU" data-fa="&#x0645;&#x0646;&#x0648;&#x06CC; &#x0627;&#x0635;&#x0644;&#x06CC;">MAIN MENU</button>
+   268→</div>
+   269→</div>
+   270→
+   271→<!-- MEDKIT NOTIFICATION -->
+   272→<div id="medkit-notify" data-en="+10 HEALTH" data-fa="+10 &#x0633;&#x0644;&#x0627;&#x0645;&#x062A;&#x06CC;">+10 HEALTH</div>
+   273→
+   274→<!-- GAME HUD -->
+   275→<div id="crosshair" style="display:none"></div>
+   276→<div id="muzzle-flash"></div>
+   277→<div id="reload-hud" data-en="RELOADING..." data-fa="در حال شارژ...">RELOADING...</div>
+   278→<div id="health-bar-container">
+   279→<div id="health-bar-bg"><div id="health-bar-fill"></div></div>
+   280→<span id="health-text">100</span>
+   281→</div>
+   282→<div id="damage-flash"></div>
+   283→<div id="debug" style="display:none"></div>
+   284→
+   285→<!-- MOBILE CONTROLS -->
+   286→<div id="mobile-controls">
+   287→<div id="look-zone"></div>
+   288→<div id="joystick-zone">
+   289→<div id="joystick-base"><div id="joystick-stick"></div></div>
+   290→</div>
+   291→<button id="btn-pause-m" data-en="❚❚" data-fa="❚❚">❚❚</button>
+   292→<div id="mobile-btns">
+   293→<div class="btn-row">
+   294→<button class="m-action" id="btn-jump-m" data-en="JUMP" data-fa="پرش">JUMP</button>
+   295→<button class="m-action" id="btn-reload-m" data-en="R" data-fa="R">R</button>
+   296→</div>
+   297→<button class="m-action" id="btn-fire-m">FIRE</button>
+   298→</div>
+   299→</div>
+   300→
+   301→<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+   302→<script>
+   303→// ===== CONFIG =====
+   304→let MOUSE_SENS = 0.004;
+   305→let masterVolume = 0.7;
+   306→const MOVE_SPEED = 8;
+   307→const PLAYER_HEIGHT = 1.7;
+   308→const PLAYER_RADIUS = 0.35;
+   309→const GRAVITY = 20;
+   310→const JUMP_FORCE = 8;
+   311→let isLocked = false;
+   312→let gameStarted = false;
+   313→let yaw = 0, pitch = 0;
+   314→let velocityY = 0;
+   315→const keys = {w:false,a:false,s:false,d:false,space:false};
+   316→let isMoving = false;
+   317→let footstepTimer = 0;
+   318→const FOOTSTEP_INTERVAL = 0.45;
+   319→let canShoot = true;
+   320→let ammo = 30;
+   321→let maxAmmo = 30;
+   322→let recoilAmount = 0;
+   323→let isReloading = false;
+   324→let reloadAnimTime = 0;
+   325→let isMobileDevice = false;
+   326→let deviceChosen = false;
+   327→
+   328→// ===== ENEMY & HEALTH =====
+   329→let playerHealth = 100;
+   330→const MAX_HEALTH = 100;
+   331→let difficulty = 1;
+   332→const DIFFICULTY_COUNTS = [1, 5, 10, 20];
+   333→const ENEMY_MAX_HP = 5;
+   334→const ENEMY_DMG = 10;
+   335→const ENEMY_SPEED = 3;
+   336→const ENEMY_ATK_RANGE = 1.8;
+   337→const ENEMY_ATK_CD = 1.0;
+   338→const enemies = [];
+   339→let killCount = 0;
+   340→const medkits = [];
+   341→const MEDKIT_HEAL = 10;
+   342→
+   343→// ===== AUDIO SYSTEM (Web Audio API) =====
+   344→let audioCtx = null;
+   345→let gunAudioCtx = null;
+   346→
+   347→function ensureAudio() {
+   348→  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+   349→}
+   350→
+   351→function playFootstep() {
+   352→  ensureAudio();
+   353→  const vol = masterVolume * 0.3;
+   354→  if (vol <= 0) return;
+   355→  // Create short noise burst for footstep
+   356→  const bufferSize = audioCtx.sampleRate * 0.08;
+   357→  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+   358→  const data = buffer.getChannelData(0);
+   359→  for (let i = 0; i < bufferSize; i++) {
+   360→    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+   361→  }
+   362→  const src = audioCtx.createBufferSource();
+   363→  src.buffer = buffer;
+   364→  const filter = audioCtx.createBiquadFilter();
+   365→  filter.type = 'lowpass';
+   366→  filter.frequency.value = 800;
+   367→  const gain = audioCtx.createGain();
+   368→  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+   369→  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+   370→  src.connect(filter).connect(gain).connect(audioCtx.destination);
+   371→  src.start();
+   372→}
+   373→
+   374→function playGunshot() {
+   375→  ensureAudio();
+   376→  const vol = masterVolume * 0.6;
+   377→  if (vol <= 0) return;
+   378→  const dur = 0.15;
+   379→  const bufferSize = audioCtx.sampleRate * dur;
+   380→  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+   381→  const data = buffer.getChannelData(0);
+   382→  for (let i = 0; i < bufferSize; i++) {
+   383→    const t = i / audioCtx.sampleRate;
+   384→    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 30) * 1.5;
+   385→  }
+   386→  const src = audioCtx.createBufferSource();
+   387→  src.buffer = buffer;
+   388→  // Low thump
+   389→  const osc = audioCtx.createOscillator();
+   390→  osc.type = 'sine';
+   391→  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+   392→  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+   393→  const oscGain = audioCtx.createGain();
+   394→  oscGain.gain.setValueAtTime(vol * 0.8, audioCtx.currentTime);
+   395→  oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+   396→  // Noise part
+   397→  const noiseGain = audioCtx.createGain();
+   398→  noiseGain.gain.setValueAtTime(vol, audioCtx.currentTime);
+   399→  noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+   400→  const filter = audioCtx.createBiquadFilter();
+   401→  filter.type = 'bandpass';
+   402→  filter.frequency.value = 1000;
+   403→  filter.Q.value = 0.5;
+   404→  src.connect(filter).connect(noiseGain).connect(audioCtx.destination);
+   405→  osc.connect(oscGain).connect(audioCtx.destination);
+   406→  src.start();
+   407→  osc.start();
+   408→  osc.stop(audioCtx.currentTime + 0.1);
+   409→}
+   410→
+   411→function playReloadSound() {
+   412→  ensureAudio();
+   413→  const vol = masterVolume * 0.4;
+   414→  if (vol <= 0) return;
+   415→  // Click sound
+   416→  var buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+   417→  var d = buf.getChannelData(0);
+   418→  for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.1));
+   419→  var s = audioCtx.createBufferSource(); s.buffer = buf;
+   420→  var g = audioCtx.createGain(); g.gain.setValueAtTime(vol, audioCtx.currentTime);
+   421→  var f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 2;
+   422→  s.connect(f).connect(g).connect(audioCtx.destination); s.start();
+   423→  // Magazine slide sound after delay
+   424→  setTimeout(function() {
+   425→    var buf2 = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+   426→    var d2 = buf2.getChannelData(0);
+   427→    for (var i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d2.length * 0.15)) * 0.6;
+   428→    var s2 = audioCtx.createBufferSource(); s2.buffer = buf2;
+   429→    var g2 = audioCtx.createGain(); g2.gain.setValueAtTime(vol * 0.7, audioCtx.currentTime);
+   430→    var f2 = audioCtx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1500; f2.Q.value = 1;
+   431→    s2.connect(f2).connect(g2).connect(audioCtx.destination); s2.start();
+   432→  }, 300);
+   433→}
+   434→
+   435→function startReload() {
+   436→  if (isReloading || ammo === maxAmmo) return;
+   437→  isReloading = true;
+   438→  canShoot = false;
+   439→  reloadAnimTime = 1800;
+   440→  playReloadSound();
+   441→  document.getElementById('reload-hud').style.display = 'block';
+   442→  setTimeout(function() {
+   443→    ammo = maxAmmo;
+   444→    isReloading = false;
+   445→    canShoot = true;
+   446→    document.getElementById('reload-hud').style.display = 'none';
+   447→  }, 1800);
+   448→}
+   449→
+   450→// ===== DEVICE SELECT & MOBILE =====
+   451→function selectDevice(dev) {
+   452→  isMobileDevice = (dev === 'mobile');
+   453→  deviceChosen = true;
+   454→  if (isMobileDevice) {
+   455→    try { document.documentElement.requestFullscreen(); } catch(e) {}
+   456→  }
+   457→  showMenu('main-menu');
+   458→  // Apply current language to new elements
+   459→  setLang(currentLang);
+   460→}
+   461→
+   462→function updateDeviceButtons() {
+   463→  document.getElementById('dev-pc').classList.toggle('active', !isMobileDevice);
+   464→  document.getElementById('dev-mobile').classList.toggle('active', isMobileDevice);
+   465→}
+   466→
+   467→function changeDevice(dev) {
+   468→  isMobileDevice = (dev === 'mobile');
+   469→  deviceChosen = true;
+   470→  updateDeviceButtons();
+   471→  if (isMobileDevice) {
+   472→    try { document.documentElement.requestFullscreen(); } catch(e) {}
+   473→  }
+   474→  // If switching to mobile and game is running, show mobile controls
+   475→  if (isMobileDevice && gameStarted) {
+   476→    document.getElementById('mobile-controls').style.display = 'block';
+   477→    if (!joyStick) initJoystick();
+   478→    // Exit pointer lock if active
+   479→    if (document.pointerLockElement) document.exitPointerLock();
+   480→  }
+   481→  // If switching to PC and game is running, hide mobile controls
+   482→  if (!isMobileDevice && gameStarted) {
+   483→    document.getElementById('mobile-controls').style.display = 'none';
+   484→  }
+   485→}
+   486→
+   487→// Joystick state
+   488→var joyTouchId = null, joyBaseX = 0, joyBaseY = 0;
+   489→var joyInputX = 0, joyInputY = 0; // -1 to 1
+   490→var JOY_RADIUS = 45;
+   491→var joyStick = null, joyBase = null;
+   492→
+   493→function initJoystick() {
+   494→  joyStick = document.getElementById('joystick-stick');
+   495→  joyBase = document.getElementById('joystick-base');
+   496→  var zone = document.getElementById('joystick-zone');
+   497→  zone.addEventListener('touchstart', function(e) {
+   498→    e.preventDefault();
+   499→    var t = e.changedTouches[0];
+   500→    joyTouchId = t.identifier;
+
+[showing lines 1-500 of 2063; use offset=501 with limit to continue reading]
