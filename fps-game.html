@@ -127,6 +127,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 /* Medkit Notify */
 #medkit-notify{position:fixed;top:55px;left:50%;transform:translateX(-50%);z-index:55;pointer-events:none;color:#2ecc71;font-size:20px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(46,204,113,0.6);opacity:0;transition:opacity 0.3s}
 #medkit-notify.show{opacity:1}
+/* Minimap */
+#minimap-container{position:fixed;top:12px;right:12px;z-index:60;pointer-events:none;display:none}
+#minimap-canvas{border:2px solid rgba(79,195,247,0.6);border-radius:8px;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(79,195,247,0.05)}
+#minimap-label{position:absolute;top:-18px;right:0;font-size:10px;color:rgba(79,195,247,0.7);letter-spacing:1px;font-weight:600}
 </style>
 </head>
 <body>
@@ -281,6 +285,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 <div id="damage-flash"></div>
 <div id="debug" style="display:none"></div>
+<div id="minimap-container"><div id="minimap-label">MINIMAP</div><canvas id="minimap-canvas" width="170" height="170"></canvas></div>
 
 <!-- MOBILE CONTROLS -->
 <div id="mobile-controls">
@@ -324,6 +329,103 @@ let isReloading = false;
 let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
+
+// ===== MINIMAP SYSTEM =====
+var minimapEl = null;
+var minimapCtx = null;
+var MINIMAP_SIZE = 170;
+var MINIMAP_RANGE = 40; // world units visible in minimap
+
+function initMinimap() {
+  minimapEl = document.getElementById('minimap-canvas');
+  minimapCtx = minimapEl.getContext('2d');
+  MINIMAP_SIZE = minimapEl.width;
+}
+initMinimap();
+
+function worldToMinimap(wx, wz) {
+  var px = player.position.x;
+  var pz = player.position.z;
+  var dx = wx - px;
+  var dz = wz - pz;
+  // Rotate by player yaw so minimap is oriented with player facing up
+  var cos = Math.cos(-yaw);
+  var sin = Math.sin(-yaw);
+  var rx = dx * cos - dz * sin;
+  var rz = dx * sin + dz * cos;
+  var scale = MINIMAP_SIZE / (MINIMAP_RANGE * 2);
+  var sx = MINIMAP_SIZE / 2 + rx * scale;
+  var sy = MINIMAP_SIZE / 2 + rz * scale;
+  return {x: sx, y: sy};
+}
+
+function drawMinimap() {
+  if (!minimapCtx || !gameStarted) return;
+  var ctx = minimapCtx;
+  var S = MINIMAP_SIZE;
+  ctx.clearRect(0, 0, S, S);
+  
+  // Background grid
+  ctx.strokeStyle = 'rgba(79,195,247,0.12)';
+  ctx.lineWidth = 0.5;
+  var step = S / 8;
+  for (var i = 1; i < 8; i++) {
+    ctx.beginPath(); ctx.moveTo(i*step, 0); ctx.lineTo(i*step, S); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*step); ctx.lineTo(S, i*step); ctx.stroke();
+  }
+  
+  // Draw colliders (walls) on minimap as small rectangles
+  var scale = S / (MINIMAP_RANGE * 2);
+  ctx.fillStyle = 'rgba(100,130,170,0.35)';
+  for (var i = 0; i < colliders.length; i++) {
+    var c = colliders[i];
+    // Only draw substantial walls (height > 1)
+    if (c.maxY - c.minY < 1.0) continue;
+    // Center of collider in world
+    var cx = (c.minX + c.maxX) / 2;
+    var cz = (c.minZ + c.maxZ) / 2;
+    var p = worldToMinimap(cx, cz);
+    if (p.x < -20 || p.x > S+20 || p.y < -20 || p.y > S+20) continue;
+    var cw = (c.maxX - c.minX) * scale;
+    var cd = (c.maxZ - c.minZ) * scale;
+    ctx.fillRect(p.x - cw/2, p.y - cd/2, Math.max(cw,1.5), Math.max(cd,1.5));
+  }
+  
+  // Draw zombies with 🧟
+  ctx.font = '14px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    var ep = worldToMinimap(e.group.position.x, e.group.position.z);
+    if (ep.x < -10 || ep.x > S+10 || ep.y < -10 || ep.y > S+10) continue;
+    // Red glow behind zombie
+    ctx.fillStyle = 'rgba(255,50,50,0.4)';
+    ctx.beginPath(); ctx.arc(ep.x, ep.y, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillText('\u{1F9DF}', ep.x, ep.y);
+  }
+  
+  // Draw player with 👮 at center
+  var center = S / 2;
+  // Player direction indicator
+  ctx.strokeStyle = 'rgba(79,195,247,0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(center, center);
+  ctx.lineTo(center, center - 18);
+  ctx.stroke();
+  // Player glow
+  ctx.fillStyle = 'rgba(79,195,247,0.3)';
+  ctx.beginPath(); ctx.arc(center, center, 10, 0, Math.PI*2); ctx.fill();
+  // Player emoji
+  ctx.font = '16px serif';
+  ctx.fillText('\u{1F46E}', center, center);
+  
+  // Range circle
+  ctx.strokeStyle = 'rgba(79,195,247,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(center, center, S/2 - 4, 0, Math.PI*2); ctx.stroke();
+}
 
 // ===== ENEMY & HEALTH =====
 let playerHealth = 100;
@@ -683,7 +785,7 @@ function clearBulletHoles() {
 // ===== ENEMY SYSTEM =====
 const mapSpawnZones = [
   [{x1:-18,z1:-18,x2:18,z2:18}],
-  [{x1:-5,z1:-35,x2:5,z2:-25},{x1:-13,z1:-12,x2:13,z2:0},{x1:-1,z1:1,x2:3,z2:7},{x1:-4,z1:8,x2:7,z2:16},{x1:-10,z1:22,x2:10,z2:34}],
+  [{x1:-22,z1:-26,x2:-10,z2:-14},{x1:-4,z1:-22,x2:14,z2:-4},{x1:-5,z1:-2,x2:5,z2:6},{x1:-2,z1:8,x2:14,z2:24},{x1:-5,z1:11,x2:5,z2:18}],
   [{x1:-14,z1:-3,x2:3,z2:8},{x1:-9,z1:8,x2:0,z2:28},{x1:5,z1:1,x2:12,z2:16},{x1:10,z1:16,x2:26,z2:28},{x1:1,z1:-2,x2:14,z2:6}],
   [{x1:-15,z1:-20,x2:15,z2:20}]
 ];
@@ -900,6 +1002,7 @@ function playerDie() {
   document.getElementById('debug').style.display = 'none';
   document.getElementById('health-bar-container').style.display = 'none';
   document.getElementById('reload-hud').style.display = 'none';
+  document.getElementById('minimap-container').style.display = 'none';
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -910,6 +1013,7 @@ function playerWin() {
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('debug').style.display = 'none';
   document.getElementById('reload-hud').style.display = 'none';
+  document.getElementById('minimap-container').style.display = 'none';
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -1124,145 +1228,171 @@ function loadTestMap() {
 }
 
 // ----- VERTIGO (CS:GO) -----
-// Under-construction skyscraper: T Spawn (top) -> A Ramp -> A Site (upper)
-// CT Spawn (mid) -> B Stairs -> B Site (lower), elevator shaft between
+// Multi-level construction site skyscraper based on CS:GO Vertigo
+// T Spawn (lower) -> A Main -> A Site (lower floor)
+// Connector/Mid -> B Ramps -> B Site (upper floor)
+// CT Spawn (highest level) overlooking B Site
 function loadVertigoMap() {
   scene.background = new THREE.Color(0x8faabe);
   scene.fog = new THREE.Fog(0x8faabe, 40, 140);
   setGround(tex.metalFloor, 0x333344, 0x444455);
-  var METAL=tex.metalWall, DARK=tex.darkMetal, CONCRETE=tex.concrete, YELLOW=0xddbb33, CRATE=tex.crate, RUST=0x885533, BLUE_STEEL=0x6688aa;
+  var METAL=tex.metalWall, DARK=tex.darkMetal, CONCRETE=tex.concrete, YELLOW=0xddbb33, CRATE=tex.crate, RUST=0x885533, BLUE_STEEL=0x6688aa, CAUTION=0xff8800;
 
-  // ====== T SPAWN (top level) ======
-  addWall(0, -0.1, -30, 12, 0.3, 12, tex.metalFloor);
-  addWall(0, 2, -36, 12, 4.5, 0.5, CONCRETE);
-  addWall(-6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
-  addWall(6.25, 2, -30, 0.5, 4.5, 12, CONCRETE);
-  addWall(-3.5, 2, -24, 5, 4.5, 0.5, CONCRETE);
-  addBox(3, 0.5, -34, 1, 1, 1, CRATE);
-  addBox(-2, 0.5, -28, 1.2, 1, 1.2, CRATE);
+  // ====== T SPAWN (lower level, west side) ======
+  addWall(-16, -0.1, -20, 14, 0.3, 14, tex.metalFloor);
+  addWall(-16, 2.5, -27.5, 14, 5, 0.5, CONCRETE);
+  addWall(-9.25, 2.5, -20, 0.5, 5, 14, CONCRETE);
+  addWall(-22.75, 2.5, -20, 0.5, 5, 14, CONCRETE);
+  addWall(-16, 2.5, -13, 10, 5, 0.5, CONCRETE);
+  addBox(-13, 0.5, -22, 1.2, 1, 1.2, CRATE);
+  addBox(-19, 0.5, -18, 1, 1, 1, CRATE);
+  addBox(-20, 0.5, -24, 1.5, 1, 1.5, CRATE);
+  addWall(-16, 0.1, -13.2, 12, 0.08, 0.08, YELLOW);
 
-  // ====== A RAMP (sloping down from T to A site) ======
-  addRamp(3, 0.5, -18, 4, 0.2, 12, 0, 0.22, METAL);
-  addWall(6, 2, -18, 0.3, 4, 12, DARK);
-  addWall(0, 2, -18, 0.3, 4, 12, DARK);
-  addWall(3, 1.5, -22, 6, 0.15, 0.15, DARK);
-  addWall(3, 2.5, -22, 6, 0.15, 0.15, DARK);
-  addWall(3, 1.5, -15, 6, 0.15, 0.15, DARK);
-  addWall(3, 2.5, -15, 6, 0.15, 0.15, DARK);
-  addCyl(1, 2, -22, 0.12, 4, METAL, 0.2);
-  addCyl(5, 2, -22, 0.12, 4, METAL, 0.2);
-  addCyl(1, 2, -14, 0.12, 4, METAL, 0.2);
-  addCyl(5, 2, -14, 0.12, 4, METAL, 0.2);
+  // ====== A MAIN (long corridor from T Spawn to A Site) ======
+  addWall(-5, -0.1, -18, 8, 0.3, 10, tex.metalFloor);
+  addWall(-9.5, 2, -18, 0.5, 4.5, 10, CONCRETE);
+  addWall(-0.5, 2, -18, 0.5, 4.5, 10, CONCRETE);
+  addCyl(-8, 2, -22, 0.12, 4.5, METAL, 0.2);
+  addCyl(-2, 2, -22, 0.12, 4.5, METAL, 0.2);
+  addCyl(-8, 2, -14, 0.12, 4.5, METAL, 0.2);
+  addCyl(-2, 2, -14, 0.12, 4.5, METAL, 0.2);
+  addWall(-5, 4, -18, 6, 0.12, 10, DARK);
+  addBox(-6, 0.5, -20, 1, 1, 1, CRATE);
+  addBox(-3, 0.5, -16, 1.2, 1, 1.2, CRATE);
 
-  // ====== A SITE (upper platform) ======
-  addWall(0, -0.1, -6, 28, 0.3, 14, tex.metalFloor);
-  addWall(0, 2.5, -13, 28, 5, 0.5, CONCRETE);
-  addWall(-14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
-  addWall(14.25, 2.5, -6, 0.5, 5, 14, CONCRETE);
-  addWall(-7, 2.5, 1, 5, 5, 0.5, CONCRETE);
-  addWall(5, 2.5, 1, 12, 5, 0.5, CONCRETE);
-  // A plant area
-  addWall(-5, 0.1, -5, 6, 0.15, 6, YELLOW);
-  // Construction materials
-  addBox(-8, 0.75, -4, 1.5, 1.5, 1.5, CRATE);
-  addBox(-6.5, 0.75, -4, 1.5, 1.5, 1.5, CRATE);
-  addBox(-7.25, 2.15, -4, 1.2, 1, 1.2, CRATE);
-  addBox(8, 0.5, -3, 2, 1, 3, CRATE);
-  addBox(9.5, 0.5, -3, 1, 1, 1, CRATE);
-  addBox(9, 1.4, -3, 0.8, 0.8, 0.8, CRATE);
-  addBox(-3, 0.5, -9, 1.2, 1, 1.2, CRATE);
-  addBox(10, 0.75, -8, 1.5, 1.5, 1.5, CRATE);
-  addBox(3, 0.5, -10, 1, 1, 2, CRATE);
-  // Scaffolding
-  addCyl(-11, 2.5, -3, 0.15, 5, METAL, 0.2);
-  addCyl(-11, 2.5, -9, 0.15, 5, METAL, 0.2);
-  addCyl(11, 2.5, -3, 0.15, 5, METAL, 0.2);
-  addCyl(11, 2.5, -9, 0.15, 5, METAL, 0.2);
-  addWall(-11, 4.5, -6, 0.15, 0.15, 6, DARK);
-  addWall(11, 4.5, -6, 0.15, 0.15, 6, DARK);
-  addWall(0, 4.5, -3, 22, 0.15, 0.15, DARK);
-  addWall(0, 4.5, -9, 22, 0.15, 0.15, DARK);
-  // Yellow edge warnings
-  addWall(-14, 0.2, -6, 0.1, 0.2, 14, YELLOW);
-  addWall(14, 0.2, -6, 0.1, 0.2, 14, YELLOW);
-  addWall(0, 0.2, -12.8, 28, 0.2, 0.1, YELLOW);
-  // Rebar
-  addCyl(-13, 1.5, -10, 0.04, 3, RUST, 0.8);
-  addCyl(13, 1.5, -8, 0.04, 3, RUST, 0.8);
+  // ====== A SITE (lower floor, large platform) ======
+  addWall(5, -0.1, -12, 20, 0.3, 16, tex.metalFloor);
+  addWall(5, 2.5, -20.5, 20, 5, 0.5, CONCRETE);
+  addWall(-5.25, 2.5, -12, 0.5, 5, 16, CONCRETE);
+  addWall(15.25, 2.5, -12, 0.5, 5, 16, CONCRETE);
+  addWall(0, 2.5, -3.5, 10, 5, 0.5, CONCRETE);
+  addWall(11, 2.5, -3.5, 8, 5, 0.5, CONCRETE);
+  addWall(3, 0.1, -12, 6, 0.12, 6, YELLOW);
+  addBox(0, 0.75, -8, 1.5, 1.5, 1.5, CRATE);
+  addBox(1.5, 0.75, -8, 1.5, 1.5, 1.5, CRATE);
+  addBox(0.75, 2.15, -8, 1.2, 1, 1.2, CRATE);
+  addBox(10, 0.5, -10, 2, 1, 3, CRATE);
+  addBox(-2, 0.5, -16, 1.2, 1, 1.2, CRATE);
+  addBox(12, 0.75, -15, 1.5, 1.5, 1.5, CRATE);
+  addBox(7, 0.5, -18, 1, 1, 2, CRATE);
+  addCyl(-4, 3, -6, 0.15, 6, METAL, 0.2);
+  addCyl(-4, 3, -16, 0.15, 6, METAL, 0.2);
+  addCyl(13, 3, -6, 0.15, 6, METAL, 0.2);
+  addCyl(13, 3, -16, 0.15, 6, METAL, 0.2);
+  addWall(-4, 5.5, -11, 0.12, 0.12, 10, DARK);
+  addWall(13, 5.5, -11, 0.12, 0.12, 10, DARK);
+  addWall(4.5, 5.5, -6, 17, 0.12, 0.12, DARK);
+  addWall(4.5, 5.5, -16, 17, 0.12, 0.12, DARK);
+  addWall(-5, 0.2, -12, 0.1, 0.2, 16, YELLOW);
+  addWall(15, 0.2, -12, 0.1, 0.2, 16, YELLOW);
+  addWall(5, 0.2, -20.3, 20, 0.2, 0.1, YELLOW);
+  addCyl(-3, 1.5, -18, 0.04, 3, RUST, 0.8);
+  addCyl(14, 1.5, -8, 0.04, 3, RUST, 0.8);
+  addCyl(8, 1.5, -19, 0.04, 3, RUST, 0.8);
 
-  // ====== CT MID CONNECTOR ======
-  addWall(1, -0.1, 4, 5, 0.3, 8, tex.metalFloor);
-  addWall(-1.75, 2, 4, 0.5, 4, 8, CONCRETE);
-  addWall(3.75, 2, 4, 0.5, 4, 8, CONCRETE);
-  addWall(1, 4, 4, 5, 0.15, 0.15, DARK);
-  addWall(1, 4, 2, 5, 0.15, 0.15, DARK);
-  addWall(1, 4, 6, 5, 0.15, 0.15, DARK);
-  addCyl(-1, 2, 2, 0.12, 4, METAL, 0.2);
-  addCyl(3, 2, 2, 0.12, 4, METAL, 0.2);
-  addCyl(-1, 2, 6, 0.12, 4, METAL, 0.2);
-  addCyl(3, 2, 6, 0.12, 4, METAL, 0.2);
+  // ====== A HELL / DROP (pit near A Site edge) ======
+  addWall(-3, -1.5, -5, 4, 0.3, 3, DARK);
+  addWall(-3, 1.5, -3.2, 4, 3.5, 0.3, CONCRETE);
 
-  // ====== CT SPAWN ======
-  addWall(1, -0.1, 12, 12, 0.3, 10, tex.metalFloor);
-  addWall(1, 2.5, 17, 12, 5, 0.5, CONCRETE);
-  addWall(-5.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
-  addWall(7.25, 2.5, 12, 0.5, 5, 10, CONCRETE);
-  addBox(-2, 0.5, 14, 1.5, 1, 1.5, CRATE);
-  addBox(4, 0.5, 10, 1.2, 1, 1.2, CRATE);
+  // ====== MID / CONNECTOR (central hub connecting levels) ======
+  addWall(0, -0.1, 2, 10, 0.3, 8, tex.metalFloor);
+  addWall(-5.25, 2, 2, 0.5, 4.5, 8, CONCRETE);
+  addWall(5.25, 2, 2, 0.5, 4.5, 8, CONCRETE);
+  addWall(0, 2, -2.3, 10, 4.5, 0.5, CONCRETE);
+  addCyl(-4, 2, -1, 0.12, 4, METAL, 0.2);
+  addCyl(4, 2, -1, 0.12, 4, METAL, 0.2);
+  addCyl(-4, 2, 5, 0.12, 4, METAL, 0.2);
+  addCyl(4, 2, 5, 0.12, 4, METAL, 0.2);
+  addWall(0, 3.8, 2, 8, 0.12, 6, DARK);
+  addBox(-2, 0.5, 1, 1, 1, 1, CRATE);
+  addBox(2, 0.5, 4, 1.2, 1, 1.2, CRATE);
 
-  // ====== B STAIRS (CT to B site, going down) ======
-  addWall(5, -2.5, 20, 4, 0.25, 6, tex.metalFloor);
+  // ====== TETRIS BLOCKS (key cover near mid) ======
+  addBox(-6, 0.5, 2, 1.5, 1, 2.5, CRATE);
+  addBox(-6, 1.5, 3, 1, 1, 1, CRATE);
+  addBox(-6, 0.5, 5, 2, 1, 1, CRATE);
+
+  // ====== B RAMPS (going up from Mid to B Site) ======
+  addWall(8, -0.1, 8, 6, 0.3, 6, tex.metalFloor);
   for (var i = 0; i < 6; i++) {
-    addWall(5, -0.3 + i * (-0.5), 17.5 + i, 4, 0.2, 1, METAL);
+    addWall(8, 0.15 + i * 0.45, 5.5 + i, 5, 0.2, 1.2, METAL);
   }
-  addWall(3, 0, 20, 0.4, 5, 8, CONCRETE);
-  addWall(7, 0, 20, 0.4, 5, 8, CONCRETE);
-  addWall(3.3, 1.5, 18, 0.1, 0.1, 4, DARK);
-  addWall(3.3, 2.5, 18, 0.1, 0.1, 4, DARK);
+  addWall(5.75, 1.5, 8, 0.3, 3.5, 7, CONCRETE);
+  addWall(10.25, 1.5, 8, 0.3, 3.5, 7, CONCRETE);
+  addWall(6, 1.8, 6, 0.08, 0.08, 6, DARK);
+  addWall(10, 1.8, 6, 0.08, 0.08, 6, DARK);
 
-  // ====== B SITE (lower level) ======
-  addWall(0, -3.1, 28, 22, 0.3, 14, tex.metalFloor);
-  addWall(0, -0.6, 21, 22, 5, 0.5, CONCRETE);
-  addWall(0, -0.6, 35, 22, 5, 0.5, CONCRETE);
-  addWall(-11.25, -0.6, 28, 0.5, 5, 14, CONCRETE);
-  addWall(11.25, -0.6, 28, 0.5, 5, 14, CONCRETE);
-  addWall(8, -0.6, 21, 8, 5, 0.5, CONCRETE);
-  addWall(-2, -2.9, 28, 5, 0.15, 5, YELLOW);
-  addBox(-7, -2.4, 24, 1.5, 1.5, 1.5, CRATE);
-  addBox(-5.5, -2.4, 24, 1.5, 1.5, 1.5, CRATE);
-  addBox(-6.25, -1, 24, 1.2, 1, 1.2, CRATE);
-  addBox(6, -2.4, 30, 2, 1.5, 2, CRATE);
-  addBox(7.5, -2.4, 30, 1.5, 1.5, 1.5, CRATE);
-  addBox(-3, -2.4, 32, 1, 1, 2, CRATE);
-  addBox(8, -2.4, 26, 1.5, 1.5, 1.5, CRATE);
-  addBox(-8, -2.4, 30, 1.2, 1, 1.2, CRATE);
-  addCyl(-10, -0.6, 24, 0.15, 5, METAL, 0.2);
-  addCyl(-10, -0.6, 32, 0.15, 5, METAL, 0.2);
-  addCyl(10, -0.6, 24, 0.15, 5, METAL, 0.2);
-  addCyl(10, -0.6, 32, 0.15, 5, METAL, 0.2);
-  addWall(0, 1.5, 24, 20, 0.15, 0.15, DARK);
-  addWall(0, 1.5, 32, 20, 0.15, 0.15, DARK);
-  addWall(-10, 0, 28, 0.15, 0.15, 8, DARK);
-  addWall(10, 0, 28, 0.15, 0.15, 8, DARK);
-  addBox(9, -2.5, 33, 1.5, 1.2, 1, BLUE_STEEL);
-  addWall(-11, -2.9, 28, 0.1, 0.2, 14, YELLOW);
-  addWall(11, -2.9, 28, 0.1, 0.2, 14, YELLOW);
-  addWall(0, -2.9, 21, 22, 0.2, 0.1, YELLOW);
-  addWall(0, -2.9, 34.8, 22, 0.2, 0.1, YELLOW);
+  // ====== B SITE (upper platform with crane) ======
+  addWall(6, 2.5, 18, 18, 0.3, 14, tex.metalFloor);
+  addWall(6, 5, 11.5, 18, 5, 0.5, CONCRETE);
+  addWall(6, 5, 24.5, 18, 5, 0.5, CONCRETE);
+  addWall(-3.25, 5, 18, 0.5, 5, 14, CONCRETE);
+  addWall(15.25, 5, 18, 0.5, 5, 14, CONCRETE);
+  addWall(4, 2.7, 18, 5, 0.12, 5, YELLOW);
+  addCyl(10, 7, 14, 0.25, 12, 0xdd8800, 0.3);
+  addCyl(10, 13, 14, 0.18, 0.5, 0xdd8800, 0.3);
+  addWall(10, 12.5, 18, 0.3, 0.3, 8, 0xdd8800);
+  addBox(0, 3, 15, 2, 1, 2, CRATE);
+  addBox(2, 3, 15, 1.5, 1.5, 1.5, CRATE);
+  addBox(1, 4.4, 15, 1.2, 1, 1.2, CRATE);
+  addBox(11, 3, 20, 2, 1.5, 2, CRATE);
+  addBox(-1, 3, 22, 1.5, 1.5, 1.5, CRATE);
+  addBox(8, 3, 16, 1, 1, 2, CRATE);
+  addBox(3, 3, 12, 1.2, 1, 1.2, CRATE);
+  addCyl(-2, 5, 12, 0.15, 5, METAL, 0.2);
+  addCyl(-2, 5, 22, 0.15, 5, METAL, 0.2);
+  addCyl(13, 5, 12, 0.15, 5, METAL, 0.2);
+  addCyl(13, 5, 22, 0.15, 5, METAL, 0.2);
+  addWall(-2, 7, 17, 0.12, 0.12, 10, DARK);
+  addWall(13, 7, 17, 0.12, 0.12, 10, DARK);
+  addWall(5.5, 7, 12, 15, 0.12, 0.12, DARK);
+  addWall(5.5, 7, 22, 15, 0.12, 0.12, DARK);
+  addWall(-3, 2.7, 18, 0.1, 0.2, 14, YELLOW);
+  addWall(15, 2.7, 18, 0.1, 0.2, 14, YELLOW);
+  addWall(6, 2.7, 11.3, 18, 0.2, 0.1, YELLOW);
+  addWall(6, 2.7, 24.3, 18, 0.2, 0.1, YELLOW);
+
+  // ====== CT SPAWN (highest level, east side) ======
+  addWall(0, 4.5, 14, 10, 0.3, 8, tex.metalFloor);
+  addWall(0, 7, 18.5, 10, 5, 0.5, CONCRETE);
+  addWall(-5.25, 7, 14, 0.5, 5, 8, CONCRETE);
+  addWall(5.25, 7, 14, 0.5, 5, 8, CONCRETE);
+  addWall(0, 7, 10, 6, 5, 0.5, CONCRETE);
+  addBox(-2, 5, 16, 1.5, 1, 1.5, CRATE);
+  addBox(3, 5, 12, 1.2, 1, 1.2, CRATE);
+  addWall(-4, 7, 12, 0.5, 4, 2, CONCRETE);
+
+  // ====== CT RAMP (from CT Spawn down to Mid/Connector) ======
+  addWall(-1, 2, 7, 4, 0.3, 4, tex.metalFloor);
+  for (var i = 0; i < 5; i++) {
+    addWall(-1, 4.2 - i * 0.55, 9.5 - i, 3.5, 0.2, 1, METAL);
+  }
+  addWall(-3, 3.5, 7, 0.3, 4, 4, CONCRETE);
+  addWall(1, 3.5, 7, 0.3, 4, 4, CONCRETE);
 
   // ====== ELEVATOR SHAFT ======
-  addWall(8, 0, -1, 3, 6, 0.3, DARK);
-  addWall(10, 0, -1, 0.3, 6, 3, DARK);
-  addWall(6, 0, -1, 0.3, 6, 3, DARK);
-  addWall(8, -3, -1, 3.5, 0.3, 3.5, DARK);
+  addWall(10, 1.5, -2, 3, 7, 0.3, DARK);
+  addWall(12, 1.5, -2, 0.3, 7, 3, DARK);
+  addWall(8, 1.5, -2, 0.3, 7, 3, DARK);
+  addWall(10, -1.5, -2, 3.5, 0.3, 3.5, DARK);
+  addCyl(10, 4, -2, 0.03, 8, METAL, 0.1);
+  addCyl(9.5, 4, -1.5, 0.03, 8, METAL, 0.1);
 
-  // Boundary walls (building exterior)
-  addWall(0, 0, -38, 33, 12, 0.6, tex.metalWall); // north
-  addWall(0, -1.5, 37, 33, 12, 0.6, tex.metalWall); // south
-  addWall(-16.3, -1.5, 0, 0.6, 12, 76, tex.metalWall); // west
-  addWall(16.3, -1.5, 0, 0.6, 12, 76, tex.metalWall); // east
+  // ====== UPPER/LOWER UTILITY (peripheral path) ======
+  addWall(-12, -0.1, 2, 3, 0.3, 10, tex.metalFloor);
+  addWall(-13.75, 2, 2, 0.5, 4.5, 10, CONCRETE);
+  addWall(-10.25, 2, 2, 0.5, 4.5, 10, CONCRETE);
+  addBox(-11, 0.5, 4, 1, 1, 1, CRATE);
+  addBox(-12, 0.5, -2, 1.2, 1, 1.2, CRATE);
 
-  player.position.set(0, PLAYER_HEIGHT, -30);
+  // Boundary walls (building exterior - skyscraper shell)
+  addWall(0, 2, -28, 40, 14, 0.6, tex.metalWall);
+  addWall(0, 2, 27, 40, 14, 0.6, tex.metalWall);
+  addWall(-24, 2, 0, 0.6, 14, 56, tex.metalWall);
+  addWall(17, 2, 0, 0.6, 14, 56, tex.metalWall);
+
+  player.position.set(-16, PLAYER_HEIGHT, -20);
 }
 
 // ----- DUST 2 (CS:GO) -----
@@ -1619,6 +1749,7 @@ function startGame() {
   pauseOvl.classList.add('hidden');
   document.getElementById('crosshair').style.display = 'block';
   document.getElementById('debug').style.display = 'block';
+  document.getElementById('minimap-container').style.display = 'block';
   gameStarted = true;
   ammo = maxAmmo; isReloading = false; canShoot = true;
   reloadAnimTime = 0; gunGroup.rotation.z = 0;
@@ -1696,6 +1827,7 @@ function exitToMenu() {
   document.getElementById('debug').style.display = 'none';
   document.getElementById('reload-hud').style.display = 'none';
   document.getElementById('health-bar-container').style.display = 'none';
+  document.getElementById('minimap-container').style.display = 'none';
   document.getElementById('death-screen').classList.add('hidden');
   document.getElementById('victory-screen').classList.add('hidden');
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
@@ -1874,6 +2006,9 @@ function animate() {
     } else {
       debugEl.innerHTML = '<span style="color:#fff">' + ammo + '</span><span style="color:rgba(255,255,255,0.5);font-size:20px"> / ' + maxAmmo + '</span>';
     }
+    
+    // Draw minimap
+    drawMinimap();
   }
 
   renderer.render(scene, camera);
