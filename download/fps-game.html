@@ -10,7 +10,7 @@ body{overflow:hidden;background:#000;font-family:'Segoe UI',Tahoma,Arial,sans-se
 canvas{display:block}
 
 /* ===== MENU SYSTEM ===== */
-.menu-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0e1a 0%,#1a1a2e 30%,#16213e 60%,#0f3460 100%)}
+.menu-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:url("fps-game-assets/bg_menu.png") center/cover no-repeat}
 .menu-overlay::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.65)}
 .menu-overlay.hidden{display:none}
 .menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
@@ -112,7 +112,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #damage-flash{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(180,0,0,0.4));transition:opacity 0.15s}
 #damage-flash.show{opacity:1}
 /* Death Screen */
-#death-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(60,0,0,0.88)}
+#death-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(60,0,0,0.92)}
 #death-screen.hidden{display:none}
 #death-screen h2{font-size:58px;color:#ff2222;margin-bottom:10px;letter-spacing:8px;text-shadow:0 0 40px rgba(255,0,0,0.6),0 0 80px rgba(255,0,0,0.3)}
 #death-screen .death-sub{color:rgba(255,150,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
@@ -1024,199 +1024,39 @@ function makeCanvasTex(drawFn, w, h) {
   return tex;
 }
 const tex = {};
-// Brick texture
-tex.brick = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#7a5c3a'; ctx.fillRect(0,0,w,h);
-    var bw=30, bh=14, gap=2;
-    for (var r=0; r < Math.ceil(h/bh); r++) {
-      var off = (r%2) * bw/2;
-      for (var c=-1; c < Math.ceil(w/bw)+1; c++) {
-        var v = 0.85 + Math.random()*0.3;
-        var rr = Math.floor(160*v), gg = Math.floor(100*v), bb = Math.floor(65*v);
-        ctx.fillStyle = 'rgb('+rr+','+gg+','+bb+')';
-        ctx.fillRect(c*bw+off+gap, r*bh+gap, bw-gap*2, bh-gap*2);
-      }
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.9, metalness:0.05});
-})();
-// Sand/Plaster texture
-tex.sand = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#c4a868'; ctx.fillRect(0,0,w,h);
-    for (var i=0; i < 2000; i++) {
-      var v = 0.8 + Math.random()*0.4;
-      var rr = Math.floor(196*v), gg = Math.floor(168*v), bb = Math.floor(104*v);
-      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.5)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.02});
-})();
-// Sand ground texture
-tex.sandGround = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#c2a878'; ctx.fillRect(0,0,w,h);
-    for (var i=0; i < 3000; i++) {
-      var v = 0.85 + Math.random()*0.3;
-      var rr = Math.floor(194*v), gg = Math.floor(168*v), bb = Math.floor(120*v);
-      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.4)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*3, Math.random()*3);
-    }
-  }, 128, 128);
-  t.repeat.set(20,20);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.02});
-})();
-// Concrete texture
-tex.concrete = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#8a8a8a'; ctx.fillRect(0,0,w,h);
-    for (var i=0; i < 4000; i++) {
-      var v = 0.7 + Math.random()*0.6;
-      var g = Math.floor(138*v);
-      ctx.fillStyle = 'rgba('+g+','+g+','+g+',0.3)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
-    }
-    // Cracks
-    ctx.strokeStyle = 'rgba(60,60,60,0.15)'; ctx.lineWidth = 1;
-    for (var i=0; i < 5; i++) {
-      ctx.beginPath(); ctx.moveTo(Math.random()*w, Math.random()*h);
-      ctx.lineTo(Math.random()*w, Math.random()*h); ctx.stroke();
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.85, metalness:0.1});
-})();
-// Metal floor texture
-tex.metalFloor = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#667788'; ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle = 'rgba(100,120,140,0.4)'; ctx.lineWidth = 1;
-    for (var i=0; i <= w; i += 32) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
-    for (var i=0; i <= h; i += 32) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
-    // Rivets
-    ctx.fillStyle = 'rgba(150,170,190,0.5)';
-    for (var x=16; x < w; x+=32) for (var y=16; y < h; y+=32) {
-      ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill();
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.4, metalness:0.6});
-})();
-// Metal wall texture
-tex.metalWall = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#778899'; ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle = 'rgba(90,110,130,0.3)'; ctx.lineWidth = 1;
-    for (var i=0; i <= w; i += 64) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
-    for (var i=0; i <= h; i += 64) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
-    for (var i=0; i < 800; i++) {
-      var g = Math.floor(100 + Math.random()*60);
-      ctx.fillStyle = 'rgba('+g+','+(g+10)+','+(g+20)+',0.15)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, 2+Math.random()*4, 1);
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.35, metalness:0.7});
-})();
-// Crate/Wood texture
-tex.crate = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#8b6914'; ctx.fillRect(0,0,w,h);
-    // Wood planks
-    ctx.strokeStyle = 'rgba(90,50,10,0.4)'; ctx.lineWidth = 2;
-    for (var i=0; i < w; i += 32) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
-    // Wood grain
-    for (var i=0; i < 1500; i++) {
-      var v = 0.8 + Math.random()*0.4;
-      var rr = Math.floor(139*v), gg = Math.floor(105*v), bb = Math.floor(20*v);
-      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.3)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*8, 1);
-    }
-    // Cross braces
-    ctx.strokeStyle = 'rgba(80,50,10,0.5)'; ctx.lineWidth = 4;
-    ctx.strokeRect(8,8,w-16,h-16);
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke();
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.8, metalness:0.05});
-})();
-// Dark metal texture
-tex.darkMetal = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#445566'; ctx.fillRect(0,0,w,h);
-    for (var i=0; i < 2000; i++) {
-      var g = Math.floor(60 + Math.random()*40);
-      ctx.fillStyle = 'rgba('+g+','+(g+8)+','+(g+16)+',0.2)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*3, 1+Math.random()*3);
-    }
-  }, 64, 64);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.3, metalness:0.8});
-})();
-// Concrete floor (indoor)
-tex.concreteFloor = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#555555'; ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle = 'rgba(70,70,70,0.3)'; ctx.lineWidth = 1;
-    for (var i=0; i <= w; i += 64) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
-    for (var i=0; i <= h; i += 64) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
-    for (var i=0; i < 3000; i++) {
-      var g = Math.floor(70 + Math.random()*30);
-      ctx.fillStyle = 'rgba('+g+','+g+','+g+',0.2)';
-      ctx.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
-    }
-  }, 128, 128);
-  t.repeat.set(10,10);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.85, metalness:0.1});
-})();
-// Hedge texture (for Test Map boundary)
-tex.hedge = (function() {
-  const t = makeCanvasTex(function(ctx, w, h) {
-    ctx.fillStyle = '#2d5a1e'; ctx.fillRect(0,0,w,h);
-    for (var i=0; i < 3000; i++) {
-      var v = 0.7 + Math.random()*0.6;
-      var rr = Math.floor(45*v), gg = Math.floor(90*v), bb = Math.floor(30*v);
-      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.5)';
-      var s = 2+Math.random()*5;
-      ctx.fillRect(Math.random()*w, Math.random()*h, s, s);
-    }
-    // Leaf shapes
-    for (var i=0; i < 200; i++) {
-      var v = 0.6 + Math.random()*0.8;
-      var rr = Math.floor(35*v), gg = Math.floor(110*v), bb = Math.floor(25*v);
-      ctx.fillStyle = 'rgba('+rr+','+gg+','+bb+',0.6)';
-      var x = Math.random()*w, y = Math.random()*h;
-      ctx.beginPath(); ctx.ellipse(x,y,2+Math.random()*3,1+Math.random()*2,Math.random()*Math.PI,0,Math.PI*2); ctx.fill();
-    }
-  }, 128, 128);
-  return new THREE.MeshStandardMaterial({map:t, roughness:0.95, metalness:0.0});
-})();
+// Texture loader for PNG files (offline-ready)
+var _texLoader = new THREE.TextureLoader();
+function _loadTex(name, rx, ry) {
+  var t = _texLoader.load('fps-game-assets/' + name);
+  t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.RepeatWrapping;
+  if (rx) t.repeat.set(rx, ry || rx);
+  return t;
+}
+// Brick texture (loaded from PNG)
+tex.brick = new THREE.MeshStandardMaterial({map:_loadTex('tex_brick.png'), roughness:0.9, metalness:0.05});
+// Sand/Plaster texture (loaded from PNG)
+tex.sand = new THREE.MeshStandardMaterial({map:_loadTex('tex_sand.png'), roughness:0.95, metalness:0.02});
+// Sand ground texture (loaded from PNG, with repeat)
+tex.sandGround = new THREE.MeshStandardMaterial({map:_loadTex('tex_sand_ground.png',20,20), roughness:0.95, metalness:0.02});
+// Concrete texture (loaded from PNG)
+tex.concrete = new THREE.MeshStandardMaterial({map:_loadTex('tex_concrete.png'), roughness:0.85, metalness:0.1});
+// Metal floor texture (loaded from PNG)
+tex.metalFloor = new THREE.MeshStandardMaterial({map:_loadTex('tex_metal_floor.png'), roughness:0.4, metalness:0.6});
+// Metal wall texture (loaded from PNG)
+tex.metalWall = new THREE.MeshStandardMaterial({map:_loadTex('tex_metal_wall.png'), roughness:0.35, metalness:0.7});
+// Crate/Wood texture (loaded from PNG)
+tex.crate = new THREE.MeshStandardMaterial({map:_loadTex('tex_crate.png'), roughness:0.8, metalness:0.05});
+// Dark metal texture (loaded from PNG)
+tex.darkMetal = new THREE.MeshStandardMaterial({map:_loadTex('tex_dark_metal.png'), roughness:0.3, metalness:0.8});
+// Concrete floor (loaded from PNG, with repeat)
+tex.concreteFloor = new THREE.MeshStandardMaterial({map:_loadTex('tex_concrete_floor.png',10,10), roughness:0.85, metalness:0.1});
+// Hedge texture (loaded from PNG)
+tex.hedge = new THREE.MeshStandardMaterial({map:_loadTex('tex_hedge.png'), roughness:0.95, metalness:0.0});
 
-// Zombie skin texture (HQ 256x256)
-tex.zombieSkin=(function(){
-  var cv=document.createElement('canvas');cv.width=512;cv.height=512;
-  var ctx=cv.getContext('2d');
-  ctx.fillStyle='#5a7a4a';ctx.fillRect(0,0,512,512);
-  for(var i=0;i<5000;i++){var v=0.5+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(75*v)+','+Math.floor(105*v)+','+Math.floor(55*v)+',0.35)';ctx.fillRect(Math.random()*512,Math.random()*512,3+Math.random()*16,3+Math.random()*16);}
-  for(var i=0;i<2500;i++){var v=0.8+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(120*v)+','+Math.floor(150*v)+','+Math.floor(95*v)+',0.25)';ctx.fillRect(Math.random()*512,Math.random()*512,2+Math.random()*12,2+Math.random()*12);}
-  ctx.strokeStyle='rgba(35,55,25,0.35)';ctx.lineWidth=2;
-  for(var i=0;i<40;i++){ctx.beginPath();var sx=Math.random()*512,sy=Math.random()*512;ctx.moveTo(sx,sy);for(var j=0;j<8;j++){sx+=(Math.random()-0.5)*60;sy+=Math.random()*35;ctx.lineTo(sx,sy);}ctx.stroke();}
-  for(var i=0;i<30;i++){ctx.fillStyle='rgba(80,30,20,0.4)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,5+Math.random()*12,4+Math.random()*8,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
-  for(var i=0;i<15;i++){ctx.fillStyle='rgba(100,20,15,0.5)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,3+Math.random()*6,2+Math.random()*4,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
-  for(var i=0;i<8000;i++){var v=0.6+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(50*v)+','+Math.floor(70*v)+','+Math.floor(35*v)+',0.15)';ctx.fillRect(Math.random()*512,Math.random()*512,1,1);}
-  var t=new THREE.CanvasTexture(cv);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;
-})();
-// Zombie dark skin (HQ 256x256)
-tex.zombieDark=(function(){
-  var cv=document.createElement('canvas');cv.width=512;cv.height=512;
-  var ctx=cv.getContext('2d');
-  ctx.fillStyle='#3a5a2a';ctx.fillRect(0,0,512,512);
-  for(var i=0;i<4000;i++){var v=0.4+Math.random()*0.6;ctx.fillStyle='rgba('+Math.floor(55*v)+','+Math.floor(80*v)+','+Math.floor(38*v)+',0.35)';ctx.fillRect(Math.random()*512,Math.random()*512,3+Math.random()*14,3+Math.random()*14);}
-  for(var i=0;i<1500;i++){var v=0.3+Math.random()*0.4;ctx.fillStyle='rgba('+Math.floor(30*v)+','+Math.floor(50*v)+','+Math.floor(20*v)+',0.3)';ctx.fillRect(Math.random()*512,Math.random()*512,2+Math.random()*10,2+Math.random()*10);}
-  ctx.strokeStyle='rgba(25,40,15,0.4)';ctx.lineWidth=1.5;
-  for(var i=0;i<30;i++){ctx.beginPath();var sx=Math.random()*512,sy=Math.random()*512;ctx.moveTo(sx,sy);for(var j=0;j<6;j++){sx+=(Math.random()-0.5)*50;sy+=Math.random()*30;ctx.lineTo(sx,sy);}ctx.stroke();}
-  for(var i=0;i<20;i++){ctx.fillStyle='rgba(60,20,15,0.5)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,4+Math.random()*10,3+Math.random()*7,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
-  for(var i=0;i<10;i++){ctx.fillStyle='rgba(90,15,10,0.4)';ctx.beginPath();ctx.ellipse(Math.random()*512,Math.random()*512,2+Math.random()*5,2+Math.random()*4,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
-  var t=new THREE.CanvasTexture(cv);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;
-})();
+// Zombie skin texture (loaded from PNG 512x512)
+tex.zombieSkin = _loadTex('tex_zombie_skin.png');
+// Zombie dark skin (loaded from PNG 512x512)
+tex.zombieDark = _loadTex('tex_zombie_dark.png');
 
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
@@ -1642,41 +1482,11 @@ loadTestMap(); // Load default map behind menu
 // ===== FPS GUN MODEL =====
 const gunGroup = new THREE.Group();
 
-// Gun procedural textures
-var _gBCv=document.createElement('canvas');_gBCv.width=512;_gBCv.height=512;
-var _gb=_gBCv.getContext('2d');_gb.fillStyle='#2c2c2c';_gb.fillRect(0,0,512,512);
-for(var _i=0;_i<6000;_i++){var _g=Math.floor(30+Math.random()*30);_gb.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_gb.fillRect(Math.random()*512,Math.random()*512,1+Math.random()*4,1+Math.random()*3);}
-_gb.strokeStyle='rgba(60,60,60,0.15)';_gb.lineWidth=1;
-for(var _i=0;_i<512;_i+=32){_gb.beginPath();_gb.moveTo(_i,0);_gb.lineTo(_i,512);_gb.stroke();}
-for(var _i=0;_i<512;_i+=32){_gb.beginPath();_gb.moveTo(0,_i);_gb.lineTo(512,_i);_gb.stroke();}
-_gb.strokeStyle='rgba(80,80,80,0.3)';_gb.lineWidth=0.5;
-for(var _i=0;_i<40;_i++){_gb.beginPath();_gb.moveTo(Math.random()*512,Math.random()*512);_gb.lineTo(Math.random()*512,Math.random()*512);_gb.stroke();}
-_gb.strokeStyle='rgba(55,55,55,0.25)';_gb.lineWidth=2;
-for(var _i=0;_i<8;_i++){var _wx=Math.random()*512,_wy=Math.random()*512,_wr=5+Math.random()*20;_gb.beginPath();_gb.arc(_wx,_wy,_wr,0,Math.PI*2);_gb.stroke();}
-var _gBT=new THREE.CanvasTexture(_gBCv);
-var _gBrCv=document.createElement('canvas');_gBrCv.width=256;_gBrCv.height=256;
-var _br=_gBrCv.getContext('2d');_br.fillStyle='#1a1a1a';_br.fillRect(0,0,256,256);
-for(var _i=0;_i<3000;_i++){var _g=Math.floor(15+Math.random()*25);_br.fillStyle='rgba('+_g+','+_g+','+_g+',0.15)';_br.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*3,1+Math.random()*5);}
-_br.strokeStyle='rgba(40,40,40,0.2)';_br.lineWidth=0.5;
-for(var _i=0;_i<256;_i+=16){_br.beginPath();_br.moveTo(_i,0);_br.lineTo(_i,256);_br.stroke();}
-for(var _i=0;_i<256;_i+=16){_br.beginPath();_br.moveTo(0,_i);_br.lineTo(256,_i);_br.stroke();}
-_br.strokeStyle='rgba(25,30,40,0.15)';_br.lineWidth=1;
-for(var _i=0;_i<15;_i++){_br.beginPath();_br.moveTo(Math.random()*256,Math.random()*256);_br.lineTo(Math.random()*256,Math.random()*256);_br.stroke();}
-var _gBrT=new THREE.CanvasTexture(_gBrCv);
-var _gGCv=document.createElement('canvas');_gGCv.width=256;_gGCv.height=256;
-var _gr=_gGCv.getContext('2d');_gr.fillStyle='#3d2b1f';_gr.fillRect(0,0,256,256);
-for(var _i=0;_i<3000;_i++){var _v=0.7+Math.random()*0.5;_gr.fillStyle='rgba('+Math.floor(61*_v)+','+Math.floor(43*_v)+','+Math.floor(31*_v)+',0.3)';_gr.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*4,Math.random()*8);}
-_gr.strokeStyle='rgba(25,18,12,0.4)';_gr.lineWidth=1.5;
-for(var _i=0;_i<256;_i+=5){_gr.beginPath();_gr.moveTo(0,_i+Math.random()*3);_gr.lineTo(256,_i+Math.random()*3);_gr.stroke();}
-_gr.strokeStyle='rgba(40,28,18,0.3)';_gr.lineWidth=1;
-for(var _cx=8;_cx<256;_cx+=8){for(var _cy=8;_cy<256;_cy+=8){_gr.beginPath();_gr.moveTo(_cx,_cy);_gr.lineTo(_cx+4,_cy+4);_gr.stroke();_gr.beginPath();_gr.moveTo(_cx+4,_cy);_gr.lineTo(_cx,_cy+4);_gr.stroke();}}
-var _gGT=new THREE.CanvasTexture(_gGCv);
-var _gMCv=document.createElement('canvas');_gMCv.width=128;_gMCv.height=128;
-var _mg=_gMCv.getContext('2d');_mg.fillStyle='#333333';_mg.fillRect(0,0,128,128);
-for(var _i=0;_i<2000;_i++){var _g=Math.floor(35+Math.random()*30);_mg.fillStyle='rgba('+_g+','+_g+','+_g+',0.2)';_mg.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*3,1+Math.random()*3);}
-_mg.strokeStyle='rgba(65,65,65,0.25)';_mg.lineWidth=1;
-for(var _i=0;_i<128;_i+=24){_mg.beginPath();_mg.moveTo(_i,0);_mg.lineTo(_i,128);_mg.stroke();}
-var _gMT=new THREE.CanvasTexture(_gMCv);
+// Gun textures (loaded from PNG files)
+var _gBT = _loadTex('tex_gun_body.png');
+var _gBrT = _loadTex('tex_gun_barrel.png');
+var _gGT = _loadTex('tex_gun_grip.png');
+var _gMT = _loadTex('tex_gun_mag.png');
 
 // Main body
 const gunBody = new THREE.Mesh(
