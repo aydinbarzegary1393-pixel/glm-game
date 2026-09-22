@@ -38,6 +38,7 @@ canvas{display:block}
 #settings-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
 .setting-group{margin:20px 0;text-align:left}
 .setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
+.setting-hint{font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;letter-spacing:0.5px}
 .setting-row{display:flex;align-items:center;gap:12px}
 input[type=range]{-webkit-appearance:none;flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#4fc3f7;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(79,195,247,0.5)}
@@ -179,6 +180,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .map-card .map-status{font-size:10px;margin-top:3px}
   .setting-group{margin:9px 0}
   .setting-label{font-size:11px;margin-bottom:5px;letter-spacing:0.5px}
+  .setting-hint{font-size:9px;margin-top:5px}
   .lang-btn{padding:8px 4px;font-size:12px}
   #device-menu h2{font-size:24px;margin-bottom:10px}
   #device-menu .subtitle{font-size:11px;margin-bottom:14px}
@@ -258,7 +260,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
-<button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();updateAutoButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
 
@@ -331,6 +333,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="diff-2" onclick="setDifficulty(2)" data-en="HARD" data-fa="سخت">HARD</button>
 <button class="lang-btn" id="diff-3" onclick="setDifficulty(3)" data-en="IMPOSSIBLE" data-fa="غیر ممکن">IMPOSSIBLE</button>
 </div>
+</div>
+<div class="setting-group">
+<div class="setting-label" data-en="AUTO RELOAD / ریلود خودکار" data-fa="AUTO RELOAD / ریلود خودکار">AUTO RELOAD / ریلود خودکار</div>
+<div class="lang-btns">
+<button class="lang-btn" id="ar-on" onclick="setAutoReload(true)" data-en="ON" data-fa="روشن">ON</button>
+<button class="lang-btn active" id="ar-off" onclick="setAutoReload(false)" data-en="OFF" data-fa="خاموش">OFF</button>
+</div>
+</div>
+<div class="setting-group">
+<div class="setting-label" data-en="AUTO FIRE / شلیک رگباری" data-fa="AUTO FIRE / شلیک رگباری">AUTO FIRE / شلیک رگباری</div>
+<div class="lang-btns">
+<button class="lang-btn" id="af-on" onclick="setAutoFire(true)" data-en="ON" data-fa="روشن">ON</button>
+<button class="lang-btn active" id="af-off" onclick="setAutoFire(false)" data-en="OFF" data-fa="خاموش">OFF</button>
+</div>
+<p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
@@ -425,6 +442,9 @@ let isReloading = false;
 let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
+let autoReload = false;
+let autoFire = false;
+let fireHeld = false;
 
 // ===== MINIMAP SYSTEM =====
 var minimapEl = null;
@@ -771,8 +791,14 @@ function initJoystick() {
 
   // Mobile buttons
   document.getElementById('btn-fire-m').addEventListener('touchstart', function(e) {
-    e.preventDefault(); if (gameStarted) shoot();
+    e.preventDefault(); fireHeld = true; if (gameStarted) shoot();
   }, {passive: false});
+  document.getElementById('btn-fire-m').addEventListener('touchend', function(e) {
+    e.preventDefault(); fireHeld = false;
+  }, {passive: false});
+  document.getElementById('btn-fire-m').addEventListener('touchcancel', function(e) {
+    fireHeld = false;
+  });
   document.getElementById('btn-jump-m').addEventListener('touchstart', function(e) {
     e.preventDefault(); keys.space = true;
   }, {passive: false});
@@ -1242,6 +1268,22 @@ function updateDifficultyButtons() {
   document.getElementById('diff-1').classList.toggle('active', difficulty===1);
   document.getElementById('diff-2').classList.toggle('active', difficulty===2);
   document.getElementById('diff-3').classList.toggle('active', difficulty===3);
+}
+
+// ===== AUTO RELOAD & AUTO FIRE SETTINGS =====
+function setAutoReload(on) {
+  autoReload = !!on;
+  updateAutoButtons();
+}
+function setAutoFire(on) {
+  autoFire = !!on;
+  updateAutoButtons();
+}
+function updateAutoButtons() {
+  document.getElementById('ar-on').classList.toggle('active', autoReload);
+  document.getElementById('ar-off').classList.toggle('active', !autoReload);
+  document.getElementById('af-on').classList.toggle('active', autoFire);
+  document.getElementById('af-off').classList.toggle('active', !autoFire);
 }
 
 function clearMap() {
@@ -1943,6 +1985,13 @@ function shoot() {
 
   // Fire rate cooldown
   setTimeout(() => { canShoot = true; }, 120);
+
+  // Auto reload: when the mag runs dry and the option is enabled
+  if (ammo <= 0 && autoReload) {
+    setTimeout(function() {
+      if (autoReload && ammo <= 0 && !isReloading && gameStarted) startReload();
+    }, 350);
+  }
 }
 
 // ===== POINTER LOCK =====
@@ -1994,6 +2043,7 @@ function openSettingsFromPause() {
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   updateDeviceButtons();
   updateDifficultyButtons();
+  updateAutoButtons();
   showMenu('settings-menu');
 }
 
@@ -2050,14 +2100,20 @@ function exitToMenu() {
 
 document.addEventListener('mousedown', function(e) {
   if (gameStarted && isLocked && e.button === 0) {
+    fireHeld = true;
     shoot();
   } else if (gameStarted && !isLocked && !isMobileDevice && !e.target.closest('#pause-overlay') && !e.target.closest('.menu-overlay') && !e.target.closest('#death-screen')&&!e.target.closest('#victory-screen')) {
     renderer.domElement.requestPointerLock();
   }
 });
 
+document.addEventListener('mouseup', function(e) {
+  if (e.button === 0) fireHeld = false;
+});
+
 document.addEventListener('pointerlockchange', function() {
   isLocked = document.pointerLockElement === renderer.domElement;
+  if (!isLocked) fireHeld = false;
   if (!isLocked && gameStarted && !isMobileDevice) {
     pauseOvl.classList.remove('hidden');
   } else {
@@ -2104,6 +2160,8 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (isLocked || (isMobileDevice && gameStarted)) {
+    // Auto fire (hold the fire button for continuous fire)
+    if (autoFire && fireHeld && gameStarted && !isReloading && ammo > 0 && pauseOvl.classList.contains('hidden')) shoot();
     // Movement
     const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
     const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
