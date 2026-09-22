@@ -224,7 +224,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 
 <!-- ROTATE PHONE TUTORIAL (mobile) -->
-<div id="rotate-tutorial" class="menu-overlay hidden" onclick="finishRotateTutorial()">
+<div id="rotate-tutorial" class="menu-overlay hidden" onclick="rotateTutorialTap()">
 <div class="rt-inner">
 <h2 class="rt-title" data-en="PLEASE ROTATE YOUR PHONE" data-fa="لطفا گوشی خود را بچرخانید">PLEASE ROTATE YOUR PHONE</h2>
 <p class="rt-sub" data-en="TURN OFF ROTATION LOCK, THEN ROTATE YOUR DEVICE" data-fa="قفل چرخش را خاموش کنید، سپس گوشی را بچرخانید">TURN OFF ROTATION LOCK, THEN ROTATE YOUR DEVICE</p>
@@ -247,7 +247,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 </div>
 <p class="rt-great" data-en="GREAT! NOW ROTATE YOUR PHONE" data-fa="عالی! حالا گوشی را بچرخانید">GREAT! NOW ROTATE YOUR PHONE</p>
-<button class="menu-btn rt-skip" data-en="SKIP" data-fa="رد کردن">SKIP</button>
+<button class="menu-btn rt-skip" onclick="finishRotateTutorial()" data-en="SKIP" data-fa="رد کردن">SKIP</button>
 </div>
 </div>
 
@@ -647,11 +647,19 @@ function startReload() {
 }
 
 // ===== DEVICE SELECT & MOBILE =====
+function goFullscreenSafe() {
+  try {
+    var fsP = document.documentElement.requestFullscreen();
+    if (fsP && fsP.catch) fsP.catch(function() {});
+  } catch(e) {}
+}
 function selectDevice(dev) {
   isMobileDevice = (dev === 'mobile');
   deviceChosen = true;
   if (isMobileDevice) {
-    try { document.documentElement.requestFullscreen(); } catch(e) {}
+    goFullscreenSafe();
+    // Always play the rotate-phone tutorial when the phone option is picked,
+    // regardless of current orientation (desktop/landscape included)
     showRotateTutorial();
   } else {
     showMenu('main-menu');
@@ -662,19 +670,23 @@ function selectDevice(dev) {
 
 // ===== ROTATE PHONE TUTORIAL (mobile) =====
 var rotateTutorialTimer = null;
+var rotateTutorialShownAt = 0;
 function showRotateTutorial() {
-  // Already in landscape -> no need for the tutorial
-  if (window.innerWidth > window.innerHeight) {
-    showMenu('main-menu');
-    setLang(currentLang);
-    return;
-  }
   document.querySelectorAll('.menu-overlay').forEach(function(m) { m.classList.add('hidden'); });
   var ov = document.getElementById('rotate-tutorial');
+  // Force restart of CSS animations on every show
+  ov.classList.add('hidden');
+  void ov.offsetWidth; // reflow
   ov.classList.remove('hidden');
+  rotateTutorialShownAt = performance.now();
   setLang(currentLang);
   clearTimeout(rotateTutorialTimer);
-  rotateTutorialTimer = setTimeout(finishRotateTutorial, 5800);
+  rotateTutorialTimer = setTimeout(finishRotateTutorial, 6600);
+}
+function rotateTutorialTap() {
+  // Ignore accidental / ghost taps in the first 700ms (common on touch devices)
+  if (performance.now() - rotateTutorialShownAt < 700) return;
+  finishRotateTutorial();
 }
 function finishRotateTutorial() {
   clearTimeout(rotateTutorialTimer);
@@ -696,7 +708,9 @@ function changeDevice(dev) {
   deviceChosen = true;
   updateDeviceButtons();
   if (isMobileDevice) {
-    try { document.documentElement.requestFullscreen(); } catch(e) {}
+    goFullscreenSafe();
+    // Show the rotate tutorial when switching to mobile before a game starts
+    if (!gameStarted) showRotateTutorial();
   }
   // If switching to mobile and game is running, show mobile controls
   if (isMobileDevice && gameStarted) {
