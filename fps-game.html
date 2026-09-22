@@ -433,7 +433,9 @@ let velocityY = 0;
 const keys = {w:false,a:false,s:false,d:false,space:false};
 let isMoving = false;
 let footstepTimer = 0;
-const FOOTSTEP_INTERVAL = 0.45;
+const FOOTSTEP_INTERVAL = 0.42;
+let bobWeight = 0, bobPhase = 0; // smooth walk-bob state
+let joyActive = false; // latched joystick state (hysteresis, prevents start/stop flicker)
 let canShoot = true;
 let ammo = 30;
 let maxAmmo = 30;
@@ -2168,14 +2170,20 @@ function animate() {
     const mv = new THREE.Vector3();
     if(keys.w) mv.add(fwd); if(keys.s) mv.sub(fwd);
     if(keys.d) mv.add(rgt); if(keys.a) mv.sub(rgt);
-    // Mobile joystick input
-    if (isMobileDevice && (Math.abs(joyInputX) > 0.1 || Math.abs(joyInputY) > 0.1)) {
+    // Mobile joystick input (hysteresis latch: no start/stop flicker near deadzone,
+    // analog speed: gentle tilt = slower walk)
+    var joyMag = Math.max(Math.abs(joyInputX), Math.abs(joyInputY));
+    if (!joyActive && joyMag > 0.18) joyActive = true;
+    else if (joyActive && joyMag < 0.06) joyActive = false;
+    var speedScale = 1;
+    if (isMobileDevice && joyActive) {
       mv.add(fwd.clone().multiplyScalar(-joyInputY));
       mv.add(rgt.clone().multiplyScalar(joyInputX));
+      speedScale = Math.min(1, Math.sqrt(joyInputX * joyInputX + joyInputY * joyInputY) * 1.5);
     }
     if(mv.lengthSq()>0) mv.normalize();
 
-    const speed = MOVE_SPEED * dt;
+    const speed = MOVE_SPEED * dt * speedScale;
     const px = player.position.x;
     const py = player.position.y;
     const pz = player.position.z;
@@ -2208,8 +2216,18 @@ function animate() {
     rawGround = getGroundY(player.position.x, player.position.y, player.position.z);
     groundLevel = rawGround > -998 ? rawGround : 0;
     if (player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05) {
-      player.position.y = groundLevel + PLAYER_HEIGHT;
-      velocityY = 0;
+      if (velocityY < 0) velocityY = 0;
+      // Smooth height correction instead of instant snap:
+      // walking near low props / across surface seams no longer jolts the camera
+      var targetY = groundLevel + PLAYER_HEIGHT;
+      var yDiff = targetY - player.position.y;
+      if (Math.abs(yDiff) <= 0.35) {
+        var maxMove = 6 * dt; // max 6 units/sec vertical correction
+        if (Math.abs(yDiff) <= maxMove) player.position.y = targetY;
+        else player.position.y += (yDiff > 0 ? maxMove : -maxMove);
+      } else {
+        player.position.y = targetY;
+      }
     }
 
     // Footstep sounds
@@ -2234,14 +2252,11 @@ function animate() {
       if (recoilAmount < 0.001) recoilAmount = 0;
     }
 
-    // Gun bob when walking
-    let bobY = 0, bobX = 0;
-    if (moving) {
-      const bobSpeed = 10;
-      const bobAmount = 0.008;
-      bobY = Math.sin(clock.elapsedTime * bobSpeed) * bobAmount;
-      bobX = Math.cos(clock.elapsedTime * bobSpeed * 0.5) * bobAmount * 0.5;
-    }
+    // Gun bob when walking (smoothly ramps in/out, gentle motion - no abrupt shake)
+    bobWeight += ((moving ? 1 : 0) - bobWeight) * Math.min(1, dt * 7);
+    if (bobWeight > 0.003) bobPhase += dt * 7.5;
+    var bobY = Math.sin(bobPhase) * 0.0055 * bobWeight;
+    var bobX = Math.cos(bobPhase * 0.5) * 0.0028 * bobWeight;
     // Reload animation
     var reloadDrop = 0;
     if (reloadAnimTime > 0) {
