@@ -131,6 +131,74 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #minimap-container{position:fixed;top:12px;right:12px;z-index:60;pointer-events:none;display:none}
 #minimap-canvas{border:2px solid rgba(79,195,247,0.6);border-radius:8px;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(79,195,247,0.05)}
 #minimap-label{position:absolute;top:-18px;right:0;font-size:10px;color:rgba(79,195,247,0.7);letter-spacing:1px;font-weight:600}
+
+/* ===== ROTATE PHONE TUTORIAL ===== */
+#rotate-tutorial{z-index:400;flex-direction:column;background:linear-gradient(160deg,#0a0e1a 0%,#16213e 60%,#0f3460 100%);cursor:pointer}
+#rotate-tutorial::before{background:rgba(0,0,0,0.55)}
+#rotate-tutorial .rt-inner{position:relative;z-index:1;text-align:center;direction:ltr;padding:10px}
+.rt-title{font-size:30px;font-weight:900;letter-spacing:3px;color:#4fc3f7;text-transform:uppercase;margin-bottom:8px;text-shadow:0 0 25px rgba(79,195,247,0.5);animation:rtPulse 1.6s ease-in-out infinite}
+.rt-sub{font-size:13px;color:#bbb;letter-spacing:1px;margin-bottom:24px}
+.rt-scale{display:block}
+.rt-scene{position:relative;width:280px;height:280px;margin:0 auto;transform:scale(0.55);opacity:0;animation:rtZoom 1.1s ease forwards}
+.rt-phone-wrap{position:absolute;left:50%;top:50%;width:130px;height:220px;margin-left:-65px;margin-top:-110px;transform:rotate(0deg);animation:rtTurn 1.4s ease-in-out 2.9s forwards}
+.rt-hand{position:absolute;left:18px;top:26px;font-size:135px;line-height:1;filter:drop-shadow(0 6px 12px rgba(0,0,0,0.5))}
+.rt-phone{position:absolute;left:50%;top:50%;width:96px;height:180px;margin-left:-48px;margin-top:-90px;background:#0d0d12;border:4px solid #3a4a5a;border-radius:18px;box-shadow:0 0 30px rgba(79,195,247,0.25),inset 0 0 12px rgba(0,0,0,0.8)}
+.rt-screen{position:absolute;inset:7px;background:linear-gradient(160deg,#101826,#0a1220);border-radius:11px;overflow:hidden}
+.rt-statusbar{height:12px;background:rgba(79,195,247,0.15);border-radius:6px;margin:5px 8px 0}
+.rt-toggle-row{display:flex;align-items:center;justify-content:space-between;margin:24px 10px 0;background:rgba(255,255,255,0.07);border-radius:10px;padding:10px}
+.rt-lock{position:relative;font-size:22px}
+.rt-strike{position:absolute;left:-5px;top:50%;width:130%;height:3px;background:#ff5555;border-radius:2px;transform:rotate(-35deg) scaleX(0);transform-origin:left center;animation:rtStrike 0.35s ease 2.2s forwards}
+.rt-switch{width:44px;height:22px;border-radius:11px;background:#2ecc71;position:relative;animation:rtSwitchBg 0.3s ease 2.2s forwards}
+.rt-knob{position:absolute;top:2px;left:24px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);animation:rtKnob 0.3s ease 2.2s forwards}
+.rt-finger{position:absolute;right:4px;bottom:-8px;font-size:36px;opacity:0;animation:rtTap 1.1s ease 1.3s forwards}
+.rt-check{position:absolute;right:0;bottom:16px;font-size:46px;color:#2ecc71;text-shadow:0 0 18px rgba(46,204,113,0.7);opacity:0;transform:scale(0.3);animation:rtCheck 0.45s ease 4.6s forwards}
+.rt-great{font-size:16px;font-weight:700;letter-spacing:2px;color:#2ecc71;margin-top:20px;opacity:0;animation:rtCheck 0.45s ease 4.8s forwards}
+.rt-skip{margin-top:12px;opacity:0.85}
+@keyframes rtZoom{from{transform:scale(0.55);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes rtTurn{to{transform:rotate(-90deg)}}
+@keyframes rtTap{0%{opacity:0;transform:translate(34px,56px)}25%{opacity:1}55%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0) scale(0.85)}85%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(0,0)}}
+@keyframes rtStrike{to{transform:rotate(-35deg) scaleX(1)}}
+@keyframes rtSwitchBg{to{background:#555a60}}
+@keyframes rtKnob{to{left:2px}}
+@keyframes rtCheck{to{opacity:1;transform:scale(1)}}
+@keyframes rtPulse{0%,100%{opacity:1}50%{opacity:0.55}}
+
+/* ===== MOBILE / SMALL SCREEN: COMPACT MENUS ===== */
+.menu-overlay{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.menu-overlay .menu-content{max-height:94vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 8px}
+@media (max-width:820px), (max-height:720px) {
+  #main-menu h1{font-size:32px;letter-spacing:3px;margin-bottom:6px}
+  #main-menu .subtitle{font-size:11px;margin-bottom:20px}
+  .menu-btn{width:220px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:7px}
+  .menu-btn.back-btn{width:160px;font-size:12px;margin-top:16px}
+  #map-menu h2,#settings-menu h2{font-size:24px;margin-bottom:12px}
+  .map-grid{gap:10px;max-width:96%;padding:0 8px}
+  .map-card{padding:10px;min-height:88px;border-radius:9px}
+  .map-card .map-icon{font-size:24px;margin-bottom:5px}
+  .map-card .map-name{font-size:12px}
+  .map-card .map-status{font-size:10px;margin-top:3px}
+  .setting-group{margin:9px 0}
+  .setting-label{font-size:11px;margin-bottom:5px;letter-spacing:0.5px}
+  .lang-btn{padding:8px 4px;font-size:12px}
+  #device-menu h2{font-size:24px;margin-bottom:10px}
+  #device-menu .subtitle{font-size:11px;margin-bottom:14px}
+  #device-menu .device-cards{gap:12px;margin-top:10px}
+  #device-menu .device-card{width:120px;padding:16px 10px;border-radius:12px}
+  #device-menu .device-card .d-icon{font-size:32px;margin-bottom:7px}
+  #device-menu .device-card .d-label{font-size:14px}
+  #device-menu .device-card .d-desc{font-size:9px;margin-top:5px}
+  .pause-btn{width:210px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:8px}
+  #pause-overlay h2{font-size:30px;letter-spacing:3px;margin-bottom:6px}
+  #pause-overlay .pause-sub{font-size:11px;margin-bottom:18px}
+  #death-screen h2{font-size:36px;letter-spacing:5px}
+  #victory-screen h2{font-size:34px;letter-spacing:5px}
+  .rt-title{font-size:20px;letter-spacing:2px;margin-bottom:6px}
+  .rt-sub{font-size:11px;margin-bottom:12px}
+  .rt-scale{transform:scale(0.8)}
+  .rt-great{font-size:13px;margin-top:8px}
+  .rt-skip{margin-top:6px}
+  #death-screen .pause-btn,#victory-screen .pause-btn{width:220px}
+}
 </style>
 </head>
 <body>
@@ -152,6 +220,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="d-desc" data-en="Touch Controls" data-fa="کنترل لمسی">Touch Controls</div>
 </div>
 </div>
+</div>
+</div>
+
+<!-- ROTATE PHONE TUTORIAL (mobile) -->
+<div id="rotate-tutorial" class="menu-overlay hidden" onclick="finishRotateTutorial()">
+<div class="rt-inner">
+<h2 class="rt-title" data-en="PLEASE ROTATE YOUR PHONE" data-fa="لطفا گوشی خود را بچرخانید">PLEASE ROTATE YOUR PHONE</h2>
+<p class="rt-sub" data-en="TURN OFF ROTATION LOCK, THEN ROTATE YOUR DEVICE" data-fa="قفل چرخش را خاموش کنید، سپس گوشی را بچرخانید">TURN OFF ROTATION LOCK, THEN ROTATE YOUR DEVICE</p>
+<div class="rt-scale">
+<div class="rt-scene">
+<div class="rt-phone-wrap">
+<div class="rt-hand">🤚</div>
+<div class="rt-phone">
+<div class="rt-screen">
+<div class="rt-statusbar"></div>
+<div class="rt-toggle-row">
+<div class="rt-lock">🔒<span class="rt-strike"></span></div>
+<div class="rt-switch"><div class="rt-knob"></div></div>
+</div>
+<div class="rt-finger">👆</div>
+</div>
+</div>
+</div>
+<div class="rt-check">✔</div>
+</div>
+</div>
+<p class="rt-great" data-en="GREAT! NOW ROTATE YOUR PHONE" data-fa="عالی! حالا گوشی را بچرخانید">GREAT! NOW ROTATE YOUR PHONE</p>
+<button class="menu-btn rt-skip" data-en="SKIP" data-fa="رد کردن">SKIP</button>
 </div>
 </div>
 
@@ -432,8 +528,9 @@ let playerHealth = 100;
 const MAX_HEALTH = 100;
 let difficulty = 1;
 const DIFFICULTY_COUNTS = [1, 5, 10, 20];
+const DIFFICULTY_DMG = [1, 5, 7, 10]; // damage per hit: Easy/Medium/Hard/Impossible
+const ZOMBIE_MAX_HIT_DIST = 10; // zombies can NEVER damage beyond 10 units
 const ENEMY_MAX_HP = 5;
-const ENEMY_DMG = 10;
 const ENEMY_SPEED = 3;
 const ENEMY_ATK_RANGE = 1.8;
 const ENEMY_ATK_CD = 1.0;
@@ -555,9 +652,37 @@ function selectDevice(dev) {
   deviceChosen = true;
   if (isMobileDevice) {
     try { document.documentElement.requestFullscreen(); } catch(e) {}
+    showRotateTutorial();
+  } else {
+    showMenu('main-menu');
+    // Apply current language to new elements
+    setLang(currentLang);
   }
+}
+
+// ===== ROTATE PHONE TUTORIAL (mobile) =====
+var rotateTutorialTimer = null;
+function showRotateTutorial() {
+  // Already in landscape -> no need for the tutorial
+  if (window.innerWidth > window.innerHeight) {
+    showMenu('main-menu');
+    setLang(currentLang);
+    return;
+  }
+  document.querySelectorAll('.menu-overlay').forEach(function(m) { m.classList.add('hidden'); });
+  var ov = document.getElementById('rotate-tutorial');
+  ov.classList.remove('hidden');
+  setLang(currentLang);
+  clearTimeout(rotateTutorialTimer);
+  rotateTutorialTimer = setTimeout(finishRotateTutorial, 5800);
+}
+function finishRotateTutorial() {
+  clearTimeout(rotateTutorialTimer);
+  rotateTutorialTimer = null;
+  var ov = document.getElementById('rotate-tutorial');
+  if (ov.classList.contains('hidden')) return;
+  ov.classList.add('hidden');
   showMenu('main-menu');
-  // Apply current language to new elements
   setLang(currentLang);
 }
 
@@ -802,6 +927,20 @@ function checkEnemyWall(px, pz) {
   return false;
 }
 
+// Line of sight between two points on the XZ plane (wall check at body height)
+// Samples points along the segment; if any wall collider blocks it, LOS is false.
+function hasLineOfSight(x1, z1, x2, z2) {
+  var dx = x2 - x1, dz = z2 - z1;
+  var dist = Math.sqrt(dx*dx + dz*dz);
+  var steps = Math.ceil(dist / 0.4);
+  if (steps < 2) return true;
+  for (var i = 1; i < steps; i++) {
+    var t = i / steps;
+    if (checkEnemyWall(x1 + dx*t, z1 + dz*t)) return false;
+  }
+  return true;
+}
+
 function isInsideMapZone(x, z) {
   var zones = mapSpawnZones[currentMap] || mapSpawnZones[0];
   for (var i = 0; i < zones.length; i++) {
@@ -923,14 +1062,13 @@ function updateMedkits() {
     mk.group.rotation.y += 0.02;
     var dx = px - mk.group.position.x;
     var dz = pz - mk.group.position.z;
-    if (Math.sqrt(dx*dx + dz*dz) < 1.2) {
-      if (playerHealth < MAX_HEALTH) {
-        playerHealth = Math.min(MAX_HEALTH, playerHealth + MEDKIT_HEAL);
-        updateHealthBar();
-        var notify = document.getElementById('medkit-notify');
-        notify.classList.add('show');
-        setTimeout(function() { notify.classList.remove('show'); }, 1200);
-      }
+    // Only pick up the medkit when health is below max (at 100% the medkit stays on ground)
+    if (Math.sqrt(dx*dx + dz*dz) < 1.2 && playerHealth < MAX_HEALTH) {
+      playerHealth = Math.min(MAX_HEALTH, playerHealth + MEDKIT_HEAL);
+      updateHealthBar();
+      var notify = document.getElementById('medkit-notify');
+      notify.classList.add('show');
+      setTimeout(function() { notify.classList.remove('show'); }, 1200);
       scene.remove(mk.group);
       mk.group.traverse(function(ch) {
         if (ch.geometry) ch.geometry.dispose();
@@ -943,28 +1081,71 @@ function updateMedkits() {
 
 function updateEnemies(dt) {
   var pPos = player.position;
+  // Player elevation state: zombies can NOT hit a player who is standing on
+  // elevated geometry (ground level > 0.1 above base floor) while grounded.
+  // (Jumping does NOT count as elevation - only standing on raised surfaces)
+  var pg = getGroundY(pPos.x, pPos.y, pPos.z);
+  if (pg < -998) pg = 0;
+  var playerElevated = (velocityY === 0 && pg > 0.1);
   for (var i = enemies.length - 1; i >= 0; i--) {
     var e = enemies[i];
-    var dx = pPos.x - e.group.position.x;
-    var dz = pPos.z - e.group.position.z;
+    var ex = e.group.position.x, ez = e.group.position.z;
+    var dx = pPos.x - ex;
+    var dz = pPos.z - ez;
     var dist = Math.sqrt(dx*dx + dz*dz);
     if (dist < 0.1) dist = 0.1;
     e.group.rotation.y = Math.atan2(dx, dz);
-    if (dist > ENEMY_ATK_RANGE) {
-      var speed = ENEMY_SPEED * dt;
+
+    // --- Separation & queueing: zombies keep distance from each other ---
+    var sepX = 0, sepZ = 0, yielding = false;
+    for (var j = 0; j < enemies.length; j++) {
+      if (j === i) continue;
+      var o = enemies[j].group.position;
+      var ox = ex - o.x, oz = ez - o.z;
+      var od = Math.sqrt(ox*ox + oz*oz);
+      if (od < 0.001) {
+        // Exactly coincident: deterministic pseudo-random jitter direction
+        var ang = i * 2.399963 + j * 1.3;
+        sepX += Math.sin(ang) * 0.6;
+        sepZ += Math.cos(ang) * 0.6;
+      } else if (od < 1.0) {
+        var push = (1.0 - od);
+        sepX += (ox/od) * push;
+        sepZ += (oz/od) * push;
+      }
+      if (od > 0.001 && od < 1.5) {
+        var oDx = pPos.x - o.x, oDz = pPos.z - o.z;
+        var oDist = Math.sqrt(oDx*oDx + oDz*oDz);
+        // Another zombie ahead of me (closer to player) and in my path -> queue behind it
+        if (oDist < dist && ((dx/dist)*(-ox/od) + (dz/dist)*(-oz/od)) > 0.45) yielding = true;
+      }
+    }
+
+    // Damage rules: melee range only, never beyond 10 units, never through walls,
+    // and never when the player is standing on elevated ground
+    var canHit = dist <= ENEMY_ATK_RANGE && dist <= ZOMBIE_MAX_HIT_DIST &&
+                 !playerElevated &&
+                 hasLineOfSight(ex, ez, pPos.x, pPos.z);
+
+    if (!canHit) {
+      var speed = ENEMY_SPEED * dt * (yielding ? 0.3 : 1);
       var nx = dx/dist, nz = dz/dist;
-      var newX = e.group.position.x + nx*speed;
-      var newZ = e.group.position.z + nz*speed;
-      if (!checkEnemyWall(newX, e.group.position.z)) e.group.position.x = newX;
-      if (!checkEnemyWall(e.group.position.x, newZ)) e.group.position.z = newZ;
+      var mvx = nx*speed + sepX * 2.2 * dt;
+      var mvz = nz*speed + sepZ * 2.2 * dt;
+      if (!checkEnemyWall(ex + mvx, ez)) e.group.position.x = ex + mvx;
+      if (!checkEnemyWall(e.group.position.x, ez + mvz)) e.group.position.z = ez + mvz;
       e.animTime += dt * 6;
       e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
       e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
       e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
       e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
     } else {
+      // Attacking: still push apart so zombies never stack inside each other
+      var spx = sepX * 2.2 * dt, spz = sepZ * 2.2 * dt;
+      if (!checkEnemyWall(ex + spx, ez)) e.group.position.x = ex + spx;
+      if (!checkEnemyWall(e.group.position.x, ez + spz)) e.group.position.z = ez + spz;
       e.attackTimer -= dt;
-      if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; damagePlayer(ENEMY_DMG); }
+      if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; damagePlayer(DIFFICULTY_DMG[difficulty]); }
       e.animTime += dt * 8;
       e.leftArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
       e.rightArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
@@ -1219,6 +1400,13 @@ function loadTestMap() {
   addCyl(10,1,-5,0.5,2,0xc0392b);
   addCyl(-10,1.5,5,0.7,3,0x2980b9);
   addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
+  // Brick ruins (brick texture showcase)
+  addWall(-13, 1.5, -13, 6, 3, 0.6, tex.brick);
+  addWall(-10.4, 1.5, -10.2, 0.6, 3, 5.6, tex.brick);
+  addWall(-13, 1.1, -10.2, 2.4, 2.2, 0.6, tex.brick);
+  addWall(13, 1.25, 12, 5, 2.5, 0.6, tex.brick);
+  addWall(15.5, 1.25, 14.6, 0.6, 2.5, 3.2, tex.brick);
+  addWall(11, 0.75, 9, 1.5, 1.5, 1.5, tex.brick);
   // Boundary walls (hedge)
   addWall(0, 2.5, -20, 42, 5, 0.8, tex.hedge);
   addWall(0, 2.5, 20, 42, 5, 0.8, tex.hedge);
@@ -1467,11 +1655,12 @@ function loadDustMap() {
   addWall(2.5, 1.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
   addWall(2.5, 2.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
 
-  // ====== B TUNNELS ======
-  addWall(10, 2, 22, 0.6, 4.5, 14, SAND);
-  addWall(16, 2, 22, 0.6, 4.5, 14, SAND);
-  addWall(13, 4.5, 22, 6, 0.3, 14, DARK_SAND);
-  addWall(13, 2, 15, 6, 4.5, 0.6, SAND);
+  // ====== B TUNNELS (brick corridor) ======
+  addWall(10, 2, 22, 0.6, 4.5, 14, BRICK);
+  addWall(16, 2, 22, 0.6, 4.5, 14, BRICK);
+  addWall(13, 4.5, 22, 6, 0.3, 14, BRICK);
+  addWall(13, 2, 15, 6, 4.5, 0.6, BRICK);
+  addWall(13, 1.1, 17, 1.2, 2.2, 0.5, BRICK);
   addBox(12, 0.5, 18, 1, 1, 1, CRATE);
   addBox(14, 0.5, 20, 1.2, 1, 1.2, CRATE);
   addBox(13, 1.3, 20, 0.8, 0.8, 0.8, CRATE);
@@ -1517,7 +1706,7 @@ function loadShootMap() {
   scene.background = new THREE.Color(0x8899aa);
   scene.fog = new THREE.Fog(0x8899aa, 15, 60);
   setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
-  var WALL=tex.concrete, WALL2=tex.concrete, CRATE=tex.crate, METAL=tex.metalWall, RUST=0x884422, WOOD=tex.crate, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
+  var WALL=tex.concrete, WALL2=tex.concrete, BRICK=tex.brick, CRATE=tex.crate, METAL=tex.metalWall, RUST=0x884422, WOOD=tex.crate, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
 
   // ====== OUTER BUILDING ======
   addWall(0, -0.1, 0, 32, 0.25, 42, FLOOR);
@@ -1528,10 +1717,10 @@ function loadShootMap() {
 
   // ====== ENTRANCE HALL ======
   addWall(-8, 2, -14, 0.4, 4.5, 8, WALL2);
-  addWall(-12, 2, -10, 8, 4.5, 0.4, WALL2);
+  addWall(-12, 2, -10, 8, 4.5, 0.4, BRICK);
   addWall(-8, 2, -18, 0.4, 4.5, 4, WALL2);
   addWall(8, 2, -14, 0.4, 4.5, 8, WALL2);
-  addWall(12, 2, -10, 8, 4.5, 0.4, WALL2);
+  addWall(12, 2, -10, 8, 4.5, 0.4, BRICK);
   addWall(8, 2, -18, 0.4, 4.5, 4, WALL2);
   addBox(-4, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
   addBox(-2.5, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
@@ -1549,6 +1738,9 @@ function loadShootMap() {
   // ====== CENTER CORRIDOR ======
   addWall(-4, 2, -4, 6, 4.5, 0.4, WALL2);
   addWall(4, 2, -4, 6, 4.5, 0.4, WALL2);
+  // Brick accents at corridor exit
+  addWall(-4.6, 2, -0.9, 0.5, 4.5, 0.5, BRICK);
+  addWall(4.6, 2, -0.9, 0.5, 4.5, 0.5, BRICK);
   addBox(0, 0.5, -6, 2, 1, 1, CRATE);
   addBox(-2, 0.5, -2, 1.2, 1, 1.2, CRATE);
   addBox(2, 0.5, -2, 1.2, 1, 1.2, CRATE);
