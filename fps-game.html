@@ -361,7 +361,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 <p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
-<button class="menu-btn" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
+<button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -488,9 +488,13 @@ function worldToMinimap(wx, wz) {
   var pz = player.position.z;
   var dx = wx - px;
   var dz = wz - pz;
-  // Rotate by player yaw so minimap is oriented with player facing up
-  var cos = Math.cos(-yaw);
-  var sin = Math.sin(-yaw);
+  // Rotate the world offset into the player-local frame so the player's
+  // facing direction is always UP on the minimap.
+  // Three.js yaw: forward = (-sin yaw, -cos yaw) in the xz plane, so the
+  // correct inverse rotation is the standard 2D rotation by +yaw.
+  // (Using -yaw inverted the map: enemies ahead appeared behind at yaw!=0)
+  var cos = Math.cos(yaw);
+  var sin = Math.sin(yaw);
   var rx = dx * cos - dz * sin;
   var rz = dx * sin + dz * cos;
   var scale = MINIMAP_SIZE / (MINIMAP_RANGE * 2);
@@ -514,21 +518,28 @@ function drawMinimap() {
     ctx.beginPath(); ctx.moveTo(0, i*step); ctx.lineTo(S, i*step); ctx.stroke();
   }
   
-  // Draw colliders (walls) on minimap as small rectangles
-  var scale = S / (MINIMAP_RANGE * 2);
+  // Draw colliders (walls) on minimap as rotated quads (corners are
+  // transformed individually so walls keep their real orientation while turning)
   ctx.fillStyle = 'rgba(100,130,170,0.35)';
   for (var i = 0; i < colliders.length; i++) {
     var c = colliders[i];
     // Only draw substantial walls (height > 1)
     if (c.maxY - c.minY < 1.0) continue;
-    // Center of collider in world
+    // Distance cull (with half-diagonal margin) before drawing
     var cx = (c.minX + c.maxX) / 2;
     var cz = (c.minZ + c.maxZ) / 2;
-    var p = worldToMinimap(cx, cz);
-    if (p.x < -20 || p.x > S+20 || p.y < -20 || p.y > S+20) continue;
-    var cw = (c.maxX - c.minX) * scale;
-    var cd = (c.maxZ - c.minZ) * scale;
-    ctx.fillRect(p.x - cw/2, p.y - cd/2, Math.max(cw,1.5), Math.max(cd,1.5));
+    var ddx = cx - player.position.x, ddz = cz - player.position.z;
+    var hx = (c.maxX - c.minX) / 2, hz = (c.maxZ - c.minZ) / 2;
+    var margin = MINIMAP_RANGE + Math.sqrt(hx * hx + hz * hz);
+    if (ddx * ddx + ddz * ddz > margin * margin) continue;
+    ctx.beginPath();
+    var corners = [[c.minX, c.minZ], [c.maxX, c.minZ], [c.maxX, c.maxZ], [c.minX, c.maxZ]];
+    for (var j = 0; j < 4; j++) {
+      var p = worldToMinimap(corners[j][0], corners[j][1]);
+      if (j === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
   
   // Draw zombies with 🧟
@@ -539,6 +550,9 @@ function drawMinimap() {
     var e = enemies[i];
     var ep = worldToMinimap(e.group.position.x, e.group.position.z);
     if (ep.x < -10 || ep.x > S+10 || ep.y < -10 || ep.y > S+10) continue;
+    // Solid red dot so blips stay visible even if emoji glyphs are unavailable
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath(); ctx.arc(ep.x, ep.y, 4, 0, Math.PI*2); ctx.fill();
     // Red glow behind zombie
     ctx.fillStyle = 'rgba(255,50,50,0.4)';
     ctx.beginPath(); ctx.arc(ep.x, ep.y, 7, 0, Math.PI*2); ctx.fill();
@@ -1074,6 +1088,9 @@ function setLang(lang) {
 function showMenu(id) {
   document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+  // HUD customization only makes sense for touch (mobile) controls
+  var hudBtn = document.getElementById('btn-hud-customize');
+  if (hudBtn) hudBtn.style.display = isMobileDevice ? '' : 'none';
 }
 
 function selectMap(idx) { currentMap = idx; startGame(); }
@@ -2678,12 +2695,32 @@ window.addEventListener('resize', function() {
 const clock = new THREE.Clock();
 const debugEl = document.getElementById('debug');
 
+// The game must be COMPLETELY frozen while any overlay is open (pause menu,
+// settings/map menus, death, victory). Before this fix, pausing on mobile only
+// hid the controls but keep running updateEnemies(), so zombies kept attacking
+// and the player could die behind the PAUSED screen.
+const pauseMenuOverlays = document.querySelectorAll('.menu-overlay');
+const pauseDeathEl = document.getElementById('death-screen');
+const pauseVictoryEl = document.getElementById('victory-screen');
+const pauseHudEditorEl = document.getElementById('hud-editor');
+function isGamePaused() {
+  if (!pauseOvl.classList.contains('hidden')) return true;
+  if (!pauseDeathEl.classList.contains('hidden')) return true;
+  if (!pauseVictoryEl.classList.contains('hidden')) return true;
+  if (pauseHudEditorEl && !pauseHudEditorEl.classList.contains('hidden')) return true;
+  for (var i = 0; i < pauseMenuOverlays.length; i++) {
+    if (!pauseMenuOverlays[i].classList.contains('hidden')) return true;
+  }
+  return false;
+}
+
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (++crosshairTick % 7 === 0) updateCrosshairEnemy();
+  const gamePaused = isGamePaused();
+  if (!gamePaused && ++crosshairTick % 7 === 0) updateCrosshairEnemy();
 
-  if (isLocked || (isMobileDevice && gameStarted)) {
+  if (!gamePaused && (isLocked || (isMobileDevice && gameStarted))) {
     // Auto fire (hold the fire button for continuous fire)
     if (autoFire && fireHeld && gameStarted && !isReloading && ammo > 0 && pauseOvl.classList.contains('hidden')) shoot();
     // Movement
