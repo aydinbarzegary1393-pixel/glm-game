@@ -53,6 +53,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7)}
 #crosshair::before{width:20px;height:2px;top:-1px;left:-10px}
 #crosshair::after{width:2px;height:20px;top:-10px;left:-1px}
+#crosshair.enemy::before,#crosshair.enemy::after{background:#ff2222;box-shadow:0 0 6px rgba(255,0,0,0.9)}
 #debug{position:fixed;top:20px;left:20px;color:#fff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:28px;font-weight:700;z-index:50;pointer-events:none;direction:ltr;text-align:left;text-shadow:0 0 10px rgba(0,0,0,0.9),0 0 20px rgba(0,0,0,0.7),2px 2px 4px rgba(0,0,0,0.8)}
 
 /* Muzzle flash */
@@ -103,6 +104,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #mobile-btns .btn-row{display:flex;gap:10px}
 #btn-pause-m{position:absolute;top:15px;right:15px;pointer-events:auto;z-index:4;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.4);color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;line-height:1}
 #btn-pause-m:active{background:rgba(255,255,255,0.15)}
+/* HUD Layout Editor (CODM-style) */
+#hud-editor{position:fixed;inset:0;z-index:350;background:rgba(8,14,24,0.88);background-image:linear-gradient(rgba(79,195,247,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(79,195,247,0.08) 1px,transparent 1px);background-size:42px 42px}
+#hud-editor.hidden{display:none}
+#hud-editor .hud-hint{position:absolute;top:64px;left:0;right:0;text-align:center;color:#4fc3f7;font-size:14px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(79,195,247,0.5);pointer-events:none}
+#hud-editor .hud-bar{position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:12px}
+#hud-editor .hud-bar button{padding:12px 20px;border-radius:10px;border:2px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#hud-editor .hud-bar #hud-save{border-color:rgba(46,204,113,0.6);background:rgba(46,204,113,0.18)}
+#hud-editor .hud-bar #hud-reset{border-color:rgba(255,170,0,0.5);background:rgba(255,170,0,0.12)}
+.hud-editing #mobile-controls{display:block !important}
+.hud-editing .m-action,.hud-editing #btn-pause-m,.hud-editing #joystick-base{border-color:#4fc3f7 !important;box-shadow:0 0 14px rgba(79,195,247,0.55);touch-action:none}
+.hud-free{position:absolute !important;right:auto !important;bottom:auto !important;left:50%;top:50%;transform:translate(-50%,-50%);touch-action:none;z-index:6}
 #reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
 /* Health Bar */
 #health-bar-container{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:50;pointer-events:none;display:none;align-items:center;gap:8px}
@@ -349,6 +361,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 <p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
+<button class="menu-btn" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -413,6 +426,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="m-action" id="btn-reload-m" data-en="R" data-fa="R">R</button>
 </div>
 <button class="m-action" id="btn-fire-m">FIRE</button>
+</div>
+</div>
+<!-- HUD LAYOUT EDITOR -->
+<div id="hud-editor" class="hidden">
+<div class="hud-hint" data-en="DRAG BUTTONS TO REPOSITION THEM" data-fa="دکمه‌ها را بکشید تا جابه‌جا شوند">DRAG BUTTONS TO REPOSITION THEM</div>
+<div class="hud-bar">
+<button id="hud-reset" onclick="resetHudLayout()" data-en="RESET" data-fa="بازنشانی">RESET</button>
+<button id="hud-cancel" onclick="closeHudEditor(true)" data-en="CANCEL" data-fa="انصراف">CANCEL</button>
+<button id="hud-save" onclick="saveHudLayout()" data-en="SAVE" data-fa="ذخیره">SAVE</button>
 </div>
 </div>
 
@@ -759,6 +781,7 @@ function initJoystick() {
   var zone = document.getElementById('joystick-zone');
   zone.addEventListener('touchstart', function(e) {
     e.preventDefault();
+    if (hudEditing) return;
     var t = e.changedTouches[0];
     joyTouchId = t.identifier;
     var rect = joyBase.getBoundingClientRect();
@@ -767,6 +790,7 @@ function initJoystick() {
   }, {passive: false});
   zone.addEventListener('touchmove', function(e) {
     e.preventDefault();
+    if (hudEditing) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === joyTouchId) {
@@ -806,6 +830,7 @@ function initJoystick() {
   var fireBtn = document.getElementById('btn-fire-m');
   fireBtn.addEventListener('touchstart', function(e) {
     e.preventDefault();
+    if (hudEditing) return;
     var t = e.changedTouches[0];
     fireLookTouchId = t.identifier;
     fireLastX = t.clientX; fireLastY = t.clientY;
@@ -818,7 +843,7 @@ function initJoystick() {
     fireHeld = false;
   });
   document.addEventListener('touchmove', function(e) {
-    if (fireLookTouchId === null) return;
+    if (hudEditing || fireLookTouchId === null) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === fireLookTouchId) {
@@ -839,19 +864,19 @@ function initJoystick() {
   document.addEventListener('touchend', endFireLook, {passive: false});
   document.addEventListener('touchcancel', endFireLook, {passive: false});
   document.getElementById('btn-jump-m').addEventListener('touchstart', function(e) {
-    e.preventDefault(); keys.space = true;
+    e.preventDefault(); if (hudEditing) return; keys.space = true;
   }, {passive: false});
   document.getElementById('btn-jump-m').addEventListener('touchend', function(e) {
     e.preventDefault(); keys.space = false;
   }, {passive: false});
   document.getElementById('btn-reload-m').addEventListener('touchstart', function(e) {
-    e.preventDefault(); startReload();
+    e.preventDefault(); if (hudEditing) return; startReload();
   }, {passive: false});
 
   // Mobile pause button
   document.getElementById('btn-pause-m').addEventListener('touchstart', function(e) {
     e.preventDefault();
-    if (!gameStarted) return;
+    if (hudEditing || !gameStarted) return;
     pauseOvl.classList.remove('hidden');
     document.getElementById('mobile-controls').style.display = 'none';
     // Reset look/fire-look touches so they don't continue after resume
@@ -866,7 +891,7 @@ function initJoystick() {
 
   lookZone.addEventListener('touchstart', function(e) {
     e.preventDefault();
-    if (!gameStarted) return;
+    if (hudEditing || !gameStarted) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       lookTouchId = t.identifier;
@@ -876,7 +901,7 @@ function initJoystick() {
   }, {passive: false});
   lookZone.addEventListener('touchmove', function(e) {
     e.preventDefault();
-    if (!gameStarted || lookTouchId === null) return;
+    if (hudEditing || !gameStarted || lookTouchId === null) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === lookTouchId) {
@@ -896,6 +921,140 @@ function initJoystick() {
       if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
     }
   });
+}
+
+// ===== HUD LAYOUT EDITOR (CODM-style: drag buttons, save layout) =====
+const HUD_ITEMS = ['btn-fire-m','btn-jump-m','btn-reload-m','btn-pause-m','joystick-base'];
+var hudEditing = false;
+function hudContainer() { return document.getElementById('mobile-controls'); }
+function applyHudPos(el, xPct, yPct) {
+  if (el.parentElement && el.parentElement.id !== 'mobile-controls') hudContainer().appendChild(el);
+  el.classList.add('hud-free');
+  el.style.left = xPct + '%';
+  el.style.top = yPct + '%';
+}
+function restoreDefaultLayout() {
+  HUD_ITEMS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hud-free');
+    el.style.left = ''; el.style.top = '';
+    if (id === 'joystick-base') document.getElementById('joystick-zone').appendChild(el);
+    else if (id === 'btn-jump-m' || id === 'btn-reload-m') document.querySelector('#mobile-btns .btn-row').appendChild(el);
+    else if (id === 'btn-fire-m') document.getElementById('mobile-btns').appendChild(el);
+  });
+}
+function loadHudLayout() {
+  var raw = null;
+  try { raw = localStorage.getItem('hudLayoutV1'); } catch(e) {}
+  if (!raw) return false;
+  var map = null;
+  try { map = JSON.parse(raw); } catch(e) { return false; }
+  var ok = false;
+  HUD_ITEMS.forEach(function(id) {
+    if (map && map[id] && typeof map[id][0] === 'number') { applyHudPos(document.getElementById(id), map[id][0], map[id][1]); ok = true; }
+  });
+  return ok;
+}
+function saveHudLayout() {
+  var r = hudContainer().getBoundingClientRect();
+  var map = {};
+  HUD_ITEMS.forEach(function(id) {
+    var b = document.getElementById(id).getBoundingClientRect();
+    map[id] = [
+      Math.round(((b.left + b.width/2 - r.left) / r.width) * 10000) / 100,
+      Math.round(((b.top + b.height/2 - r.top) / r.height) * 10000) / 100
+    ];
+  });
+  try { localStorage.setItem('hudLayoutV1', JSON.stringify(map)); } catch(e) {}
+  closeHudEditor(false);
+}
+function resetHudLayout() {
+  try { localStorage.removeItem('hudLayoutV1'); } catch(e) {}
+  restoreDefaultLayout();
+}
+function freeAtCurrent(el) {
+  var r = hudContainer().getBoundingClientRect();
+  var b = el.getBoundingClientRect();
+  var x = ((b.left + b.width/2 - r.left) / r.width) * 100;
+  var y = ((b.top + b.height/2 - r.top) / r.height) * 100;
+  applyHudPos(el, Math.round(x * 100) / 100, Math.round(y * 100) / 100);
+}
+function openHudEditor() {
+  hudEditing = true;
+  fireHeld = false; keys.space = false;
+  document.body.classList.add('hud-editing');
+  loadHudLayout();
+  HUD_ITEMS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && !el.classList.contains('hud-free')) freeAtCurrent(el);
+  });
+  document.querySelectorAll('.menu-overlay').forEach(function(m) { m.classList.add('hidden'); });
+  document.getElementById('hud-editor').classList.remove('hidden');
+}
+function closeHudEditor(cancel) {
+  hudEditing = false;
+  fireHeld = false; keys.space = false;
+  document.body.classList.remove('hud-editing');
+  document.getElementById('hud-editor').classList.add('hidden');
+  if (cancel && !loadHudLayout()) restoreDefaultLayout();
+  backFromSettings();
+}
+function initHudDrag() {
+  HUD_ITEMS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('pointerdown', function(e) {
+      if (!hudEditing) return;
+      e.preventDefault();
+      try { el.setPointerCapture(e.pointerId); } catch(err) {}
+      var r = hudContainer().getBoundingClientRect();
+      var b = el.getBoundingClientRect();
+      var offX = e.clientX - (b.left + b.width/2);
+      var offY = e.clientY - (b.top + b.height/2);
+      var move = function(ev) {
+        var x = ((ev.clientX - offX - r.left) / r.width) * 100;
+        var y = ((ev.clientY - offY - r.top) / r.height) * 100;
+        x = Math.max(5, Math.min(95, x));
+        y = Math.max(8, Math.min(90, y));
+        el.style.left = x + '%';
+        el.style.top = y + '%';
+      };
+      var up = function() {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+  });
+}
+initHudDrag();
+loadHudLayout();
+
+// ===== CROSSHAIR ENEMY HIGHLIGHT (red when aiming at a zombie) =====
+const SCREEN_CENTER = new THREE.Vector2(0, 0);
+var crosshairTick = 0;
+function updateCrosshairEnemy() {
+  var chEl = document.getElementById('crosshair');
+  if (!gameStarted || chEl.style.display === 'none') { chEl.classList.remove('enemy'); return; }
+  raycaster.setFromCamera(SCREEN_CENTER, camera);
+  var eMeshes = [];
+  for (var ei = 0; ei < enemies.length; ei++) {
+    enemies[ei].group.traverse(function(ch) { if (ch.isMesh) eMeshes.push(ch); });
+  }
+  var on = false;
+  if (eMeshes.length > 0) {
+    var hits = raycaster.intersectObjects(eMeshes);
+    if (hits.length > 0) {
+      on = true;
+      var wallHits = raycaster.intersectObjects(sceneObjects);
+      if (wallHits.length > 0 && wallHits[0].distance < hits[0].distance) on = false;
+    }
+  }
+  chEl.classList.toggle('enemy', on);
 }
 
 // ===== TRANSLATIONS =====
@@ -2521,6 +2680,7 @@ const debugEl = document.getElementById('debug');
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  if (++crosshairTick % 7 === 0) updateCrosshairEnemy();
 
   if (isLocked || (isMobileDevice && gameStarted)) {
     // Auto fire (hold the fire button for continuous fire)
