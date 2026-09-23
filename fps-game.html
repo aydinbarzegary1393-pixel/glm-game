@@ -337,15 +337,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="setting-group">
 <div class="setting-label" data-en="AUTO RELOAD / ریلود خودکار" data-fa="AUTO RELOAD / ریلود خودکار">AUTO RELOAD / ریلود خودکار</div>
 <div class="lang-btns">
-<button class="lang-btn" id="ar-on" onclick="setAutoReload(true)" data-en="ON" data-fa="روشن">ON</button>
-<button class="lang-btn active" id="ar-off" onclick="setAutoReload(false)" data-en="OFF" data-fa="خاموش">OFF</button>
+<button class="lang-btn active" id="ar-on" onclick="setAutoReload(true)" data-en="ON" data-fa="روشن">ON</button>
+<button class="lang-btn" id="ar-off" onclick="setAutoReload(false)" data-en="OFF" data-fa="خاموش">OFF</button>
 </div>
 </div>
 <div class="setting-group">
 <div class="setting-label" data-en="AUTO FIRE / شلیک رگباری" data-fa="AUTO FIRE / شلیک رگباری">AUTO FIRE / شلیک رگباری</div>
 <div class="lang-btns">
-<button class="lang-btn" id="af-on" onclick="setAutoFire(true)" data-en="ON" data-fa="روشن">ON</button>
-<button class="lang-btn active" id="af-off" onclick="setAutoFire(false)" data-en="OFF" data-fa="خاموش">OFF</button>
+<button class="lang-btn active" id="af-on" onclick="setAutoFire(true)" data-en="ON" data-fa="روشن">ON</button>
+<button class="lang-btn" id="af-off" onclick="setAutoFire(false)" data-en="OFF" data-fa="خاموش">OFF</button>
 </div>
 <p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
@@ -444,8 +444,8 @@ let isReloading = false;
 let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
-let autoReload = false;
-let autoFire = false;
+let autoReload = true;
+let autoFire = true;
 let fireHeld = false;
 
 // ===== MINIMAP SYSTEM =====
@@ -792,15 +792,52 @@ function initJoystick() {
   zone.addEventListener('touchcancel', resetJoy);
 
   // Mobile buttons
-  document.getElementById('btn-fire-m').addEventListener('touchstart', function(e) {
-    e.preventDefault(); fireHeld = true; if (gameStarted) shoot();
+  // Fire button: fire + drag-to-aim with the SAME finger (PUBG/COD style).
+  // The fire touch is tracked at document level so sliding the finger off the
+  // button still rotates the camera until the finger lifts.
+  var fireLookTouchId = null, fireLastX = 0, fireLastY = 0;
+  var applyLookDelta = function(dx, dy) {
+    yaw -= dx * TOUCH_SENS;
+    pitch -= dy * TOUCH_SENS;
+    pitch = Math.max(-1.55, Math.min(1.55, pitch));
+    player.rotation.y = yaw;
+    pitchObj.rotation.x = pitch;
+  };
+  var fireBtn = document.getElementById('btn-fire-m');
+  fireBtn.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    var t = e.changedTouches[0];
+    fireLookTouchId = t.identifier;
+    fireLastX = t.clientX; fireLastY = t.clientY;
+    fireHeld = true; if (gameStarted) shoot();
   }, {passive: false});
-  document.getElementById('btn-fire-m').addEventListener('touchend', function(e) {
+  fireBtn.addEventListener('touchend', function(e) {
     e.preventDefault(); fireHeld = false;
   }, {passive: false});
-  document.getElementById('btn-fire-m').addEventListener('touchcancel', function(e) {
+  fireBtn.addEventListener('touchcancel', function(e) {
     fireHeld = false;
   });
+  document.addEventListener('touchmove', function(e) {
+    if (fireLookTouchId === null) return;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.identifier === fireLookTouchId) {
+        e.preventDefault();
+        if (gameStarted) applyLookDelta(t.clientX - fireLastX, t.clientY - fireLastY);
+        fireLastX = t.clientX; fireLastY = t.clientY;
+        break;
+      }
+    }
+  }, {passive: false});
+  var endFireLook = function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === fireLookTouchId) {
+        fireLookTouchId = null; fireHeld = false;
+      }
+    }
+  };
+  document.addEventListener('touchend', endFireLook, {passive: false});
+  document.addEventListener('touchcancel', endFireLook, {passive: false});
   document.getElementById('btn-jump-m').addEventListener('touchstart', function(e) {
     e.preventDefault(); keys.space = true;
   }, {passive: false});
@@ -817,8 +854,9 @@ function initJoystick() {
     if (!gameStarted) return;
     pauseOvl.classList.remove('hidden');
     document.getElementById('mobile-controls').style.display = 'none';
-    // Reset look touch so it doesn't continue after resume
+    // Reset look/fire-look touches so they don't continue after resume
     lookTouchId = null;
+    fireLookTouchId = null; fireHeld = false;
   }, {passive: false});
 
   // Mobile look (touch on look-zone for aiming)
@@ -842,13 +880,7 @@ function initJoystick() {
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === lookTouchId) {
-        var dx = t.clientX - lastLookX;
-        var dy = t.clientY - lastLookY;
-        yaw -= dx * TOUCH_SENS;
-        pitch -= dy * TOUCH_SENS;
-        pitch = Math.max(-1.55, Math.min(1.55, pitch));
-        player.rotation.y = yaw;
-        pitchObj.rotation.x = pitch;
+        applyLookDelta(t.clientX - lastLookX, t.clientY - lastLookY);
         lastLookX = t.clientX; lastLookY = t.clientY;
         break;
       }
@@ -1010,10 +1042,24 @@ function createEnemy(x, z) {
   body.position.set(0,1.1,0); enemy.group.add(body);
   var head = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.4,0.35), bMat);
   head.position.set(0,1.85,0); enemy.group.add(head);
-  var eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6), eyeMat);
-  eyeL.position.set(-0.1,1.9,-0.17); enemy.group.add(eyeL);
-  var eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6), eyeMat);
-  eyeR.position.set(0.1,1.9,-0.17); enemy.group.add(eyeR);
+  // Face is local +z (rotation.y = atan2(dx,dz) points +z toward player)
+  var eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8), eyeMat);
+  eyeL.position.set(-0.085,1.93,0.185); enemy.group.add(eyeL);
+  var eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8), eyeMat);
+  eyeR.position.set(0.085,1.93,0.185); enemy.group.add(eyeR);
+  var pupilMat = new THREE.MeshBasicMaterial({color:0x330000});
+  var pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.022,6,6), pupilMat);
+  pupilL.position.set(-0.085,1.93,0.225); enemy.group.add(pupilL);
+  var pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.022,6,6), pupilMat);
+  pupilR.position.set(0.085,1.93,0.225); enemy.group.add(pupilR);
+  var brow = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.05,0.04), dMat);
+  brow.position.set(0,2.01,0.17); brow.rotation.z = 0.08; enemy.group.add(brow);
+  var mouth = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.055,0.03), pupilMat);
+  mouth.position.set(0,1.72,0.18); enemy.group.add(mouth);
+  var toothL = new THREE.Mesh(new THREE.BoxGeometry(0.03,0.035,0.01), new THREE.MeshBasicMaterial({color:0xdddddd}));
+  toothL.position.set(-0.045,1.735,0.195); enemy.group.add(toothL);
+  var toothR = new THREE.Mesh(new THREE.BoxGeometry(0.03,0.035,0.01), toothL.material);
+  toothR.position.set(0.045,1.735,0.195); enemy.group.add(toothR);
   var la = new THREE.Group(); la.position.set(-0.45,1.5,0);
   var laM = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.55,0.14), dMat);
   laM.position.y = -0.275; la.add(laM); enemy.group.add(la); enemy.leftArm = la;
