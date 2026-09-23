@@ -105,16 +105,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #btn-pause-m{position:absolute;top:15px;right:15px;pointer-events:auto;z-index:4;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.4);color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;line-height:1}
 #btn-pause-m:active{background:rgba(255,255,255,0.15)}
 /* HUD Layout Editor (CODM-style) */
-#hud-editor{position:fixed;inset:0;z-index:350;background:rgba(8,14,24,0.88);background-image:linear-gradient(rgba(79,195,247,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(79,195,247,0.08) 1px,transparent 1px);background-size:42px 42px}
+#hud-editor{position:fixed;inset:0;z-index:350;pointer-events:none;background:rgba(8,14,24,0.88);background-image:linear-gradient(rgba(79,195,247,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(79,195,247,0.08) 1px,transparent 1px);background-size:42px 42px}
 #hud-editor.hidden{display:none}
-#hud-editor .hud-hint{position:absolute;top:64px;left:0;right:0;text-align:center;color:#4fc3f7;font-size:14px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(79,195,247,0.5);pointer-events:none}
-#hud-editor .hud-bar{position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:12px}
-#hud-editor .hud-bar button{padding:12px 20px;border-radius:10px;border:2px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#hud-editor .hud-hint{position:absolute;top:72px;left:0;right:0;text-align:center;color:#4fc3f7;font-size:14px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(79,195,247,0.5);pointer-events:none}
+#hud-editor .hud-bar{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center;gap:10px;pointer-events:auto;padding-right:64px}
+#hud-editor .hud-bar button{padding:10px 14px;border-radius:10px;border:2px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #hud-editor .hud-bar #hud-save{border-color:rgba(46,204,113,0.6);background:rgba(46,204,113,0.18)}
 #hud-editor .hud-bar #hud-reset{border-color:rgba(255,170,0,0.5);background:rgba(255,170,0,0.12)}
 .hud-editing #mobile-controls{display:block !important}
 .hud-editing .m-action,.hud-editing #btn-pause-m,.hud-editing #joystick-base{border-color:#4fc3f7 !important;box-shadow:0 0 14px rgba(79,195,247,0.55);touch-action:none}
-.hud-free{position:absolute !important;right:auto !important;bottom:auto !important;left:50%;top:50%;transform:translate(-50%,-50%);touch-action:none;z-index:6}
+.hud-free{position:absolute !important;right:auto !important;bottom:auto !important;left:50%;top:50%;transform:translate(-50%,-50%);touch-action:none;pointer-events:auto;z-index:6}
 #reload-hud{position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);z-index:55;pointer-events:none;color:#ffaa00;font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,170,0,0.5);display:none}
 /* Health Bar */
 #health-bar-container{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:50;pointer-events:none;display:none;align-items:center;gap:8px}
@@ -843,7 +843,8 @@ function initJoystick() {
     fireHeld = false;
   });
   document.addEventListener('touchmove', function(e) {
-    if (hudEditing || fireLookTouchId === null) return;
+    if (hudEditing) { e.preventDefault(); return; }
+    if (fireLookTouchId === null) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       if (t.identifier === fireLookTouchId) {
