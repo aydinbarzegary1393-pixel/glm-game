@@ -141,9 +141,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #medkit-notify{position:fixed;top:55px;left:50%;transform:translateX(-50%);z-index:55;pointer-events:none;color:#2ecc71;font-size:20px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(46,204,113,0.6);opacity:0;transition:opacity 0.3s}
 #medkit-notify.show{opacity:1}
 /* Minimap */
-#minimap-container{position:fixed;top:12px;right:12px;z-index:60;pointer-events:none;display:none}
-#minimap-canvas{border:2px solid rgba(79,195,247,0.6);border-radius:8px;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(79,195,247,0.05)}
-#minimap-label{position:absolute;top:-18px;right:0;font-size:10px;color:rgba(79,195,247,0.7);letter-spacing:1px;font-weight:600}
+#minimap-container{position:fixed;top:72px;right:12px;z-index:60;pointer-events:none;display:none}
+#minimap-canvas{border:2px solid rgba(255,255,255,0.28);border-radius:10px;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(0,0,0,0.25)}
+#minimap-label{position:absolute;bottom:-16px;right:0;font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:2px;font-weight:600}
+/* Short screens (landscape phones): shrink radar so it clears JUMP/R buttons */
+@media (max-height:500px){
+  #minimap-canvas{width:150px;height:150px}
+  #minimap-container{top:66px}
+}
 
 /* ===== ROTATE PHONE TUTORIAL ===== */
 #rotate-tutorial{z-index:400;flex-direction:column;background:linear-gradient(160deg,#0a0e1a 0%,#16213e 60%,#0f3460 100%);cursor:pointer}
@@ -411,7 +416,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 <div id="damage-flash"></div>
 <div id="debug" style="display:none"></div>
-<div id="minimap-container"><div id="minimap-label">MINIMAP</div><canvas id="minimap-canvas" width="170" height="170"></canvas></div>
+<div id="minimap-container"><div id="minimap-label">RADAR</div><canvas id="minimap-canvas" width="200" height="200"></canvas></div>
 
 <!-- MOBILE CONTROLS -->
 <div id="mobile-controls">
@@ -470,11 +475,15 @@ let autoReload = true;
 let autoFire = true;
 let fireHeld = false;
 
-// ===== MINIMAP SYSTEM =====
+// ===== RADAR SYSTEM (CS2-style full-map minimap) =====
+// North-up STATIC radar: the whole map is scaled to fit the canvas (like the
+// real CS2 radar / the reference image). Olive walkable floors, light gray
+// structures, dark void, orange bombsite callouts (A/B), tiny area labels,
+// red enemy dots and a white player arrow that rotates with the player.
 var minimapEl = null;
 var minimapCtx = null;
-var MINIMAP_SIZE = 170;
-var MINIMAP_RANGE = 40; // world units visible in minimap
+var MINIMAP_SIZE = 200;
+var RADAR_PAD = 10; // px margin around the map inside the canvas
 
 function initMinimap() {
   minimapEl = document.getElementById('minimap-canvas');
@@ -483,102 +492,159 @@ function initMinimap() {
 }
 initMinimap();
 
-function worldToMinimap(wx, wz) {
-  var px = player.position.x;
-  var pz = player.position.z;
-  var dx = wx - px;
-  var dz = wz - pz;
-  // Rotate the world offset into the player-local frame so the player's
-  // facing direction is always UP on the minimap.
-  // Three.js yaw: forward = (-sin yaw, -cos yaw) in the xz plane, so the
-  // correct inverse rotation is the standard 2D rotation by +yaw.
-  // (Using -yaw inverted the map: enemies ahead appeared behind at yaw!=0)
-  var cos = Math.cos(yaw);
-  var sin = Math.sin(yaw);
-  var rx = dx * cos - dz * sin;
-  var rz = dx * sin + dz * cos;
-  var scale = MINIMAP_SIZE / (MINIMAP_RANGE * 2);
-  var sx = MINIMAP_SIZE / 2 + rx * scale;
-  var sy = MINIMAP_SIZE / 2 + rz * scale;
-  return {x: sx, y: sy};
+// Per-map radar metadata
+// levelMode: map has upper+lower walkable levels (Vertigo) - floors come from
+//   thin slab colliders (olive upper / maroon lower), no olive base rect.
+// sites / labels: bombsite callouts and tiny area names.
+const MAP_RADAR = [
+  { levelMode: false, sites: [], labels: [] },
+  { levelMode: true,
+    sites: [{t:'A', x:20, z:6.5}, {t:'B', x:-18, z:-22.5}],
+    labels: [
+      {t:'MID', x:-0.5, z:-10.5}, {t:'CT', x:7, z:-22.5}, {t:'T', x:-6, z:18.5},
+      {t:'TUN', x:-16, z:3.5}, {t:'PIT', x:-21.5, z:-3}, {t:'BRDG', x:9.5, z:5.5},
+      {t:'RAMP', x:9.5, z:10.5}, {t:'CONN', x:-8, z:-4.5}
+    ]},
+  { levelMode: false,
+    sites: [{t:'A', x:-5, z:3}, {t:'B', x:19.8, z:12.3}],
+    labels: [{t:'T', x:0, z:24}, {t:'CT', x:9, z:1}, {t:'LONG', x:-3, z:13}, {t:'TUN', x:13, z:21}]},
+  { levelMode: false, sites: [], labels: [] }
+];
+
+var radarCache = { key: null };
+function radarRebuild() {
+  var key = currentMap + ':' + colliders.length + ':' + MINIMAP_SIZE;
+  if (radarCache.key === key) return radarCache;
+  var meta = MAP_RADAR[currentMap] || MAP_RADAR[0];
+  // Classify colliders: thin slabs = floors (levelMode), thin high slabs = roofs,
+  // everything taller = structures (walls / props)
+  var floors = [], roofs = [], structs = [];
+  for (var i = 0; i < colliders.length; i++) {
+    var c = colliders[i];
+    var h = c.maxY - c.minY;
+    if (h <= 0.45) {
+      if (meta.levelMode) {
+        if (c.maxY <= 3.3) floors.push(c);
+        else if (c.maxY <= 7) roofs.push(c);
+      }
+      // base-mode maps: ground plane is the olive base, thin decals skipped
+    } else {
+      structs.push(c);
+    }
+  }
+  // Bounds from everything we will actually draw
+  var minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+  function eat(c) {
+    if (c.minX < minX) minX = c.minX;
+    if (c.maxX > maxX) maxX = c.maxX;
+    if (c.minZ < minZ) minZ = c.minZ;
+    if (c.maxZ > maxZ) maxZ = c.maxZ;
+  }
+  floors.forEach(eat); roofs.forEach(eat); structs.forEach(eat);
+  if (minX > maxX) { minX = -20; maxX = 20; minZ = -20; maxZ = 20; }
+  var pad = meta.levelMode ? 1.5 : 1;
+  minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
+  var bw = maxX - minX, bh = maxZ - minZ;
+  var S = MINIMAP_SIZE;
+  var scale = Math.min((S - 2 * RADAR_PAD) / bw, (S - 2 * RADAR_PAD) / bh);
+  var ox = S / 2 - (minX + maxX) / 2 * scale;
+  var oy = S / 2 - (minZ + maxZ) / 2 * scale;
+  function X(wx) { return wx * scale + ox; }
+  function Y(wz) { return wz * scale + oy; }
+
+  // Pre-render every static layer ONCE per map (dynamic dots/arrow redraw per frame)
+  var off = document.createElement('canvas');
+  off.width = S; off.height = S;
+  var g = off.getContext('2d');
+  g.fillStyle = '#0b0d11';                       // void, like the reference radar
+  g.fillRect(0, 0, S, S);
+  if (!meta.levelMode) {
+    g.fillStyle = '#6b6748';                     // olive walkable base (ground plane)
+    g.fillRect(X(minX), Y(minZ), bw * scale, bh * scale);
+  }
+  var k;
+  for (k = 0; k < floors.length; k++) {          // walkable floor slabs
+    var f = floors[k];
+    g.fillStyle = f.maxY >= 1.2 ? '#716c4d' : '#5c3a30'; // upper olive / lower maroon
+    g.fillRect(X(f.minX), Y(f.minZ), (f.maxX - f.minX) * scale, (f.maxZ - f.minZ) * scale);
+  }
+  for (k = 0; k < roofs.length; k++) {           // roofed areas read darker
+    var r = roofs[k];
+    g.fillStyle = '#22252c';
+    g.fillRect(X(r.minX), Y(r.minZ), (r.maxX - r.minX) * scale, (r.maxZ - r.minZ) * scale);
+  }
+  for (k = 0; k < structs.length; k++) {         // walls bright, props dimmer
+    var st = structs[k];
+    g.fillStyle = (st.maxY - st.minY) >= 2 ? '#c9c5ba' : '#a09d93';
+    g.fillRect(X(st.minX), Y(st.minZ), (st.maxX - st.minX) * scale, (st.maxZ - st.minZ) * scale);
+  }
+  // Bombsite callouts: orange letter inside an outlined box (like the real radar)
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (k = 0; k < meta.sites.length; k++) {
+    var s = meta.sites[k];
+    var sx = X(s.x), sy = Y(s.z), ss = Math.max(12, 4.5 * scale);
+    g.strokeStyle = 'rgba(232,150,30,0.9)'; g.lineWidth = 1.5;
+    g.strokeRect(sx - ss / 2, sy - ss / 2, ss, ss);
+    g.font = 'bold 12px Arial';
+    g.fillStyle = '#e8961e';
+    g.fillText(s.t, sx, sy + 0.5);
+  }
+  // Tiny area labels (dark outline + white text for readability)
+  g.font = 'bold 8px Arial';
+  for (k = 0; k < meta.labels.length; k++) {
+    var lb = meta.labels[k];
+    var lx = X(lb.x), ly = Y(lb.z);
+    g.lineWidth = 2.5; g.strokeStyle = 'rgba(0,0,0,0.65)';
+    g.strokeText(lb.t, lx, ly);
+    g.fillStyle = 'rgba(255,255,255,0.82)';
+    g.fillText(lb.t, lx, ly);
+  }
+
+  radarCache = { key: key, meta: meta, scale: scale, ox: ox, oy: oy, staticCanvas: off };
+  return radarCache;
 }
 
 function drawMinimap() {
   if (!minimapCtx || !gameStarted) return;
+  var R = radarRebuild();
   var ctx = minimapCtx;
   var S = MINIMAP_SIZE;
   ctx.clearRect(0, 0, S, S);
-  
-  // Background grid
-  ctx.strokeStyle = 'rgba(79,195,247,0.12)';
-  ctx.lineWidth = 0.5;
-  var step = S / 8;
-  for (var i = 1; i < 8; i++) {
-    ctx.beginPath(); ctx.moveTo(i*step, 0); ctx.lineTo(i*step, S); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i*step); ctx.lineTo(S, i*step); ctx.stroke();
-  }
-  
-  // Draw colliders (walls) on minimap as rotated quads (corners are
-  // transformed individually so walls keep their real orientation while turning)
-  ctx.fillStyle = 'rgba(100,130,170,0.35)';
-  for (var i = 0; i < colliders.length; i++) {
-    var c = colliders[i];
-    // Only draw substantial walls (height > 1)
-    if (c.maxY - c.minY < 1.0) continue;
-    // Distance cull (with half-diagonal margin) before drawing
-    var cx = (c.minX + c.maxX) / 2;
-    var cz = (c.minZ + c.maxZ) / 2;
-    var ddx = cx - player.position.x, ddz = cz - player.position.z;
-    var hx = (c.maxX - c.minX) / 2, hz = (c.maxZ - c.minZ) / 2;
-    var margin = MINIMAP_RANGE + Math.sqrt(hx * hx + hz * hz);
-    if (ddx * ddx + ddz * ddz > margin * margin) continue;
-    ctx.beginPath();
-    var corners = [[c.minX, c.minZ], [c.maxX, c.minZ], [c.maxX, c.maxZ], [c.minX, c.maxZ]];
-    for (var j = 0; j < 4; j++) {
-      var p = worldToMinimap(corners[j][0], corners[j][1]);
-      if (j === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
-  
-  // Draw zombies with 🧟
-  ctx.font = '14px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.drawImage(R.staticCanvas, 0, 0);
+  function X(wx) { return wx * R.scale + R.ox; }
+  function Y(wz) { return wz * R.scale + R.oy; }
+
+  // Enemies: red dots (CS2 spotted-enemy red)
   for (var i = 0; i < enemies.length; i++) {
     var e = enemies[i];
-    var ep = worldToMinimap(e.group.position.x, e.group.position.z);
-    if (ep.x < -10 || ep.x > S+10 || ep.y < -10 || ep.y > S+10) continue;
-    // Solid red dot so blips stay visible even if emoji glyphs are unavailable
+    var ex = X(e.group.position.x), ey = Y(e.group.position.z);
+    if (ex < -6 || ex > S + 6 || ey < -6 || ey > S + 6) continue;
+    ctx.fillStyle = 'rgba(255,60,60,0.35)';
+    ctx.beginPath(); ctx.arc(ex, ey, 6.5, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#ff3b3b';
-    ctx.beginPath(); ctx.arc(ep.x, ep.y, 4, 0, Math.PI*2); ctx.fill();
-    // Red glow behind zombie
-    ctx.fillStyle = 'rgba(255,50,50,0.4)';
-    ctx.beginPath(); ctx.arc(ep.x, ep.y, 7, 0, Math.PI*2); ctx.fill();
-    ctx.fillText('\u{1F9DF}', ep.x, ep.y);
+    ctx.beginPath(); ctx.arc(ex, ey, 3.2, 0, Math.PI*2); ctx.fill();
   }
-  
-  // Draw player with 👮 at center
-  var center = S / 2;
-  // Player direction indicator
-  ctx.strokeStyle = 'rgba(79,195,247,0.7)';
-  ctx.lineWidth = 2;
+
+  // Player: white view cone + arrow (arrow rotates with the player, map is fixed)
+  var px = X(player.position.x), py = Y(player.position.z);
+  var ang = Math.atan2(-Math.cos(yaw), -Math.sin(yaw)); // canvas angle of facing dir
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(ang);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';      // view cone
   ctx.beginPath();
-  ctx.moveTo(center, center);
-  ctx.lineTo(center, center - 18);
-  ctx.stroke();
-  // Player glow
-  ctx.fillStyle = 'rgba(79,195,247,0.3)';
-  ctx.beginPath(); ctx.arc(center, center, 10, 0, Math.PI*2); ctx.fill();
-  // Player emoji
-  ctx.font = '16px serif';
-  ctx.fillText('\u{1F46E}', center, center);
-  
-  // Range circle
-  ctx.strokeStyle = 'rgba(79,195,247,0.2)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(center, center, S/2 - 4, 0, Math.PI*2); ctx.stroke();
+  ctx.moveTo(0, 0);
+  ctx.arc(0, 0, 24, -0.42, 0.42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';                     // arrow
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(8, 0); ctx.lineTo(-5, 5); ctx.lineTo(-2.5, 0); ctx.lineTo(-5, -5);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
 }
 
 // ===== ENEMY & HEALTH =====
