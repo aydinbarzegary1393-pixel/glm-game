@@ -142,7 +142,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #medkit-notify.show{opacity:1}
 /* Minimap */
 #minimap-container{position:fixed;top:72px;right:12px;z-index:60;pointer-events:none;display:none}
-#minimap-canvas{border:2px solid rgba(255,255,255,0.28);border-radius:10px;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(0,0,0,0.25)}
+#minimap-canvas{border:2px solid rgba(255,255,255,0.28);border-radius:50%;background:rgba(0,0,0,0.55);box-shadow:0 0 12px rgba(0,0,0,0.5),inset 0 0 30px rgba(0,0,0,0.25)}
 #minimap-label{position:absolute;bottom:-16px;right:0;font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:2px;font-weight:600}
 /* Short screens (landscape phones): shrink radar so it clears JUMP/R buttons */
 @media (max-height:500px){
@@ -546,7 +546,9 @@ function radarRebuild() {
   minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
   var bw = maxX - minX, bh = maxZ - minZ;
   var S = MINIMAP_SIZE;
-  var scale = Math.min((S - 2 * RADAR_PAD) / bw, (S - 2 * RADAR_PAD) / bh);
+  // Circular radar: fit the map into the circle's inscribed square so the
+  // round mask never clips map corners (B site / CT edge on Vertigo).
+  var scale = Math.min((S - 2 * RADAR_PAD) / bw, (S - 2 * RADAR_PAD) / bh) / Math.SQRT2;
   var ox = S / 2 - (minX + maxX) / 2 * scale;
   var oy = S / 2 - (minZ + maxZ) / 2 * scale;
   function X(wx) { return wx * scale + ox; }
@@ -610,6 +612,11 @@ function drawMinimap() {
   var ctx = minimapCtx;
   var S = MINIMAP_SIZE;
   ctx.clearRect(0, 0, S, S);
+  // Circular mask: static map + dots + arrow all clipped to a circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+  ctx.clip();
   ctx.drawImage(R.staticCanvas, 0, 0);
   function X(wx) { return wx * R.scale + R.ox; }
   function Y(wz) { return wz * R.scale + R.oy; }
@@ -645,6 +652,25 @@ function drawMinimap() {
   ctx.closePath();
   ctx.fill(); ctx.stroke();
   ctx.restore();
+  ctx.restore(); // close circular clip
+
+  // Round frame ring (double ring for contrast on any background)
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 3.5, 0, Math.PI * 2); ctx.stroke();
+
+  // North marker (radar is north-up)
+  ctx.font = 'bold 9px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+  ctx.strokeText('N', S / 2, 9);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText('N', S / 2, 9);
 }
 
 // ===== ENEMY & HEALTH =====
@@ -1700,9 +1726,13 @@ function checkCollision(px, py, pz) {
     const c = colliders[i];
     if (px + r > c.minX && px - r < c.maxX &&
         pz + r > c.minZ && pz - r < c.maxZ) {
-      // Only block if collider extends at least 0.3 above player feet
-      // This prevents thin floor slabs from blocking movement
-      if (c.maxY > feetY + 0.3 && c.minY < py) {
+      // Stairs/curbs/low props: anything at or below STEP_UP (0.55, same as
+      // getGroundY) above the feet is walkable terrain, never a wall - the
+      // ground code in animate() lifts the player onto it. Fixes Vertigo
+      // stairs where exact-0.3 steps floated above feetY+0.3 (floating-point)
+      // and blocked horizontal movement from step 4 on.
+      if (c.maxY <= feetY + 0.55) continue;
+      if (c.minY < py) {
         return c;
       }
     }
