@@ -1,0 +1,107 @@
+{
+  "version": "v1.9.0",
+  "generated": "2026-09-24T18:27:05Z",
+  "entry": "fps-game.html",
+  "files": [
+    {
+      "path": "fps-game.html",
+      "sha256": "5abb7473941c011891c6e2e5db1565dab47c63d5d9e81cb9df3edb5e45ef4055",
+      "size": 138655
+    },
+    {
+      "path": "fps-game-assets/bg_menu.png",
+      "sha256": "2d56b6e0dfa66c1c62dd41d905eb2df40e9aae647b0ceada6a706381523b7ad9",
+      "size": 1139685
+    },
+    {
+      "path": "fps-game-assets/bg_menu_small.jpg",
+      "sha256": "6c6c7442b44bf8790b73b4fd1038d6b650e6cba19c2a1e1373c7229fdafac8f4",
+      "size": 61829
+    },
+    {
+      "path": "fps-game-assets/tex_brick.png",
+      "sha256": "26e22b537a3c916b69f0af59ed16d39822c5b411d7b0ecf7330d220d18c4af11",
+      "size": 2160
+    },
+    {
+      "path": "fps-game-assets/tex_concrete.png",
+      "sha256": "00aa5c9ca01c975c8fb97fc3dded40f980175b738cb3accf270eaf4b662a3cc1",
+      "size": 33451
+    },
+    {
+      "path": "fps-game-assets/tex_concrete_floor.png",
+      "sha256": "b1f752a0bf39cc06c11e1246b38d50ba23730b382fe1975c85ad4e9f52ac9728",
+      "size": 22537
+    },
+    {
+      "path": "fps-game-assets/tex_crate.png",
+      "sha256": "d79957ec232a6f51b65996f8f4b8dd57814b6fd7e125e24ee63d71c139eb6c37",
+      "size": 19615
+    },
+    {
+      "path": "fps-game-assets/tex_dark_metal.png",
+      "sha256": "e92958ad9c567238c2c298c4149540610c65f87328f7af85094c980cfaaf6788",
+      "size": 11779
+    },
+    {
+      "path": "fps-game-assets/tex_gun_barrel.png",
+      "sha256": "4867862414ee2af464ee2d79d85af503dfce5c383df7bfdaf379cb2832923aef",
+      "size": 22382
+    },
+    {
+      "path": "fps-game-assets/tex_gun_body.png",
+      "sha256": "510c32344829b0208c964b06423cc0cf3f8b1cb3afea519cd76661062a8ef7b8",
+      "size": 48171
+    },
+    {
+      "path": "fps-game-assets/tex_gun_grip.png",
+      "sha256": "1042c7ed24883e462f3b2fc81b09b2e99aa95411f273023fa8a3c3b53c6eefa9",
+      "size": 48786
+    },
+    {
+      "path": "fps-game-assets/tex_gun_mag.png",
+      "sha256": "15cc58b2d9387e5c754a0e2ee04057caa7fe0cdb177dab71ddefdd7e732f9d32",
+      "size": 8893
+    },
+    {
+      "path": "fps-game-assets/tex_hedge.png",
+      "sha256": "45ac1550a1060bdf99e07e7684b331420864a6e710942cf906da98bc6514b823",
+      "size": 32262
+    },
+    {
+      "path": "fps-game-assets/tex_metal_floor.png",
+      "sha256": "0765eb9455840a23619a940d5418ce8b6edd8ead19c393a2aa0e813e7b584602",
+      "size": 976
+    },
+    {
+      "path": "fps-game-assets/tex_metal_wall.png",
+      "sha256": "74b6886341dc8bbf518687c40e7bbe0034d6ff0ec107d72a2aa883192e2f3117",
+      "size": 12088
+    },
+    {
+      "path": "fps-game-assets/tex_sand.png",
+      "sha256": "19842e124afb8b20a9578cff425ebf1f992a5e4c958657d29a135c19529f272f",
+      "size": 23544
+    },
+    {
+      "path": "fps-game-assets/tex_sand_ground.png",
+      "sha256": "9da86f8c81eb1130198fb20bba2bca4fce734dd71d303b21124395c89674d2f5",
+      "size": 27037
+    },
+    {
+      "path": "fps-game-assets/tex_zombie_dark.png",
+      "sha256": "cf4cf233fe3f8c3d3c11a16a2549f3c622f2bc7e95077777cb16b8d09cc02b29",
+      "size": 64868
+    },
+    {
+      "path": "fps-game-assets/tex_zombie_skin.png",
+      "sha256": "9e11d9b8cb3640d8cc0fb664b4a9081099fc6d487ee2fd99531e85df930eaada",
+      "size": 155187
+    },
+    {
+      "path": "fps-game-assets/three.min.js",
+      "sha256": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
+      "size": 603445
+    }
+  ]
+}
