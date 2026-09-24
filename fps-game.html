@@ -20,6 +20,16 @@ canvas{display:block}
 .menu-stat-line + .menu-stat-line{margin-top:6px}
 #best-kills-line{color:#ffd76e}
 
+/* Achievements */
+#stats-menu .menu-content{max-width:400px}
+#stats-menu h2{font-size:36px;margin-bottom:26px;color:#4fc3f7;letter-spacing:3px}
+#stats-menu .save-hint{margin:-18px 0 18px;color:rgba(79,195,247,0.7);letter-spacing:1px}
+.stat-rows{max-width:300px;margin:0 auto}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;margin:8px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px}
+.stat-row .stat-label{font-size:13px;color:#aaa;letter-spacing:1px;font-weight:600}
+.stat-row .stat-value{font-size:15px;color:#ffd76e;font-weight:800;letter-spacing:1px}
+.stat-row.money .stat-value{color:#7bd88f}
+
 .menu-btn{display:block;width:280px;margin:12px auto;padding:14px 0;background:rgba(255,255,255,0.08);border:1px solid rgba(79,195,247,0.3);border-radius:8px;color:#fff;font-size:18px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s}
 .menu-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
 .menu-btn:active{transform:scale(0.98)}
@@ -195,7 +205,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   #main-menu .subtitle{font-size:11px;margin-bottom:20px}
   .menu-btn{width:220px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:7px}
   .menu-btn.back-btn{width:160px;font-size:12px;margin-top:16px}
-  #map-menu h2,#settings-menu h2{font-size:24px;margin-bottom:12px}
+  #map-menu h2,#settings-menu h2,#stats-menu h2{font-size:24px;margin-bottom:12px}
   .map-grid{gap:10px;max-width:96%;padding:0 8px}
   .map-card{padding:10px;min-height:88px;border-radius:9px}
   .map-card .map-icon{font-size:24px;margin-bottom:5px}
@@ -205,6 +215,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .setting-label{font-size:11px;margin-bottom:5px;letter-spacing:0.5px}
   .setting-hint{font-size:9px;margin-top:5px}
   #settings-menu .save-hint{margin:-14px 0 12px}
+  #stats-menu .save-hint{margin:-14px 0 12px}
+  .stat-row{padding:8px 12px;margin:6px 0}
+  .stat-row .stat-label{font-size:11px}
+  .stat-row .stat-value{font-size:12px}
   .menu-stat-line{font-size:10px}
   .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
   .lang-btn{padding:8px 4px;font-size:12px}
@@ -288,6 +302,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p id="best-kills-line" class="menu-stat-line" style="display:none"></p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
+<button class="menu-btn" onclick="openStatsMenu()" data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">ACHIEVEMENTS</button>
 <button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();updateAutoButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
@@ -381,6 +396,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
 <button class="menu-btn danger-btn" id="btn-reset-data" onclick="resetAllSavedData(this)" data-en="RESET SAVED DATA" data-fa="پاک کردن اطلاعات ذخیره‌شده">RESET SAVED DATA</button>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+
+<!-- ACHIEVEMENTS -->
+<div id="stats-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">دست‌آوردها</h2>
+<p class="setting-hint save-hint" data-en="AUTOMATICALLY SAVED" data-fa="خودکار ذخیره می‌شود">AUTOMATICALLY SAVED</p>
+<div class="stat-rows">
+<div class="stat-row"><span class="stat-label" data-en="KILLS" data-fa="کیل‌ها">KILLS</span><span class="stat-value" id="st-kills">0</span></div>
+<div class="stat-row"><span class="stat-label" data-en="DEATHS" data-fa="مرگ‌ها">DEATHS</span><span class="stat-value" id="st-deaths">0</span></div>
+<div class="stat-row"><span class="stat-label" data-en="WINS" data-fa="بردها">WINS</span><span class="stat-value" id="st-wins">0</span></div>
+<div class="stat-row"><span class="stat-label" data-en="SCORE" data-fa="امتیاز">SCORE</span><span class="stat-value" id="st-score">0</span></div>
+<div class="stat-row money"><span class="stat-label" data-en="MONEY" data-fa="پول">MONEY</span><span class="stat-value" id="st-money">0</span></div>
+</div>
+<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 <!-- PAUSE -->
@@ -497,6 +528,37 @@ var SETTINGS_KEY = 'glmSettingsV1';
 var savedSettings = null;
 var settingsMuted = false; // blocks saving while factory-reset restores defaults
 var bestKills = 0;
+// ===== LIFETIME ACHIEVEMENTS (auto-saved, survive refresh) =====
+// kills / deaths / wins + score (2 per zombie) + money (5000 toman per zombie).
+// Stored inside glmSettingsV1 so the existing factory reset wipes them too.
+var SCORE_PER_KILL = 2, MONEY_PER_KILL = 5000;
+var statsKills = 0, statsDeaths = 0, statsWins = 0, statsScore = 0, statsMoney = 0;
+function recordKillStats() {
+  statsKills++; statsScore += SCORE_PER_KILL; statsMoney += MONEY_PER_KILL;
+  saveSettings({statsKills: statsKills, statsScore: statsScore, statsMoney: statsMoney});
+}
+function recordDeathStats() {
+  statsDeaths++;
+  saveSettings({statsDeaths: statsDeaths});
+}
+function recordWinStats() {
+  statsWins++;
+  saveSettings({statsWins: statsWins});
+}
+function fmtMoney(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function updateStatsLines() {
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+  set('st-kills', String(statsKills));
+  set('st-deaths', String(statsDeaths));
+  set('st-wins', String(statsWins));
+  set('st-score', fmtMoney(statsScore));
+  var m = fmtMoney(statsMoney);
+  set('st-money', currentLang === 'fa' ? (m + ' تومان') : (m + ' TOMAN'));
+}
+function openStatsMenu() {
+  updateStatsLines();
+  showMenu('stats-menu');
+}
 function loadSavedSettings() {
   try {
     var raw = localStorage.getItem(SETTINGS_KEY);
@@ -572,7 +634,13 @@ function applySavedSettings() {
   updateAutoButtons();
   if (typeof s.lastMap === 'number' && s.lastMap >= 0 && s.lastMap <= 3) currentMap = s.lastMap;
   if (typeof s.bestKills === 'number' && s.bestKills > 0) bestKills = s.bestKills;
+  if (typeof s.statsKills === 'number' && s.statsKills > 0) statsKills = s.statsKills;
+  if (typeof s.statsDeaths === 'number' && s.statsDeaths > 0) statsDeaths = s.statsDeaths;
+  if (typeof s.statsWins === 'number' && s.statsWins > 0) statsWins = s.statsWins;
+  if (typeof s.statsScore === 'number' && s.statsScore > 0) statsScore = s.statsScore;
+  if (typeof s.statsMoney === 'number' && s.statsMoney > 0) statsMoney = s.statsMoney;
   updateBestKillsLine();
+  updateStatsLines();
   updateCurrentMapLine();
 }
 // Danger zone: wipe ALL saved data (settings + HUD layout + best score).
@@ -599,6 +667,7 @@ function resetAllSavedData(btn) {
   try { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem('hudLayoutV1'); } catch(e) {}
   savedSettings = null;
   bestKills = 0;
+  statsKills = 0; statsDeaths = 0; statsWins = 0; statsScore = 0; statsMoney = 0;
   setLang('en');
   isMobileDevice = false; deviceChosen = true;
   updateDeviceButtons();
@@ -610,6 +679,7 @@ function resetAllSavedData(btn) {
   restoreDefaultLayout();
   settingsMuted = false;
   updateBestKillsLine();
+  updateStatsLines();
   updateCurrentMapLine();
   // back to the very first screen, exactly like a factory-fresh player
   showMenu('device-menu');
@@ -1322,6 +1392,7 @@ function setLang(lang) {
   });
   saveSettings({lang: lang});
   updateBestKillsLine();
+  updateStatsLines();
 }
 
 function showMenu(id) {
@@ -1687,6 +1758,7 @@ function updateHealthBar() {
 
 function playerDie() {
   recordBestKills();
+  recordDeathStats();
   gameStarted = false;
   document.getElementById('death-screen').classList.remove('hidden');
   document.getElementById('crosshair').style.display = 'none';
@@ -1700,6 +1772,7 @@ function playerDie() {
 
 function playerWin() {
   recordBestKills();
+  recordWinStats();
   gameStarted = false;
   document.getElementById('victory-screen').classList.remove('hidden');
   document.getElementById('crosshair').style.display = 'none';
@@ -2752,6 +2825,7 @@ function shoot() {
         var idx = enemies.indexOf(enemy);
         if (idx > -1) enemies.splice(idx, 1);
         killCount++;
+        recordKillStats();
         if (killCount % 2 === 0) dropMedkit(dropX, dropZ, dropY);
         if (enemies.length === 0) playerWin();
       }
