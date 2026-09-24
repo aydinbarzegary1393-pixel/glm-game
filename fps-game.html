@@ -16,9 +16,6 @@ canvas{display:block}
 .menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
 #main-menu h1{font-size:52px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px;text-shadow:0 0 30px rgba(79,195,247,0.5);color:#4fc3f7}
 #main-menu .subtitle{font-size:14px;color:#aaa;margin-bottom:40px;letter-spacing:3px}
-.menu-stat-line{font-size:12px;color:#ffaa00;margin:0;text-align:center;letter-spacing:2px;font-weight:700}
-.menu-stat-line + .menu-stat-line{margin-top:6px}
-#best-kills-line{color:#ffd76e}
 
 /* Achievements */
 #stats-menu .menu-content{max-width:400px}
@@ -219,7 +216,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .stat-row{padding:8px 12px;margin:6px 0}
   .stat-row .stat-label{font-size:11px}
   .stat-row .stat-value{font-size:12px}
-  .menu-stat-line{font-size:10px}
   .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
   .lang-btn{padding:8px 4px;font-size:12px}
   #device-menu h2{font-size:24px;margin-bottom:10px}
@@ -298,8 +294,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h1 id="t_title" data-en="FPS GAME" data-fa="بازی شوتر">FPS GAME</h1>
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
-<p id="cur-map-line" class="menu-stat-line"></p>
-<p id="best-kills-line" class="menu-stat-line" style="display:none"></p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
 <button class="menu-btn" onclick="openStatsMenu()" data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">ACHIEVEMENTS</button>
@@ -574,33 +568,10 @@ function saveSettings(patch) {
   savedSettings = s;
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e) {}
 }
-function updateBestKillsLine() {
-  var el = document.getElementById('best-kills-line');
-  if (!el) return;
-  if (bestKills > 0) {
-    el.style.display = 'block';
-    el.textContent = currentLang === 'fa'
-      ? ('بهترین رکورد: ' + bestKills + ' زامبی')
-      : ('BEST: ' + bestKills + ' KILLS');
-  } else {
-    el.style.display = 'none';
-  }
-}
-var MAP_NAMES_EN = ['TEST MAP', 'VERTIGO', 'DUST 2', 'SHOOT HOUSE'];
-var MAP_NAMES_FA = ['تست', 'ورتیگو', 'داست دو', 'شوت هاوس'];
-function updateCurrentMapLine() {
-  var el = document.getElementById('cur-map-line');
-  if (!el) return;
-  var idx = Math.max(0, Math.min(3, currentMap | 0));
-  el.textContent = currentLang === 'fa'
-    ? ('نقشه: ' + MAP_NAMES_FA[idx])
-    : ('MAP: ' + MAP_NAMES_EN[idx]);
-}
 function recordBestKills() {
   if (killCount > bestKills) {
     bestKills = killCount;
     saveSettings({bestKills: bestKills});
-    updateBestKillsLine();
   }
 }
 // Restore everything saved from a previous session. Called once at boot.
@@ -608,7 +579,7 @@ function recordBestKills() {
 // tutorial) is skipped entirely - the player lands straight in the main menu.
 function applySavedSettings() {
   var s = loadSavedSettings();
-  if (!s) { updateBestKillsLine(); return; }
+  if (!s) return;
   if (s.device === 'mobile' || s.device === 'pc') {
     isMobileDevice = (s.device === 'mobile');
     deviceChosen = true;
@@ -639,9 +610,7 @@ function applySavedSettings() {
   if (typeof s.statsWins === 'number' && s.statsWins > 0) statsWins = s.statsWins;
   if (typeof s.statsScore === 'number' && s.statsScore > 0) statsScore = s.statsScore;
   if (typeof s.statsMoney === 'number' && s.statsMoney > 0) statsMoney = s.statsMoney;
-  updateBestKillsLine();
   updateStatsLines();
-  updateCurrentMapLine();
 }
 // Danger zone: wipe ALL saved data (settings + HUD layout + best score).
 // Two-tap confirm (no native dialogs): first tap arms, second tap within
@@ -678,9 +647,7 @@ function resetAllSavedData(btn) {
   currentMap = 0;
   restoreDefaultLayout();
   settingsMuted = false;
-  updateBestKillsLine();
   updateStatsLines();
-  updateCurrentMapLine();
   // back to the very first screen, exactly like a factory-fresh player
   showMenu('device-menu');
 }
@@ -1391,7 +1358,6 @@ function setLang(lang) {
     el.textContent = el.getAttribute('data-'+lang);
   });
   saveSettings({lang: lang});
-  updateBestKillsLine();
   updateStatsLines();
 }
 
@@ -1401,7 +1367,6 @@ function showMenu(id) {
   // HUD customization only makes sense for touch (mobile) controls
   var hudBtn = document.getElementById('btn-hud-customize');
   if (hudBtn) hudBtn.style.display = isMobileDevice ? '' : 'none';
-  if (id === 'main-menu') updateCurrentMapLine();
 }
 
 function selectMap(idx) { currentMap = idx; saveSettings({lastMap: idx}); startGame(); }
