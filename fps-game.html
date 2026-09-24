@@ -16,6 +16,9 @@ canvas{display:block}
 .menu-content{position:relative;z-index:1;text-align:center;direction:ltr}
 #main-menu h1{font-size:52px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px;text-shadow:0 0 30px rgba(79,195,247,0.5);color:#4fc3f7}
 #main-menu .subtitle{font-size:14px;color:#aaa;margin-bottom:40px;letter-spacing:3px}
+.menu-stat-line{font-size:12px;color:#ffaa00;margin:0;text-align:center;letter-spacing:2px;font-weight:700}
+.menu-stat-line + .menu-stat-line{margin-top:6px}
+#best-kills-line{color:#ffd76e}
 
 .menu-btn{display:block;width:280px;margin:12px auto;padding:14px 0;background:rgba(255,255,255,0.08);border:1px solid rgba(79,195,247,0.3);border-radius:8px;color:#fff;font-size:18px;font-weight:600;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.3s}
 .menu-btn:hover{background:rgba(79,195,247,0.2);border-color:#4fc3f7;transform:scale(1.04);box-shadow:0 0 20px rgba(79,195,247,0.3)}
@@ -39,6 +42,9 @@ canvas{display:block}
 .setting-group{margin:20px 0;text-align:left}
 .setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
 .setting-hint{font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;letter-spacing:0.5px}
+#settings-menu .save-hint{margin:-20px 0 20px;color:rgba(79,195,247,0.7);letter-spacing:1px}
+.menu-btn.danger-btn{width:280px;font-size:13px;padding:11px 0;background:rgba(255,60,60,0.08);border-color:rgba(255,80,80,0.35);color:#ff8a8a}
+.menu-btn.danger-btn.armed{background:rgba(255,60,60,0.25);border-color:#ff5252;color:#fff}
 .setting-row{display:flex;align-items:center;gap:12px}
 input[type=range]{-webkit-appearance:none;flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#4fc3f7;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(79,195,247,0.5)}
@@ -198,6 +204,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .setting-group{margin:9px 0}
   .setting-label{font-size:11px;margin-bottom:5px;letter-spacing:0.5px}
   .setting-hint{font-size:9px;margin-top:5px}
+  #settings-menu .save-hint{margin:-14px 0 12px}
+  .menu-stat-line{font-size:10px}
+  .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
   .lang-btn{padding:8px 4px;font-size:12px}
   #device-menu h2{font-size:24px;margin-bottom:10px}
   #device-menu .subtitle{font-size:11px;margin-bottom:14px}
@@ -275,6 +284,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h1 id="t_title" data-en="FPS GAME" data-fa="بازی شوتر">FPS GAME</h1>
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
+<p id="cur-map-line" class="menu-stat-line"></p>
+<p id="best-kills-line" class="menu-stat-line" style="display:none"></p>
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
 <button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();updateAutoButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
@@ -314,6 +325,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="settings-menu" class="menu-overlay hidden">
 <div class="menu-content">
 <h2 data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</h2>
+<p class="setting-hint save-hint" data-en="ALL SETTINGS SAVE AUTOMATICALLY" data-fa="همه تنظیمات خودکار ذخیره می‌شوند">ALL SETTINGS SAVE AUTOMATICALLY</p>
 <div class="setting-group">
 <div class="setting-label" data-en="MOUSE SENSITIVITY" data-fa="حساسیت ماوس">MOUSE SENSITIVITY</div>
 <div class="setting-row">
@@ -367,6 +379,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
 <button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
+<button class="menu-btn danger-btn" id="btn-reset-data" onclick="resetAllSavedData(this)" data-en="RESET SAVED DATA" data-fa="پاک کردن اطلاعات ذخیره‌شده">RESET SAVED DATA</button>
 <button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -474,6 +487,133 @@ let deviceChosen = false;
 let autoReload = true;
 let autoFire = true;
 let fireHeld = false;
+
+// ===== PERSISTENT PLAYER SETTINGS (auto-saved, survive page refresh) =====
+// Everything the player configures - device, language, sensitivity, volume,
+// difficulty, auto reload/fire, last played map, best kill record (plus the
+// HUD layout in its own hudLayoutV1 key) - is stored in localStorage, so a
+// refresh never forces the player to enter anything again.
+var SETTINGS_KEY = 'glmSettingsV1';
+var savedSettings = null;
+var settingsMuted = false; // blocks saving while factory-reset restores defaults
+var bestKills = 0;
+function loadSavedSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) savedSettings = JSON.parse(raw);
+  } catch(e) { savedSettings = null; }
+  return savedSettings;
+}
+function saveSettings(patch) {
+  if (settingsMuted) return;
+  if (!savedSettings) loadSavedSettings();
+  var s = savedSettings || {};
+  for (var k in patch) s[k] = patch[k];
+  savedSettings = s;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e) {}
+}
+function updateBestKillsLine() {
+  var el = document.getElementById('best-kills-line');
+  if (!el) return;
+  if (bestKills > 0) {
+    el.style.display = 'block';
+    el.textContent = currentLang === 'fa'
+      ? ('بهترین رکورد: ' + bestKills + ' زامبی')
+      : ('BEST: ' + bestKills + ' KILLS');
+  } else {
+    el.style.display = 'none';
+  }
+}
+var MAP_NAMES_EN = ['TEST MAP', 'VERTIGO', 'DUST 2', 'SHOOT HOUSE'];
+var MAP_NAMES_FA = ['تست', 'ورتیگو', 'داست دو', 'شوت هاوس'];
+function updateCurrentMapLine() {
+  var el = document.getElementById('cur-map-line');
+  if (!el) return;
+  var idx = Math.max(0, Math.min(3, currentMap | 0));
+  el.textContent = currentLang === 'fa'
+    ? ('نقشه: ' + MAP_NAMES_FA[idx])
+    : ('MAP: ' + MAP_NAMES_EN[idx]);
+}
+function recordBestKills() {
+  if (killCount > bestKills) {
+    bestKills = killCount;
+    saveSettings({bestKills: bestKills});
+    updateBestKillsLine();
+  }
+}
+// Restore everything saved from a previous session. Called once at boot.
+// When a device was already chosen, the device menu (and the rotate-phone
+// tutorial) is skipped entirely - the player lands straight in the main menu.
+function applySavedSettings() {
+  var s = loadSavedSettings();
+  if (!s) { updateBestKillsLine(); return; }
+  if (s.device === 'mobile' || s.device === 'pc') {
+    isMobileDevice = (s.device === 'mobile');
+    deviceChosen = true;
+    var dm = document.getElementById('device-menu');
+    if (dm) dm.classList.add('hidden');
+    showMenu('main-menu');
+  }
+  if (s.lang === 'fa' || s.lang === 'en') setLang(s.lang);
+  if (typeof s.sens === 'number' && s.sens >= 1 && s.sens <= 20) {
+    var sl = document.getElementById('sens-slider');
+    if (sl) sl.value = s.sens;
+    updateSens(s.sens);
+  }
+  if (typeof s.vol === 'number' && s.vol >= 0 && s.vol <= 100) {
+    var vl = document.getElementById('vol-slider');
+    if (vl) vl.value = s.vol;
+    updateVol(s.vol);
+  }
+  if (typeof s.difficulty === 'number' && s.difficulty >= 0 && s.difficulty <= 3) difficulty = s.difficulty;
+  if (typeof s.autoReload === 'boolean') autoReload = s.autoReload;
+  if (typeof s.autoFire === 'boolean') autoFire = s.autoFire;
+  updateDifficultyButtons();
+  updateAutoButtons();
+  if (typeof s.lastMap === 'number' && s.lastMap >= 0 && s.lastMap <= 3) currentMap = s.lastMap;
+  if (typeof s.bestKills === 'number' && s.bestKills > 0) bestKills = s.bestKills;
+  updateBestKillsLine();
+  updateCurrentMapLine();
+}
+// Danger zone: wipe ALL saved data (settings + HUD layout + best score).
+// Two-tap confirm (no native dialogs): first tap arms, second tap within
+// 3.5s wipes, otherwise it disarms back automatically.
+var resetArmed = false, resetDisarmTimer = null;
+function disarmResetData(btn) {
+  resetArmed = false;
+  clearTimeout(resetDisarmTimer);
+  btn.classList.remove('armed');
+  btn.textContent = btn.getAttribute('data-' + currentLang) || btn.getAttribute('data-en') || 'RESET SAVED DATA';
+}
+function resetAllSavedData(btn) {
+  if (!resetArmed) {
+    resetArmed = true;
+    btn.classList.add('armed');
+    btn.textContent = currentLang === 'fa' ? 'مطمئنی؟ دوباره بزن' : 'TAP AGAIN TO CONFIRM';
+    clearTimeout(resetDisarmTimer);
+    resetDisarmTimer = setTimeout(function() { disarmResetData(btn); }, 3500);
+    return;
+  }
+  disarmResetData(btn);
+  settingsMuted = true;
+  try { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem('hudLayoutV1'); } catch(e) {}
+  savedSettings = null;
+  bestKills = 0;
+  setLang('en');
+  isMobileDevice = false; deviceChosen = true;
+  updateDeviceButtons();
+  difficulty = 1; updateDifficultyButtons();
+  autoReload = true; autoFire = true; updateAutoButtons();
+  var sl = document.getElementById('sens-slider'); if (sl) sl.value = 4; updateSens(4);
+  var vl = document.getElementById('vol-slider'); if (vl) vl.value = 70; updateVol(70);
+  currentMap = 0;
+  restoreDefaultLayout();
+  settingsMuted = false;
+  updateBestKillsLine();
+  updateCurrentMapLine();
+  // back to the very first screen, exactly like a factory-fresh player
+  showMenu('device-menu');
+}
 
 // ===== RADAR SYSTEM (CS2-style full-map minimap) =====
 // North-up STATIC radar: the whole map is scaled to fit the canvas (like the
@@ -806,6 +946,7 @@ function goFullscreenSafe() {
 function selectDevice(dev) {
   isMobileDevice = (dev === 'mobile');
   deviceChosen = true;
+  saveSettings({device: dev});
   if (isMobileDevice) {
     goFullscreenSafe();
     // Always play the rotate-phone tutorial when the phone option is picked,
@@ -844,6 +985,8 @@ function finishRotateTutorial() {
   var ov = document.getElementById('rotate-tutorial');
   if (ov.classList.contains('hidden')) return;
   ov.classList.add('hidden');
+  // remember it was seen - never force the player to watch it again on refresh
+  saveSettings({rotateTutorialSeen: true});
   showMenu('main-menu');
   setLang(currentLang);
 }
@@ -856,11 +999,13 @@ function updateDeviceButtons() {
 function changeDevice(dev) {
   isMobileDevice = (dev === 'mobile');
   deviceChosen = true;
+  saveSettings({device: dev});
   updateDeviceButtons();
   if (isMobileDevice) {
     goFullscreenSafe();
     // Show the rotate tutorial when switching to mobile before a game starts
-    if (!gameStarted) showRotateTutorial();
+    // (only the first time - never replay it for players who have seen it)
+    if (!gameStarted && !(savedSettings && savedSettings.rotateTutorialSeen)) showRotateTutorial();
   }
   // If switching to mobile and game is running, show mobile controls
   if (isMobileDevice && gameStarted) {
@@ -1175,6 +1320,8 @@ function setLang(lang) {
   document.querySelectorAll('[data-'+lang+']').forEach(el => {
     el.textContent = el.getAttribute('data-'+lang);
   });
+  saveSettings({lang: lang});
+  updateBestKillsLine();
 }
 
 function showMenu(id) {
@@ -1183,18 +1330,21 @@ function showMenu(id) {
   // HUD customization only makes sense for touch (mobile) controls
   var hudBtn = document.getElementById('btn-hud-customize');
   if (hudBtn) hudBtn.style.display = isMobileDevice ? '' : 'none';
+  if (id === 'main-menu') updateCurrentMapLine();
 }
 
-function selectMap(idx) { currentMap = idx; startGame(); }
+function selectMap(idx) { currentMap = idx; saveSettings({lastMap: idx}); startGame(); }
 
 function updateSens(v) {
   MOUSE_SENS = v * 0.001;
   document.getElementById('sens-val').textContent = MOUSE_SENS.toFixed(3);
+  saveSettings({sens: Number(v)});
 }
 
 function updateVol(v) {
   masterVolume = v / 100;
   document.getElementById('vol-val').textContent = v + '%';
+  saveSettings({vol: Number(v)});
 }
 
 // ===== THREE.JS SETUP =====
@@ -1536,6 +1686,7 @@ function updateHealthBar() {
 }
 
 function playerDie() {
+  recordBestKills();
   gameStarted = false;
   document.getElementById('death-screen').classList.remove('hidden');
   document.getElementById('crosshair').style.display = 'none';
@@ -1548,6 +1699,7 @@ function playerDie() {
 }
 
 function playerWin() {
+  recordBestKills();
   gameStarted = false;
   document.getElementById('victory-screen').classList.remove('hidden');
   document.getElementById('crosshair').style.display = 'none';
@@ -1576,6 +1728,7 @@ function backToMenuFromDeath() {
 
 function setDifficulty(d) {
   difficulty = d;
+  saveSettings({difficulty: d});
   document.getElementById('diff-0').classList.toggle('active', d===0);
   document.getElementById('diff-1').classList.toggle('active', d===1);
   document.getElementById('diff-2').classList.toggle('active', d===2);
@@ -1592,10 +1745,12 @@ function updateDifficultyButtons() {
 // ===== AUTO RELOAD & AUTO FIRE SETTINGS =====
 function setAutoReload(on) {
   autoReload = !!on;
+  saveSettings({autoReload: !!on});
   updateAutoButtons();
 }
 function setAutoFire(on) {
   autoFire = !!on;
+  saveSettings({autoFire: !!on});
   updateAutoButtons();
 }
 function updateAutoButtons() {
@@ -2947,6 +3102,10 @@ function animate() {
 
   renderer.render(scene, camera);
 }
+// Restore the player's saved settings (device, language, sensitivity, volume,
+// difficulty, auto reload/fire, last map, best score) - a refresh never
+// forces re-entry. Must run after all definitions, right before the loop.
+applySavedSettings();
 animate();
 </script>
 </body>
