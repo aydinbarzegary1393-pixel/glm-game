@@ -10,7 +10,7 @@ ManifestDPIAware true
 !define APPNAME      "GLM FPS Game"
 !define APPID        "GLMFPSGame"
 !define EXENAME      "GLMFPSGame.exe"
-!define APPVER       "1.0.0"
+!define APPVER       "1.1.0"
 !define PUBLISHER    "aydinbarzegary1393-pixel"
 
 Name "${APPNAME} ${APPVER}"
@@ -21,11 +21,11 @@ SetCompressor /SOLID lzma
 ShowInstDetails show
 ShowUnInstDetails show
 
-VIProductVersion "1.0.0.0"
+VIProductVersion "1.1.0.0"
 VIAddVersionKey "ProductName" "${APPNAME} Setup"
 VIAddVersionKey "CompanyName" "${PUBLISHER}"
 VIAddVersionKey "FileDescription" "${APPNAME} installer"
-VIAddVersionKey "FileVersion" "1.0.0.0"
+VIAddVersionKey "FileVersion" "1.1.0.0"
 VIAddVersionKey "ProductVersion" "${APPVER}"
 
 !include "MUI2.nsh"

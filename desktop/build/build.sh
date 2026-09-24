@@ -18,12 +18,13 @@ echo "[1/6] clean staging + dist"
 rm -rf "$STAGE" "$DESK/dist"
 mkdir -p "$APPROOT/resources/app/game" "$DESK/dist"
 
-echo "[2/6] copy game files (html + assets)"
+echo "[2/6] copy game files (html + assets + update manifest)"
 cp "$ROOT/fps-game.html" "$APPROOT/resources/app/game/"
 cp -r "$ROOT/fps-game-assets" "$APPROOT/resources/app/game/"
+cp "$ROOT/version.json" "$APPROOT/resources/app/game/"
 
-echo "[3/6] copy app sources (main.js, package.json, icons)"
-cp "$DESK/app/package.json" "$DESK/app/main.js" "$APPROOT/resources/app/"
+echo "[3/6] copy app sources (main.js, updater.js, package.json, icons)"
+cp "$DESK/app/package.json" "$DESK/app/main.js" "$DESK/app/updater.js" "$APPROOT/resources/app/"
 cp "$DESK/app/app-icon.png" "$DESK/app/app-icon.ico" "$APPROOT/resources/app/"
 
 echo "[4/6] electron runtime v$ELEC_VER (win32-x64)"
@@ -45,4 +46,4 @@ echo "[6/6] makensis (LZMA solid, may take minutes)"
 cd "$DESK/build"
 "$MAKENSIS" -V2 installer.nsi
 
-echo "DONE: $DESK/dist/GLM-FPS-Game-Setup-${APPVER}.exe"
+echo "DONE: $DESK/dist/GLM-FPS-Game-Setup-$(rg -o 'APPVER\s+"([0-9.]+)"' -r '$1' -N "$DESK/build/installer.nsi" | head -1).exe"

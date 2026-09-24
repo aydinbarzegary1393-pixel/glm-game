@@ -1,8 +1,8 @@
 {
   "name": "glm-fps-game",
   "productName": "GLM FPS Game",
-  "version": "1.0.0",
-  "description": "GLM FPS Game - offline desktop edition (Windows)",
+  "version": "1.1.0",
+  "description": "GLM FPS Game - offline desktop edition (Windows) with GitHub auto-update",
   "main": "main.js",
   "author": "aydinbarzegary1393-pixel",
   "license": "MIT"
