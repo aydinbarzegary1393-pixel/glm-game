@@ -1067,7 +1067,12 @@ function initJoystick() {
   joyStick = document.getElementById('joystick-stick');
   joyBase = document.getElementById('joystick-base');
   var zone = document.getElementById('joystick-zone');
-  zone.addEventListener('touchstart', function(e) {
+  // HUD editor may free the base out of the zone (re-parented into
+  // #mobile-controls with .hud-free). Zone handlers only apply while the base
+  // lives inside the zone (default layout); once freed, the base handles its
+  // own touches - otherwise touching the moved joystick would be dead.
+  var baseFreed = function() { return joyBase.classList.contains('hud-free'); };
+  var joyStart = function(e) {
     e.preventDefault();
     if (hudEditing) return;
     var t = e.changedTouches[0];
@@ -1075,8 +1080,8 @@ function initJoystick() {
     var rect = joyBase.getBoundingClientRect();
     joyBaseX = rect.left + rect.width / 2;
     joyBaseY = rect.top + rect.height / 2;
-  }, {passive: false});
-  zone.addEventListener('touchmove', function(e) {
+  };
+  var joyMove = function(e) {
     e.preventDefault();
     if (hudEditing) return;
     for (var i = 0; i < e.changedTouches.length; i++) {
@@ -1091,7 +1096,7 @@ function initJoystick() {
         joyStick.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
       }
     }
-  }, {passive: false});
+  };
   var resetJoy = function(e) {
     for (var i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === joyTouchId) {
@@ -1100,8 +1105,35 @@ function initJoystick() {
       }
     }
   };
+  // Default layout: touches on the base bubble up to the zone, so the zone
+  // handlers catch both the fat-finger area and on-base touches.
+  zone.addEventListener('touchstart', function(e) {
+    if (baseFreed()) return;   // freed: zone is disabled (pointer-events:none)
+    joyStart(e);
+  }, {passive: false});
+  zone.addEventListener('touchmove', joyMove, {passive: false});
   zone.addEventListener('touchend', resetJoy);
   zone.addEventListener('touchcancel', resetJoy);
+  // Freed layout: the base sits OUTSIDE the zone, touches on it never reach
+  // the zone handlers. Bind the same handlers on the base itself - touch
+  // events keep targeting the start element, so the finger may slide off the
+  // base and the joystick still follows.
+  joyBase.addEventListener('touchstart', function(e) {
+    if (!baseFreed()) return;  // default layout: let it bubble to the zone
+    joyStart(e);
+  }, {passive: false});
+  joyBase.addEventListener('touchmove', function(e) {
+    if (!baseFreed()) return;
+    joyMove(e);
+  }, {passive: false});
+  joyBase.addEventListener('touchend', function(e) {
+    if (!baseFreed()) return;
+    resetJoy(e);
+  }, {passive: false});
+  joyBase.addEventListener('touchcancel', function(e) {
+    if (!baseFreed()) return;
+    resetJoy(e);
+  }, {passive: false});
 
   // Mobile buttons
   // Fire button: fire + drag-to-aim with the SAME finger (PUBG/COD style).
@@ -1221,6 +1253,19 @@ function applyHudPos(el, xPct, yPct) {
   el.classList.add('hud-free');
   el.style.left = xPct + '%';
   el.style.top = yPct + '%';
+  updateJoyZoneMode();
+}
+function updateJoyZoneMode() {
+  // Freed joystick: the fixed fat-finger zone would sit far from the visible
+  // base - a dead spot that also acts as a ghost joystick. Disable it and
+  // stretch the look zone over the whole screen instead.
+  var zone = document.getElementById('joystick-zone');
+  var look = document.getElementById('look-zone');
+  var base = document.getElementById('joystick-base');
+  if (!zone || !look || !base) return;
+  var freed = base.classList.contains('hud-free');
+  zone.style.pointerEvents = freed ? 'none' : '';
+  look.style.width = freed ? '100%' : '';
 }
 function restoreDefaultLayout() {
   HUD_ITEMS.forEach(function(id) {
@@ -1232,6 +1277,7 @@ function restoreDefaultLayout() {
     else if (id === 'btn-jump-m' || id === 'btn-reload-m') document.querySelector('#mobile-btns .btn-row').appendChild(el);
     else if (id === 'btn-fire-m') document.getElementById('mobile-btns').appendChild(el);
   });
+  updateJoyZoneMode();
 }
 function loadHudLayout() {
   var raw = null;
@@ -1322,6 +1368,7 @@ function initHudDrag() {
 }
 initHudDrag();
 loadHudLayout();
+updateJoyZoneMode();
 
 // ===== CROSSHAIR ENEMY HIGHLIGHT (red when aiming at a zombie) =====
 const SCREEN_CENTER = new THREE.Vector2(0, 0);
