@@ -44,12 +44,12 @@ canvas{display:block}
 .map-card.playable .map-status{color:#4fc3f7}
 
 /* Settings */
-#settings-menu .menu-content{max-width:400px}
-#settings-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
+#settings-menu .menu-content,#gameplay-menu .menu-content{max-width:400px}
+#settings-menu h2,#gameplay-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
 .setting-group{margin:20px 0;text-align:left}
 .setting-label{font-size:14px;color:#aaa;margin-bottom:8px;letter-spacing:1px}
 .setting-hint{font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;letter-spacing:0.5px}
-#settings-menu .save-hint{margin:-20px 0 20px;color:rgba(79,195,247,0.7);letter-spacing:1px}
+#settings-menu .save-hint,#gameplay-menu .save-hint{margin:-20px 0 20px;color:rgba(79,195,247,0.7);letter-spacing:1px}
 .menu-btn.danger-btn{width:280px;font-size:13px;padding:11px 0;background:rgba(255,60,60,0.08);border-color:rgba(255,80,80,0.35);color:#ff8a8a}
 .menu-btn.danger-btn.armed{background:rgba(255,60,60,0.25);border-color:#ff5252;color:#fff}
 .setting-row{display:flex;align-items:center;gap:12px}
@@ -202,7 +202,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   #main-menu .subtitle{font-size:11px;margin-bottom:20px}
   .menu-btn{width:220px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:7px}
   .menu-btn.back-btn{width:160px;font-size:12px;margin-top:16px}
-  #map-menu h2,#settings-menu h2,#stats-menu h2{font-size:24px;margin-bottom:12px}
+  #map-menu h2,#settings-menu h2,#gameplay-menu h2,#stats-menu h2{font-size:24px;margin-bottom:12px}
   .map-grid{gap:10px;max-width:96%;padding:0 8px}
   .map-card{padding:10px;min-height:88px;border-radius:9px}
   .map-card .map-icon{font-size:24px;margin-bottom:5px}
@@ -211,7 +211,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .setting-group{margin:9px 0}
   .setting-label{font-size:11px;margin-bottom:5px;letter-spacing:0.5px}
   .setting-hint{font-size:9px;margin-top:5px}
-  #settings-menu .save-hint{margin:-14px 0 12px}
+  #settings-menu .save-hint,#gameplay-menu .save-hint{margin:-14px 0 12px}
   #stats-menu .save-hint{margin:-14px 0 12px}
   .stat-row{padding:8px 12px;margin:6px 0}
   .stat-row .stat-label{font-size:11px}
@@ -297,7 +297,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
 <button class="menu-btn" onclick="openStatsMenu()" data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">ACHIEVEMENTS</button>
-<button class="menu-btn" onclick="updateDeviceButtons();updateDifficultyButtons();updateAutoButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+<button class="menu-btn" onclick="updateDeviceButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
 
@@ -363,6 +363,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="dev-mobile" onclick="changeDevice('mobile')" data-en="MOBILE" data-fa="موبایل">MOBILE</button>
 </div>
 </div>
+<button class="menu-btn" id="btn-gameplay-settings" onclick="openGameplayMenu()" data-en="GAMEPLAY SETTINGS" data-fa="گیم پلی ستینگ">GAMEPLAY SETTINGS</button>
+<button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
+<button class="menu-btn danger-btn" id="btn-reset-data" onclick="resetAllSavedData(this)" data-en="RESET SAVED DATA" data-fa="پاک کردن اطلاعات ذخیره‌شده">RESET SAVED DATA</button>
+<button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+
+<!-- GAMEPLAY SETTINGS -->
+<div id="gameplay-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="GAMEPLAY" data-fa="گیم پلی ستینگ">GAMEPLAY</h2>
+<p class="setting-hint save-hint" data-en="ALL SETTINGS SAVE AUTOMATICALLY" data-fa="همه تنظیمات خودکار ذخیره می‌شوند">ALL SETTINGS SAVE AUTOMATICALLY</p>
 <div class="setting-group">
 <div class="setting-label" data-en="DIFFICULTY / سختی" data-fa="DIFFICULTY / سختی">DIFFICULTY / سختی</div>
 <div class="lang-btns" style="flex-wrap:wrap">
@@ -387,9 +399,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 <p class="setting-hint" data-en="HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE" data-fa="دکمه شلیک را نگه دارید تا رگباری شلیک کند">HOLD THE FIRE BUTTON FOR CONTINUOUS FIRE</p>
 </div>
-<button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
-<button class="menu-btn danger-btn" id="btn-reset-data" onclick="resetAllSavedData(this)" data-en="RESET SAVED DATA" data-fa="پاک کردن اطلاعات ذخیره‌شده">RESET SAVED DATA</button>
-<button class="menu-btn back-btn" onclick="backFromSettings()" data-en="BACK" data-fa="بازگشت">BACK</button>
+<button class="menu-btn back-btn" onclick="backFromGameplayMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 
@@ -2919,8 +2929,16 @@ function openSettingsFromPause() {
   pauseOvl.classList.add('hidden');
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   updateDeviceButtons();
+  showMenu('settings-menu');
+}
+
+function openGameplayMenu() {
   updateDifficultyButtons();
   updateAutoButtons();
+  showMenu('gameplay-menu');
+}
+
+function backFromGameplayMenu() {
   showMenu('settings-menu');
 }
 
