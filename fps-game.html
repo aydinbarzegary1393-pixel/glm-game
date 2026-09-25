@@ -95,14 +95,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 [dir=rtl] .pause-content{direction:rtl}
 [dir=rtl] .setting-group{text-align:right}
 
-/* Device Select */
-#device-menu .device-cards{display:flex;gap:20px;justify-content:center;margin-top:20px}
-#device-menu .device-card{width:160px;padding:30px 20px;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.1);border-radius:16px;cursor:pointer;transition:all 0.3s;text-align:center}
-#device-menu .device-card:hover{border-color:#4fc3f7;background:rgba(79,195,247,0.12);transform:translateY(-4px);box-shadow:0 8px 30px rgba(79,195,247,0.2)}
-#device-menu .device-card .d-icon{font-size:48px;margin-bottom:12px}
-#device-menu .device-card .d-label{font-size:18px;font-weight:700;letter-spacing:1px}
-#device-menu .device-card .d-desc{font-size:11px;color:#888;margin-top:8px;letter-spacing:0.5px}
-
 /* Mobile Controls */
 #mobile-controls{display:none;position:fixed;inset:0;z-index:100;pointer-events:none}
 #look-zone{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto;touch-action:none;z-index:1}
@@ -218,13 +210,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .stat-row .stat-value{font-size:12px}
   .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
   .lang-btn{padding:8px 4px;font-size:12px}
-  #device-menu h2{font-size:24px;margin-bottom:10px}
-  #device-menu .subtitle{font-size:11px;margin-bottom:14px}
-  #device-menu .device-cards{gap:12px;margin-top:10px}
-  #device-menu .device-card{width:120px;padding:16px 10px;border-radius:12px}
-  #device-menu .device-card .d-icon{font-size:32px;margin-bottom:7px}
-  #device-menu .device-card .d-label{font-size:14px}
-  #device-menu .device-card .d-desc{font-size:9px;margin-top:5px}
   .pause-btn{width:210px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:8px}
   #pause-overlay h2{font-size:30px;letter-spacing:3px;margin-bottom:6px}
   #pause-overlay .pause-sub{font-size:11px;margin-bottom:18px}
@@ -240,26 +225,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </style>
 </head>
 <body>
-
-<!-- DEVICE SELECT -->
-<div id="device-menu" class="menu-overlay">
-<div class="menu-content">
-<h2 data-en="CHOOSE DEVICE" data-fa="انتخاب دستگاه">CHOOSE DEVICE</h2>
-<p class="subtitle" data-en="SELECT YOUR PLATFORM" data-fa="پلتفرم خود را انتخاب کنید">SELECT YOUR PLATFORM</p>
-<div class="device-cards">
-<div class="device-card" onclick="selectDevice('pc')">
-<div class="d-icon">⭐</div>
-<div class="d-label" data-en="PC" data-fa="کامپیوتر">PC</div>
-<div class="d-desc" data-en="Mouse + Keyboard" data-fa="ماوس و کیبورد">Mouse + Keyboard</div>
-</div>
-<div class="device-card" onclick="selectDevice('mobile')">
-<div class="d-icon">📱</div>
-<div class="d-label" data-en="MOBILE" data-fa="موبایل">MOBILE</div>
-<div class="d-desc" data-en="Touch Controls" data-fa="کنترل لمسی">Touch Controls</div>
-</div>
-</div>
-</div>
-</div>
 
 <!-- ROTATE PHONE TUTORIAL (mobile) -->
 <div id="rotate-tutorial" class="menu-overlay hidden" onclick="rotateTutorialTap()">
@@ -524,6 +489,18 @@ let deviceChosen = false;
 // DEVICE option is hidden in settings. Desktop (Windows Electron app, PC
 // browsers) keeps the PC/MOBILE choice untouched.
 var IS_PHONE_EDITION = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+// Auto-detect what the player came with: touch-first devices (phones,
+// tablets, the APK WebView) get mobile controls; mouse/keyboard machines
+// get PC. Detection only runs for fresh players - a saved device choice
+// always wins, and desktop players can still switch in settings.
+function detectBestDevice() {
+  if (IS_PHONE_EDITION) return 'mobile';
+  var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+  try {
+    if (touch && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return 'mobile';
+  } catch(e) {}
+  return 'pc';
+}
 let autoReload = true;
 let autoFire = true;
 let fireHeld = false;
@@ -590,29 +567,31 @@ function recordBestKills() {
   }
 }
 // Restore everything saved from a previous session. Called once at boot.
-// When a device was already chosen, the device menu (and the rotate-phone
-// tutorial) is skipped entirely - the player lands straight in the main menu.
+// Returning players land straight in the main menu; fresh players get their
+// device auto-detected (touch-first -> mobile, mouse/keyboard -> PC).
 function applySavedSettings() {
   var s = loadSavedSettings();
   if (IS_PHONE_EDITION) {
     // Phone/APK edition: no device selection - always mobile from the start,
-    // even if a previous session saved device:'pc'. Device menu + settings
-    // DEVICE group are hidden.
+    // even if a previous session saved device:'pc'. Settings DEVICE group hidden.
     isMobileDevice = true; deviceChosen = true;
     var dg = document.getElementById('device-group');
     if (dg) dg.style.display = 'none';
-    var dm = document.getElementById('device-menu');
-    if (dm) dm.classList.add('hidden');
+    showMenu('main-menu');
+  } else if (s && (s.device === 'mobile' || s.device === 'pc')) {
+    // returning player: the saved choice always wins over detection
+    isMobileDevice = (s.device === 'mobile');
+    deviceChosen = true;
     showMenu('main-menu');
   } else {
-    if (!s) return;
-    if (s.device === 'mobile' || s.device === 'pc') {
-      isMobileDevice = (s.device === 'mobile');
-      deviceChosen = true;
-      var dm = document.getElementById('device-menu');
-      if (dm) dm.classList.add('hidden');
-      showMenu('main-menu');
-    }
+    // fresh (or partial) player: detect the device automatically - no chooser
+    var det = detectBestDevice();
+    isMobileDevice = (det === 'mobile');
+    deviceChosen = true;
+    saveSettings({device: det});
+    // touch-first tablets get the rotate hint once, like a picked "mobile"
+    if (isMobileDevice && !(savedSettings && savedSettings.rotateTutorialSeen)) showRotateTutorial();
+    else { showMenu('main-menu'); setLang(currentLang); }
   }
   if (!s) return;
   if (s.lang === 'fa' || s.lang === 'en') setLang(s.lang);
@@ -670,7 +649,8 @@ function resetAllSavedData(btn) {
     // phone edition has no device choice: stay mobile, return to main menu
     isMobileDevice = true; deviceChosen = true;
   } else {
-    isMobileDevice = false; deviceChosen = true;
+    // desktop: re-detect what the player came with (saved choice was wiped)
+    isMobileDevice = (detectBestDevice() === 'mobile'); deviceChosen = true;
   }
   updateDeviceButtons();
   difficulty = 1; updateDifficultyButtons();
@@ -681,8 +661,10 @@ function resetAllSavedData(btn) {
   restoreDefaultLayout();
   settingsMuted = false;
   updateStatsLines();
-  // back to the very first screen, exactly like a factory-fresh player
-  showMenu(IS_PHONE_EDITION ? 'main-menu' : 'device-menu');
+  // back to the very first screen, exactly like a factory-fresh player:
+  // the device is re-detected above and saved - there is no chooser screen
+  if (!IS_PHONE_EDITION) saveSettings({device: isMobileDevice ? 'mobile' : 'pc'});
+  showMenu('main-menu');
 }
 
 // ===== RADAR SYSTEM (CS2-style full-map minimap) =====
@@ -1006,27 +988,12 @@ function startReload() {
   }, 1800);
 }
 
-// ===== DEVICE SELECT & MOBILE =====
+// ===== DEVICE MODE & MOBILE =====
 function goFullscreenSafe() {
   try {
     var fsP = document.documentElement.requestFullscreen();
     if (fsP && fsP.catch) fsP.catch(function() {});
   } catch(e) {}
-}
-function selectDevice(dev) {
-  isMobileDevice = (dev === 'mobile');
-  deviceChosen = true;
-  saveSettings({device: dev});
-  if (isMobileDevice) {
-    goFullscreenSafe();
-    // Always play the rotate-phone tutorial when the phone option is picked,
-    // regardless of current orientation (desktop/landscape included)
-    showRotateTutorial();
-  } else {
-    showMenu('main-menu');
-    // Apply current language to new elements
-    setLang(currentLang);
-  }
 }
 
 // ===== ROTATE PHONE TUTORIAL (mobile) =====
