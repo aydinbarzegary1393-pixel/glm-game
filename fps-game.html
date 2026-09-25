@@ -43,6 +43,27 @@ canvas{display:block}
 .map-card .map-status{font-size:12px;color:#888;margin-top:6px;letter-spacing:1px}
 .map-card.playable .map-status{color:#4fc3f7}
 
+/* Gun Shop */
+#shop-menu .menu-content{max-width:470px}
+#shop-menu h2{font-size:36px;margin-bottom:16px;color:#ffd76e;letter-spacing:3px}
+#shop-menu .save-hint{margin:-10px 0 14px;color:rgba(79,195,247,0.7);letter-spacing:1px}
+.shop-money-hint{font-size:13px}
+#shop-money{font-weight:800;letter-spacing:1px;color:#7bd88f}
+.shop-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;margin:8px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;text-align:left}
+[dir=rtl] .shop-card{text-align:right}
+.shop-card.equipped-card{border-color:rgba(123,216,143,0.5);background:rgba(123,216,143,0.08)}
+.shop-name{font-size:14px;font-weight:800;letter-spacing:1px;color:#fff}
+.shop-desc{font-size:11px;color:#9aa3ad;margin-top:2px}
+.shop-stats{font-size:10px;color:#5d9dd8;margin-top:3px;letter-spacing:0.5px}
+.shop-btn{display:inline-block;width:132px;padding:9px 0;font-size:11px;margin:0;flex-shrink:0;border-radius:7px;letter-spacing:1px}
+.shop-btn:hover{transform:none;box-shadow:none}
+.shop-btn.equipped{background:rgba(123,216,143,0.15);color:#7bd88f;border:1px solid rgba(123,216,143,0.5)}
+.shop-btn.own{background:rgba(93,157,216,0.15);color:#5d9dd8;border:1px solid rgba(93,157,216,0.5)}
+.shop-btn.buy{background:rgba(255,215,110,0.12);color:#ffd76e;border:1px solid rgba(255,215,110,0.45)}
+.shop-btn.cant{opacity:0.45;border:1px solid rgba(255,255,255,0.15)}
+#shop-msg{color:#ff7b7b;min-height:14px;margin-top:6px;font-size:11px;opacity:0;transition:opacity 0.2s}
+#shop-msg.show{opacity:1}
+
 /* Settings */
 #settings-menu .menu-content,#gameplay-menu .menu-content{max-width:400px}
 #settings-menu h2,#gameplay-menu h2{font-size:36px;margin-bottom:30px;color:#4fc3f7;letter-spacing:3px}
@@ -208,6 +229,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .stat-row{padding:8px 12px;margin:6px 0}
   .stat-row .stat-label{font-size:11px}
   .stat-row .stat-value{font-size:12px}
+  #shop-menu h2{font-size:24px;margin-bottom:10px}
+  #shop-menu .save-hint{margin:-6px 0 8px}
+  .shop-card{padding:8px 10px;margin:6px 0;gap:8px}
+  .shop-name{font-size:12px}
+  .shop-desc{font-size:9px}
+  .shop-stats{font-size:8px}
+  .shop-btn{width:104px;padding:8px 0;font-size:10px}
   .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
   .lang-btn{padding:8px 4px;font-size:12px}
   .pause-btn{width:210px;padding:11px 0;font-size:14px;margin:8px auto;border-radius:8px}
@@ -262,6 +290,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
 <button class="menu-btn" onclick="openStatsMenu()" data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">ACHIEVEMENTS</button>
+<button class="menu-btn" onclick="openShopMenu()" data-en="GUN SHOP" data-fa="فروشگاه اسلحه">GUN SHOP</button>
 <button class="menu-btn" onclick="updateDeviceButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 </div>
 </div>
@@ -387,6 +416,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="stat-row"><span class="stat-label" data-en="SCORE" data-fa="امتیاز">SCORE</span><span class="stat-value" id="st-score">0</span></div>
 <div class="stat-row money"><span class="stat-label" data-en="MONEY" data-fa="پول">MONEY</span><span class="stat-value" id="st-money">0</span></div>
 </div>
+<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+<!-- GUN SHOP -->
+<div id="shop-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="GUN SHOP" data-fa="فروشگاه اسلحه">فروشگاه اسلحه</h2>
+<p class="setting-hint save-hint shop-money-hint"><span data-en="YOUR MONEY" data-fa="پول شما">YOUR MONEY</span>: <span id="shop-money">0</span></p>
+<div id="shop-cards"></div>
+<p class="setting-hint" data-en="EARN MONEY: 5,000 TOMAN PER ZOMBIE KILL" data-fa="درآمد: ۵٬۰۰۰ تومان به ازای هر کیل زامبی">EARN MONEY: 5,000 TOMAN PER ZOMBIE KILL</p>
+<p class="setting-hint" id="shop-msg"></p>
 <button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -553,6 +593,80 @@ function openStatsMenu() {
   updateStatsLines();
   showMenu('stats-menu');
 }
+
+// ===== GUN SHOP (v1.17.0) =====
+function openShopMenu() {
+  renderShop();
+  showMenu('shop-menu');
+}
+function gunStatLine(g) {
+  var rpm = Math.round(60000 / g.fireCd);
+  return currentLang === 'fa'
+    ? ('آسیب ' + g.dmg + ' • خشاب ' + g.mag + ' • ' + rpm + ' گلوله در دقیقه')
+    : ('DMG ' + g.dmg + ' • MAG ' + g.mag + ' • ' + rpm + ' RPM');
+}
+function renderShop() {
+  var wrap = document.getElementById('shop-cards');
+  if (!wrap) return;
+  var sm = document.getElementById('shop-money');
+  if (sm) sm.textContent = currentLang === 'fa'
+    ? (fmtMoney(statsMoney) + ' تومان') : (fmtMoney(statsMoney) + ' TOMAN');
+  var html = '';
+  for (var i = 0; i < GUNS.length; i++) {
+    var g = GUNS[i];
+    var owned = ownedGuns.indexOf(i) > -1;
+    var equipped = currentGun === i;
+    var canAfford = statsMoney >= g.price;
+    var btnTxt, btnCls;
+    if (equipped)      { btnTxt = currentLang === 'fa' ? 'انتخاب شده' : 'EQUIPPED'; btnCls = 'equipped'; }
+    else if (owned)    { btnTxt = currentLang === 'fa' ? 'انتخاب' : 'EQUIP'; btnCls = 'own'; }
+    else               { btnTxt = currentLang === 'fa' ? (fmtMoney(g.price) + ' تومان') : (fmtMoney(g.price) + ' TOMAN');
+                         btnCls = canAfford ? 'buy' : 'cant'; }
+    html += '<div class="shop-card' + (equipped ? ' equipped-card' : '') + '">'
+      + '<div class="shop-info">'
+      + '<div class="shop-name">' + (currentLang === 'fa' ? g.nameFa : g.nameEn) + '</div>'
+      + '<div class="shop-desc">' + (currentLang === 'fa' ? g.descFa : g.descEn) + '</div>'
+      + '<div class="shop-stats">' + gunStatLine(g) + '</div>'
+      + '</div>'
+      + '<button class="menu-btn shop-btn ' + btnCls + '" onclick="buyGun(' + i + ')">' + btnTxt + '</button>'
+      + '</div>';
+  }
+  wrap.innerHTML = html;
+}
+function buyGun(idx) {
+  var g = GUNS[idx];
+  if (!g) return;
+  if (ownedGuns.indexOf(idx) > -1) { equipGun(idx); return; }
+  if (statsMoney < g.price) {
+    flashShopMsg(currentLang === 'fa' ? 'پول کافی نداری! زامبی بکش' : 'NOT ENOUGH MONEY - KILL ZOMBIES');
+    return;
+  }
+  statsMoney -= g.price;
+  ownedGuns.push(idx);
+  saveSettings({statsMoney: statsMoney, ownedGuns: ownedGuns});
+  updateStatsLines();
+  equipGun(idx);
+  flashShopMsg(currentLang === 'fa' ? 'خرید انجام شد!' : 'PURCHASED!');
+}
+function equipGun(idx) {
+  if (!GUNS[idx] || ownedGuns.indexOf(idx) === -1) return;
+  currentGun = idx;
+  saveSettings({currentGun: idx});
+  maxAmmo = GUNS[idx].mag;
+  ammo = maxAmmo;
+  isReloading = false; canShoot = true;
+  buildGunModel();
+  renderShop();
+}
+var shopMsgTimer = null;
+function flashShopMsg(txt) {
+  var el = document.getElementById('shop-msg');
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.add('show');
+  clearTimeout(shopMsgTimer);
+  shopMsgTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
+}
 function loadSavedSettings() {
   try {
     var raw = localStorage.getItem(SETTINGS_KEY);
@@ -617,6 +731,22 @@ function applySavedSettings() {
   if (typeof s.autoReload === 'boolean') autoReload = s.autoReload;
   if (typeof s.autoFire === 'boolean') autoFire = s.autoFire;
   if (typeof s.autoFullscreen === 'boolean') autoFullscreen = s.autoFullscreen;
+  // v1.17.0: gun shop ownership + equipped weapon (validated against GUNS)
+  if (Array.isArray(s.ownedGuns)) {
+    var own = [];
+    for (var ogi = 0; ogi < s.ownedGuns.length; ogi++) {
+      var ogv = s.ownedGuns[ogi];
+      if (typeof ogv === 'number' && ogv >= 0 && ogv < GUNS.length && own.indexOf(ogv) === -1) own.push(ogv);
+    }
+    if (own.length === 0) own = [0];
+    if (own.indexOf(0) === -1) own.push(0); // starter gun can never be lost
+    ownedGuns = own;
+  }
+  if (typeof s.currentGun === 'number' && s.currentGun >= 0 && s.currentGun < GUNS.length
+      && ownedGuns.indexOf(s.currentGun) > -1) currentGun = s.currentGun;
+  maxAmmo = GUNS[currentGun].mag;
+  ammo = maxAmmo;
+  buildGunModel();
   updateDifficultyButtons();
   updateAutoButtons();
   updateFullscreenButtons();
@@ -666,6 +796,9 @@ function resetAllSavedData(btn) {
   difficulty = 1; updateDifficultyButtons();
   autoReload = true; autoFire = true; autoFullscreen = true;
   updateAutoButtons(); updateFullscreenButtons();
+  ownedGuns = [0]; currentGun = 0;
+  maxAmmo = GUNS[0].mag; ammo = maxAmmo;
+  buildGunModel();
   var sl = document.getElementById('sens-slider'); if (sl) sl.value = 4; updateSens(4);
   var vl = document.getElementById('vol-slider'); if (vl) vl.value = 70; updateVol(70);
   currentMap = 0;
@@ -892,6 +1025,41 @@ let killCount = 0;
 const medkits = [];
 const MEDKIT_HEAL = 10;
 
+// ===== GUN SHOP (v1.17.0): 5 purchasable weapons =====
+// price in toman - money comes from zombie kills (MONEY_PER_KILL = 5000).
+// dmg per hit (zombie HP = 5), fireCd = ms between shots, mag = rounds,
+// reload = ms, recoil = view-kick strength, sndFreq/sndDur/sndThump shape the
+// synthesized gunshot. Ids match the three.js models built in buildGunModel().
+var GUNS = [
+  { id:'default', price:0,
+    nameEn:'DEFAULT GUN', nameFa:'تفنگ پیش‌فرض',
+    descEn:'Your trusty starter rifle', descFa:'تفنگ شروع قابل‌اعتماد شما',
+    dmg:1, fireCd:120, mag:30, reload:1800, recoil:0.06,
+    sndFreq:1000, sndDur:0.15, sndThump:150 },
+  { id:'golden', price:100000,
+    nameEn:'GOLDEN GUN', nameFa:'گان گلدن',
+    descEn:'GoldenEye 007 - one shot, one kill', descFa:'گلدن‌آی ۰۰۷ - یک شلیک، یک کیل',
+    dmg:5, fireCd:500, mag:7, reload:1500, recoil:0.11,
+    sndFreq:1500, sndDur:0.18, sndThump:220 },
+  { id:'lancer', price:300000,
+    nameEn:'LANCER', nameFa:'لنسر',
+    descEn:'Gears of War assault rifle + chainsaw', descFa:'مسلسل هجومی گیرز آو وار + اره برقی',
+    dmg:2, fireCd:90, mag:40, reload:2200, recoil:0.045,
+    sndFreq:1100, sndDur:0.12, sndThump:130 },
+  { id:'awp', price:500000,
+    nameEn:'AWP', nameFa:'اِی دبلیو پی',
+    descEn:'Counter-Strike sniper - one shot, one kill', descFa:'اسنایپر کانتر استرایک - یک شلیک، یک کیل',
+    dmg:10, fireCd:1400, mag:5, reload:3000, recoil:0.16,
+    sndFreq:450, sndDur:0.3, sndThump:90 },
+  { id:'p90', price:250000,
+    nameEn:'P90', nameFa:'پی ۹۰',
+    descEn:'Counter-Strike PDW - 50 rounds of spray', descFa:'اسلحه دفاع شخصی کانتر استرایک - ۵۰ گلوله رگبار',
+    dmg:1, fireCd:75, mag:50, reload:2400, recoil:0.035,
+    sndFreq:1400, sndDur:0.08, sndThump:170 }
+];
+var ownedGuns = [0];   // indices into GUNS - gun 0 is the free starter
+var currentGun = 0;    // equipped index
+
 // ===== AUDIO SYSTEM (Web Audio API) =====
 let audioCtx = null;
 let gunAudioCtx = null;
@@ -925,9 +1093,10 @@ function playFootstep() {
 
 function playGunshot() {
   ensureAudio();
+  var g = GUNS[currentGun] || GUNS[0];
   const vol = masterVolume * 0.6;
   if (vol <= 0) return;
-  const dur = 0.15;
+  const dur = g.sndDur;
   const bufferSize = audioCtx.sampleRate * dur;
   const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -940,8 +1109,8 @@ function playGunshot() {
   // Low thump
   const osc = audioCtx.createOscillator();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+  osc.frequency.setValueAtTime(g.sndThump, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(30, g.sndThump * 0.27), audioCtx.currentTime + 0.1);
   const oscGain = audioCtx.createGain();
   oscGain.gain.setValueAtTime(vol * 0.8, audioCtx.currentTime);
   oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
@@ -951,7 +1120,7 @@ function playGunshot() {
   noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
   const filter = audioCtx.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.frequency.value = 1000;
+  filter.frequency.value = g.sndFreq;
   filter.Q.value = 0.5;
   src.connect(filter).connect(noiseGain).connect(audioCtx.destination);
   osc.connect(oscGain).connect(audioCtx.destination);
@@ -988,7 +1157,8 @@ function startReload() {
   if (isReloading || ammo === maxAmmo) return;
   isReloading = true;
   canShoot = false;
-  reloadAnimTime = 1800;
+  var rl = (GUNS[currentGun] || GUNS[0]).reload;
+  reloadAnimTime = rl;
   playReloadSound();
   document.getElementById('reload-hud').style.display = 'block';
   setTimeout(function() {
@@ -996,7 +1166,7 @@ function startReload() {
     isReloading = false;
     canShoot = true;
     document.getElementById('reload-hud').style.display = 'none';
-  }, 1800);
+  }, rl);
 }
 
 // ===== DEVICE MODE & MOBILE =====
@@ -1450,6 +1620,7 @@ function setLang(lang) {
   });
   saveSettings({lang: lang});
   updateStatsLines();
+  renderShop();
 }
 
 function showMenu(id) {
@@ -2789,7 +2960,7 @@ function loadShootMap() {
 const mapLoaders = [loadTestMap, loadVertigoMap, loadDustMap, loadShootMap];
 loadTestMap(); // Load default map behind menu
 
-// ===== FPS GUN MODEL =====
+// ===== FPS GUN MODEL (v1.17.0: one 3D model per shop weapon) =====
 const gunGroup = new THREE.Group();
 
 // Gun textures (loaded from PNG files)
@@ -2798,50 +2969,95 @@ var _gBrT = _loadTex('tex_gun_barrel.png');
 var _gGT = _loadTex('tex_gun_grip.png');
 var _gMT = _loadTex('tex_gun_mag.png');
 
-// Main body
-const gunBody = new THREE.Mesh(
-  new THREE.BoxGeometry(0.08, 0.12, 0.5),
-  new THREE.MeshStandardMaterial({map:_gBT, roughness:0.3, metalness:0.8})
-);
-gunGroup.add(gunBody);
-
-// Barrel
-const barrel = new THREE.Mesh(
-  new THREE.BoxGeometry(0.04, 0.04, 0.35),
-  new THREE.MeshStandardMaterial({map:_gBrT, roughness:0.2, metalness:0.9})
-);
-barrel.position.set(0, 0.02, -0.35);
-gunGroup.add(barrel);
-
-// Handle/grip
-const grip = new THREE.Mesh(
-  new THREE.BoxGeometry(0.07, 0.18, 0.08),
-  new THREE.MeshStandardMaterial({map:_gGT, roughness:0.8, metalness:0.1})
-);
-grip.position.set(0, -0.13, 0.1);
-grip.rotation.x = 0.2;
-gunGroup.add(grip);
-
-// Magazine
-const mag = new THREE.Mesh(
-  new THREE.BoxGeometry(0.06, 0.15, 0.06),
-  new THREE.MeshStandardMaterial({map:_gMT, roughness:0.4, metalness:0.7})
-);
-mag.position.set(0, -0.12, -0.02);
-gunGroup.add(mag);
-
-// Sight
-const sight = new THREE.Mesh(
-  new THREE.BoxGeometry(0.03, 0.04, 0.03),
-  new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.3, metalness:0.9})
-);
-sight.position.set(0, 0.09, -0.15);
-gunGroup.add(sight);
-
-// Muzzle flash light
+// Muzzle flash light - the single persistent child of gunGroup
 const muzzleLight = new THREE.PointLight(0xffaa00, 0, 8);
-muzzleLight.position.set(0, 0.02, -0.55);
 gunGroup.add(muzzleLight);
+
+// Build (or rebuild) the equipped gun's 3D model inside gunGroup.
+// Called at boot, at boot-time settings restore, and whenever the player
+// equips a different gun from the shop. Old parts are disposed, the light
+// stays (its position is tuned per weapon length).
+function buildGunModel() {
+  for (var i = gunGroup.children.length - 1; i >= 0; i--) {
+    var ch = gunGroup.children[i];
+    if (ch === muzzleLight) continue;
+    gunGroup.remove(ch);
+    if (ch.geometry) ch.geometry.dispose();
+    if (ch.material) ch.material.dispose();
+  }
+  var g = GUNS[currentGun] || GUNS[0];
+  var _std = function(c, rough, metal) {
+    return new THREE.MeshStandardMaterial({color:c, roughness:rough, metalness:metal});
+  };
+  var part = function(w, h, d, mat, x, y, z, rx) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    if (rx) m.rotation.x = rx;
+    gunGroup.add(m);
+    return m;
+  };
+  if (g.id === 'golden') {
+    // GoldenEye 007 Golden Gun - compact all-gold pistol
+    var gold = _std(0xffd700, 0.25, 0.95), goldD = _std(0xc9a227, 0.3, 0.9);
+    part(0.07, 0.11, 0.34, gold,   0,  0,     0);
+    part(0.035, 0.035, 0.2, goldD, 0,  0.02, -0.26);
+    part(0.065, 0.16, 0.075, gold, 0, -0.12, 0.09, 0.25);
+    part(0.05, 0.1, 0.05, goldD,   0, -0.1, -0.02);
+    part(0.025, 0.035, 0.025, goldD, 0, 0.075, -0.12);
+    muzzleLight.position.set(0, 0.02, -0.4);
+  } else if (g.id === 'lancer') {
+    // Gears of War Lancer - blue-gray assault rifle + underbarrel chainsaw
+    var bodyM = _std(0x54626f, 0.45, 0.6), darkM = _std(0x23282e, 0.5, 0.6);
+    var sawM = _std(0x8a8f96, 0.4, 0.7), toothM = _std(0xd9dde2, 0.3, 0.8);
+    var accM = _std(0xc96a2d, 0.5, 0.4);
+    part(0.075, 0.11, 0.6, bodyM, 0, 0, -0.02);
+    part(0.03, 0.03, 0.3, darkM,  0, 0.015, -0.44);
+    part(0.07, 0.17, 0.08, darkM, 0, -0.13, 0.12, 0.2);
+    part(0.055, 0.16, 0.07, darkM, 0, -0.13, -0.04, 0.3);
+    part(0.02, 0.05, 0.02, darkM, 0, 0.085, -0.2);
+    part(0.04, 0.045, 0.16, darkM, 0, 0.095, 0.05);
+    part(0.055, 0.055, 0.4, sawM, 0, -0.055, -0.3);   // chainsaw body
+    for (var t = 0; t < 8; t++) {
+      part(0.062, 0.016, 0.018, toothM, 0, -0.055, -0.12 - t * 0.052); // teeth
+    }
+    part(0.06, 0.07, 0.06, accM, 0, -0.055, -0.06);   // saw handle block
+    muzzleLight.position.set(0, 0.015, -0.62);
+  } else if (g.id === 'awp') {
+    // Counter-Strike AWP - olive sniper with long barrel + scope
+    var awpG = _std(0x55603f, 0.55, 0.35), awpD = _std(0x1f241b, 0.5, 0.5);
+    var scopeM = _std(0x101210, 0.35, 0.8);
+    part(0.07, 0.12, 0.68, awpG, 0, 0, 0.02);
+    part(0.028, 0.028, 0.52, awpD, 0, 0.02, -0.56);
+    part(0.06, 0.15, 0.075, awpG, 0, -0.13, 0.16, 0.22);
+    part(0.055, 0.11, 0.08, awpD, 0, -0.11, 0);
+    var scope = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.24, 10), scopeM);
+    scope.rotation.x = Math.PI / 2;
+    scope.position.set(0, 0.11, -0.05);
+    gunGroup.add(scope);
+    part(0.02, 0.04, 0.02, awpD, 0, 0.075, -0.12);
+    part(0.02, 0.04, 0.02, awpD, 0, 0.075, 0.02);
+    part(0.02, 0.045, 0.02, awpD, 0, 0.08, -0.28);
+    muzzleLight.position.set(0, 0.02, -0.85);
+  } else if (g.id === 'p90') {
+    // Counter-Strike P90 - compact tan bullpup, magazine on TOP
+    var tanM = _std(0x8f8468, 0.6, 0.3), p90D = _std(0x2a2a24, 0.55, 0.4);
+    part(0.085, 0.12, 0.42, tanM, 0, 0, 0.02);
+    part(0.03, 0.03, 0.14, p90D, 0, 0.02, -0.27);
+    part(0.05, 0.035, 0.26, p90D, 0, 0.095, -0.02);   // top-mounted mag
+    part(0.055, 0.13, 0.06, tanM, 0, -0.12, 0.16, 0.25);
+    part(0.02, 0.04, 0.02, p90D, 0, 0.085, -0.2);
+    muzzleLight.position.set(0, 0.02, -0.38);
+  } else {
+    // default starter rifle (original model, texture-mapped)
+    part(0.08, 0.12, 0.5, new THREE.MeshStandardMaterial({map:_gBT, roughness:0.3, metalness:0.8}), 0, 0, 0);
+    part(0.04, 0.04, 0.35, new THREE.MeshStandardMaterial({map:_gBrT, roughness:0.2, metalness:0.9}), 0, 0.02, -0.35);
+    part(0.07, 0.18, 0.08, new THREE.MeshStandardMaterial({map:_gGT, roughness:0.8, metalness:0.1}), 0, -0.13, 0.1, 0.2);
+    part(0.06, 0.15, 0.06, new THREE.MeshStandardMaterial({map:_gMT, roughness:0.4, metalness:0.7}), 0, -0.12, -0.02);
+    part(0.03, 0.04, 0.03, _std(0x1a1a1a, 0.3, 0.9), 0, 0.09, -0.15);
+    muzzleLight.position.set(0, 0.02, -0.55);
+  }
+}
+buildGunModel();
 
 // Position gun in view
 gunGroup.position.set(0.25, -0.22, -0.4);
@@ -2853,10 +3069,11 @@ const muzzleFlashEl = document.getElementById('muzzle-flash');
 
 function shoot() {
   if (!canShoot || isReloading || ammo <= 0) return;
+  var g = GUNS[currentGun] || GUNS[0];
   canShoot = false;
   ammo--;
 
-  // Sound
+  // Sound (gun-shaped: per-weapon brightness/thump/decay)
   playGunshot();
 
   // Muzzle flash
@@ -2866,8 +3083,8 @@ function shoot() {
   muzzleLight.intensity = 3;
   setTimeout(() => { muzzleLight.intensity = 0; }, 50);
 
-  // Gun recoil (Three.js, not DOM)
-  recoilAmount = 0.06;
+  // Gun recoil (Three.js, not DOM) - heavier guns kick harder
+  recoilAmount = g.recoil;
 
   // Raycast
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -2880,7 +3097,7 @@ function shoot() {
     const hit = hits[0];
     if (hit.object.userData.enemyRef) {
       const enemy = hit.object.userData.enemyRef;
-      enemy.health--;
+      enemy.health -= g.dmg;
       enemy.bodyMat.emissive.setHex(0x660000);
       setTimeout(function() { if (enemy.bodyMat) enemy.bodyMat.emissive.setHex(0x000000); }, 100);
       if (enemy.health <= 0) {
@@ -2916,8 +3133,8 @@ function shoot() {
     }
   }
 
-  // Fire rate cooldown
-  setTimeout(() => { canShoot = true; }, 120);
+  // Fire rate cooldown - per-weapon (P90 75ms ... AWP 1400ms)
+  setTimeout(() => { canShoot = true; }, g.fireCd);
 
   // Auto reload: when the mag runs dry and the option is enabled
   if (ammo <= 0 && autoReload) {
@@ -3242,11 +3459,13 @@ function animate() {
     gunGroup.position.y = -0.22 + bobY + recoilAmount - reloadDrop;
     gunGroup.position.x = 0.25 + bobX;
 
-    // Ammo HUD
+    // Ammo HUD (with equipped weapon name)
+    var gName = (currentLang === 'fa' ? GUNS[currentGun].nameFa : GUNS[currentGun].nameEn);
+    var gNameLine = '<div style="font-size:11px;letter-spacing:1px;color:rgba(255,255,255,0.55);margin-bottom:2px">' + gName + '</div>';
     if (isReloading) {
-      debugEl.innerHTML = '<span style="color:#ffaa00">RELOADING...</span>';
+      debugEl.innerHTML = gNameLine + '<span style="color:#ffaa00">RELOADING...</span>';
     } else {
-      debugEl.innerHTML = '<span style="color:#fff">' + ammo + '</span><span style="color:rgba(255,255,255,0.5);font-size:20px"> / ' + maxAmmo + '</span>';
+      debugEl.innerHTML = gNameLine + '<span style="color:#fff">' + ammo + '</span><span style="color:rgba(255,255,255,0.5);font-size:20px"> / ' + maxAmmo + '</span>';
     }
     
     // Draw minimap
