@@ -328,6 +328,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="dev-mobile" onclick="changeDevice('mobile')" data-en="MOBILE" data-fa="موبایل">MOBILE</button>
 </div>
 </div>
+<div class="setting-group" id="fullscreen-group">
+<div class="setting-label" data-en="AUTO FULLSCREEN / فول اسکرین خودکار" data-fa="AUTO FULLSCREEN / فول اسکرین خودکار">AUTO FULLSCREEN / فول اسکرین خودکار</div>
+<div class="lang-btns">
+<button class="lang-btn active" id="fs-on" onclick="setAutoFullscreen(true)" data-en="ON" data-fa="روشن">ON</button>
+<button class="lang-btn" id="fs-off" onclick="setAutoFullscreen(false)" data-en="OFF" data-fa="خاموش">OFF</button>
+</div>
+</div>
 <button class="menu-btn" id="btn-gameplay-settings" onclick="openGameplayMenu()" data-en="GAMEPLAY SETTINGS" data-fa="گیم پلی ستینگ">GAMEPLAY SETTINGS</button>
 <button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
 <button class="menu-btn danger-btn" id="btn-reset-data" onclick="resetAllSavedData(this)" data-en="RESET SAVED DATA" data-fa="پاک کردن اطلاعات ذخیره‌شده">RESET SAVED DATA</button>
@@ -503,6 +510,7 @@ function detectBestDevice() {
 }
 let autoReload = true;
 let autoFire = true;
+let autoFullscreen = true; // v1.16.0: auto-fullscreen on first gesture + match start
 let fireHeld = false;
 
 // ===== PERSISTENT PLAYER SETTINGS (auto-saved, survive page refresh) =====
@@ -608,8 +616,10 @@ function applySavedSettings() {
   if (typeof s.difficulty === 'number' && s.difficulty >= 0 && s.difficulty <= 3) difficulty = s.difficulty;
   if (typeof s.autoReload === 'boolean') autoReload = s.autoReload;
   if (typeof s.autoFire === 'boolean') autoFire = s.autoFire;
+  if (typeof s.autoFullscreen === 'boolean') autoFullscreen = s.autoFullscreen;
   updateDifficultyButtons();
   updateAutoButtons();
+  updateFullscreenButtons();
   if (typeof s.lastMap === 'number' && s.lastMap >= 0 && s.lastMap <= 3) currentMap = s.lastMap;
   if (typeof s.bestKills === 'number' && s.bestKills > 0) bestKills = s.bestKills;
   if (typeof s.statsKills === 'number' && s.statsKills > 0) statsKills = s.statsKills;
@@ -654,7 +664,8 @@ function resetAllSavedData(btn) {
   }
   updateDeviceButtons();
   difficulty = 1; updateDifficultyButtons();
-  autoReload = true; autoFire = true; updateAutoButtons();
+  autoReload = true; autoFire = true; autoFullscreen = true;
+  updateAutoButtons(); updateFullscreenButtons();
   var sl = document.getElementById('sens-slider'); if (sl) sl.value = 4; updateSens(4);
   var vl = document.getElementById('vol-slider'); if (vl) vl.value = 70; updateVol(70);
   currentMap = 0;
@@ -989,12 +1000,45 @@ function startReload() {
 }
 
 // ===== DEVICE MODE & MOBILE =====
-function goFullscreenSafe() {
+// v1.16.0: enter fullscreen safely (browser requires a user gesture, so this
+// must be called from a tap/click/keydown). Adds the Safari webkit fallback,
+// skips when already fullscreen, and locks landscape on phones once fullscreen
+// actually succeeded (Android Chrome allows orientation lock only there).
+function lockLandscapeSafe() {
   try {
-    var fsP = document.documentElement.requestFullscreen();
-    if (fsP && fsP.catch) fsP.catch(function() {});
+    if (!isMobileDevice) return;
+    if (screen.orientation && screen.orientation.lock) {
+      var ol = screen.orientation.lock('landscape');
+      if (ol && ol.catch) ol.catch(function() {});
+    }
   } catch(e) {}
 }
+function goFullscreenSafe() {
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var fsEl = document.documentElement;
+    var fsFn = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen;
+    if (!fsFn) return; // e.g. iPhone Safari has no element fullscreen - skip silently
+    var fsP = fsFn.call(fsEl);
+    if (fsP && fsP.then) fsP.then(function() { lockLandscapeSafe(); }).catch(function() {});
+    else if (fsP && fsP.catch) fsP.catch(function() {});
+    else lockLandscapeSafe();
+  } catch(e) {}
+}
+// v1.16.0: the FIRST user gesture on the page (tap / click / key) goes
+// fullscreen automatically - the earliest moment a browser allows it, so
+// "entering the game via the link" means fullscreen on the first touch.
+// One-shot per page load: if the player exits fullscreen (ESC), gestures
+// never force it back - only starting a match does (explicit intent).
+var fsGestureDone = false;
+function autoFullscreenFromGesture() {
+  if (fsGestureDone) return;
+  if (!autoFullscreen) return; // setting off - keep listening in case it is enabled later
+  fsGestureDone = true;
+  goFullscreenSafe();
+}
+document.addEventListener('pointerdown', autoFullscreenFromGesture, true);
+document.addEventListener('keydown', autoFullscreenFromGesture, true);
 
 // ===== ROTATE PHONE TUTORIAL (mobile) =====
 var rotateTutorialTimer = null;
@@ -1825,6 +1869,18 @@ function updateDifficultyButtons() {
   document.getElementById('diff-1').classList.toggle('active', difficulty===1);
   document.getElementById('diff-2').classList.toggle('active', difficulty===2);
   document.getElementById('diff-3').classList.toggle('active', difficulty===3);
+}
+
+// ===== AUTO FULLSCREEN SETTING (v1.16.0) =====
+function setAutoFullscreen(on) {
+  autoFullscreen = !!on;
+  saveSettings({autoFullscreen: !!on});
+  updateFullscreenButtons();
+}
+function updateFullscreenButtons() {
+  var on = document.getElementById('fs-on'), off = document.getElementById('fs-off');
+  if (on) on.classList.toggle('active', autoFullscreen);
+  if (off) off.classList.toggle('active', !autoFullscreen);
 }
 
 // ===== AUTO RELOAD & AUTO FIRE SETTINGS =====
@@ -2875,6 +2931,9 @@ function shoot() {
 const pauseOvl = document.getElementById('pause-overlay');
 
 function startGame() {
+  // v1.16.0: starting a match is an explicit intent to play - (re)enter
+  // fullscreen if the auto-fullscreen setting is on (no-op if already there)
+  if (autoFullscreen) goFullscreenSafe();
   clearMap(); clearMedkits();
   mapLoaders[currentMap]();
   document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
