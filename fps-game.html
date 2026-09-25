@@ -356,7 +356,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn" id="lang-fa" onclick="setLang('fa')">فارسی</button>
 </div>
 </div>
-<div class="setting-group">
+<div class="setting-group" id="device-group">
 <div class="setting-label" data-en="DEVICE / دستگاه" data-fa="DEVICE / دستگاه">DEVICE / دستگاه</div>
 <div class="lang-btns">
 <button class="lang-btn" id="dev-pc" onclick="changeDevice('pc')" data-en="PC" data-fa="کامپیوتر">PC</button>
@@ -519,6 +519,11 @@ let isReloading = false;
 let reloadAnimTime = 0;
 let isMobileDevice = false;
 let deviceChosen = false;
+// PHONE EDITION (Android APK WebView / any phone browser): the device choice
+// is skipped entirely - the game boots straight into mobile mode and the
+// DEVICE option is hidden in settings. Desktop (Windows Electron app, PC
+// browsers) keeps the PC/MOBILE choice untouched.
+var IS_PHONE_EDITION = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 let autoReload = true;
 let autoFire = true;
 let fireHeld = false;
@@ -589,14 +594,27 @@ function recordBestKills() {
 // tutorial) is skipped entirely - the player lands straight in the main menu.
 function applySavedSettings() {
   var s = loadSavedSettings();
-  if (!s) return;
-  if (s.device === 'mobile' || s.device === 'pc') {
-    isMobileDevice = (s.device === 'mobile');
-    deviceChosen = true;
+  if (IS_PHONE_EDITION) {
+    // Phone/APK edition: no device selection - always mobile from the start,
+    // even if a previous session saved device:'pc'. Device menu + settings
+    // DEVICE group are hidden.
+    isMobileDevice = true; deviceChosen = true;
+    var dg = document.getElementById('device-group');
+    if (dg) dg.style.display = 'none';
     var dm = document.getElementById('device-menu');
     if (dm) dm.classList.add('hidden');
     showMenu('main-menu');
+  } else {
+    if (!s) return;
+    if (s.device === 'mobile' || s.device === 'pc') {
+      isMobileDevice = (s.device === 'mobile');
+      deviceChosen = true;
+      var dm = document.getElementById('device-menu');
+      if (dm) dm.classList.add('hidden');
+      showMenu('main-menu');
+    }
   }
+  if (!s) return;
   if (s.lang === 'fa' || s.lang === 'en') setLang(s.lang);
   if (typeof s.sens === 'number' && s.sens >= 1 && s.sens <= 20) {
     var sl = document.getElementById('sens-slider');
@@ -648,7 +666,12 @@ function resetAllSavedData(btn) {
   bestKills = 0;
   statsKills = 0; statsDeaths = 0; statsWins = 0; statsScore = 0; statsMoney = 0;
   setLang('en');
-  isMobileDevice = false; deviceChosen = true;
+  if (IS_PHONE_EDITION) {
+    // phone edition has no device choice: stay mobile, return to main menu
+    isMobileDevice = true; deviceChosen = true;
+  } else {
+    isMobileDevice = false; deviceChosen = true;
+  }
   updateDeviceButtons();
   difficulty = 1; updateDifficultyButtons();
   autoReload = true; autoFire = true; updateAutoButtons();
@@ -659,7 +682,7 @@ function resetAllSavedData(btn) {
   settingsMuted = false;
   updateStatsLines();
   // back to the very first screen, exactly like a factory-fresh player
-  showMenu('device-menu');
+  showMenu(IS_PHONE_EDITION ? 'main-menu' : 'device-menu');
 }
 
 // ===== RADAR SYSTEM (CS2-style full-map minimap) =====
