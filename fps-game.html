@@ -63,6 +63,21 @@ canvas{display:block}
 .shop-btn.cant{opacity:0.45;border:1px solid rgba(255,255,255,0.15)}
 #shop-msg{color:#ff7b7b;min-height:14px;margin-top:6px;font-size:11px;opacity:0;transition:opacity 0.2s}
 #shop-msg.show{opacity:1}
+/* v1.18.0 ammo economy: card rows + ammo stepper (minus/count/plus like a top-up widget) */
+.shop-row{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}
+[dir=rtl] .shop-row{text-align:right}
+.shop-ammo{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(255,255,255,0.14);display:flex;flex-direction:column;gap:7px}
+.shop-res{font-size:11px;color:#7bd88f;letter-spacing:0.5px}
+.ammo-picker{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ammo-label{font-size:11px;color:#9aa3ad;letter-spacing:1px;font-weight:700}
+.ammo-step{width:36px;height:32px;font-size:17px;font-weight:800;color:#efe6ff;background:rgba(139,92,246,0.28);border:1px solid rgba(150,100,255,0.65);border-radius:9px;cursor:pointer;line-height:1;padding:0;margin:0;flex-shrink:0}
+.ammo-step:hover{background:rgba(139,92,246,0.45)}
+.ammo-count{min-width:52px;text-align:center;font-size:14px;font-weight:800;color:#fff;background:rgba(139,92,246,0.2);border:1px solid rgba(150,100,255,0.5);border-radius:9px;padding:6px 0}
+.ammo-cost{font-size:11px;color:#ffd76e;min-width:86px;font-weight:700}
+.ammo-buy{width:88px;padding:8px 0;font-size:11px;flex-shrink:0}
+/* v1.18.0 out-of-ammo warning toast */
+#ammo-warning{position:fixed;left:50%;bottom:20%;transform:translateX(-50%);z-index:150;display:none;background:rgba(120,20,20,0.55);border:1px solid rgba(255,120,120,0.6);color:#ffb3b3;font-size:13px;font-weight:700;letter-spacing:1px;padding:9px 18px;border-radius:9px;text-shadow:0 1px 2px rgba(0,0,0,0.8);pointer-events:none}
+#ammo-warning.show{display:block}
 
 /* Settings */
 #settings-menu .menu-content,#gameplay-menu .menu-content{max-width:400px}
@@ -234,6 +249,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .shop-card{padding:8px 10px;margin:6px 0;gap:8px}
   .shop-name{font-size:12px}
   .shop-desc{font-size:9px}
+  .shop-row{gap:8px}
+  .ammo-step{width:32px;height:30px;font-size:15px}
+  .ammo-count{min-width:44px;padding:5px 0;font-size:13px}
+  .ammo-cost{min-width:74px;font-size:10px}
+  .ammo-buy{width:74px;padding:7px 0}
   .shop-stats{font-size:8px}
   .shop-btn{width:104px;padding:8px 0;font-size:10px}
   .menu-btn.danger-btn{font-size:11px;padding:10px 0;width:220px}
@@ -427,7 +447,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="shop-cards"></div>
 <p class="setting-hint" data-en="EARN MONEY: 5,000 TOMAN PER ZOMBIE KILL" data-fa="درآمد: ۵٬۰۰۰ تومان به ازای هر کیل زامبی">EARN MONEY: 5,000 TOMAN PER ZOMBIE KILL</p>
 <p class="setting-hint" id="shop-msg"></p>
-<button class="menu-btn back-btn" onclick="showMenu('main-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+<button class="menu-btn back-btn" onclick="backFromShop()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 <!-- PAUSE -->
@@ -436,6 +456,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <h2 data-en="PAUSED" data-fa="توقف">PAUSED</h2>
 <p class="pause-sub" data-en="GAME PAUSED" data-fa="بازی متوقف شد">GAME PAUSED</p>
 <button class="pause-btn" onclick="resumeGame()" data-en="RESUME" data-fa="ادامه بازی">RESUME</button>
+<button class="pause-btn" onclick="openShopFromPause()" data-en="GUN SHOP" data-fa="فروشگاه اسلحه">GUN SHOP</button>
 <button class="pause-btn" onclick="openSettingsFromPause()" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
 <button class="pause-btn" onclick="changeMapFromPause()" data-en="CHANGE MAP" data-fa="تغییر نقشه">CHANGE MAP</button>
 <button class="pause-btn exit-btn" onclick="exitToMenu()" data-en="EXIT TO MENU" data-fa="خروج به منو">EXIT TO MENU</button>
@@ -468,6 +489,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 <!-- GAME HUD -->
 <div id="crosshair" style="display:none"></div>
+<div id="ammo-warning">OUT OF AMMO!</div>
 <div id="muzzle-flash"></div>
 <div id="reload-hud" data-en="RELOADING..." data-fa="در حال شارژ...">RELOADING...</div>
 <div id="health-bar-container">
@@ -529,6 +551,8 @@ let maxAmmo = 30;
 let recoilAmount = 0;
 let isReloading = false;
 let reloadAnimTime = 0;
+let reloadTotalTime = 1800;           // v1.18.0: real duration of the current reload
+let shootAnimT = 0, shootAnimDur = 600; // v1.18.0: fire-delay gun bob (rechamber feel)
 let isMobileDevice = false;
 let deviceChosen = false;
 // PHONE EDITION (Android APK WebView / any phone browser): the device choice
@@ -594,16 +618,42 @@ function openStatsMenu() {
   showMenu('stats-menu');
 }
 
-// ===== GUN SHOP (v1.17.0) =====
+// ===== GUN SHOP (v1.17.0, ammo economy v1.18.0) =====
+var AMMO_PRICE = 25; // toman per single bullet - 5,000 buys 200 rounds
+var shopReturn = false; // shop opened from the pause overlay -> BACK returns there
+var ammoQty = {};       // per-gun ammo purchase stepper quantity
+var ammoReserve = {};   // per-gun reserve bullets; -1 = infinite (P90)
+function seedReserve(i) { return GUNS[i].mags === -1 ? -1 : GUNS[i].mags * GUNS[i].mag; }
 function openShopMenu() {
+  shopReturn = false;
   renderShop();
   showMenu('shop-menu');
 }
+function openShopFromPause() {
+  // mid-match shopping: pause overlay -> shop -> BACK lands back on pause
+  shopReturn = true;
+  pauseOvl.classList.add('hidden');
+  renderShop();
+  showMenu('shop-menu');
+}
+function backFromShop() {
+  if (shopReturn) {
+    shopReturn = false;
+    document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+    pauseOvl.classList.remove('hidden');
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'block';
+  } else {
+    showMenu('main-menu');
+  }
+}
 function gunStatLine(g) {
-  var rpm = Math.round(60000 / g.fireCd);
+  var rpm = g.fireCd > 0 ? String(Math.round(60000 / g.fireCd)) : '∞';
+  var magsTxt = g.mags === -1
+    ? (currentLang === 'fa' ? 'خشاب بی‌نهایت' : 'INFINITE MAGS')
+    : (currentLang === 'fa' ? (g.mags + ' خشاب اولیه') : (g.mags + ' START MAGS'));
   return currentLang === 'fa'
-    ? ('آسیب ' + g.dmg + ' • خشاب ' + g.mag + ' • ' + rpm + ' گلوله در دقیقه')
-    : ('DMG ' + g.dmg + ' • MAG ' + g.mag + ' • ' + rpm + ' RPM');
+    ? ('آسیب ' + g.dmg + ' • خشاب ' + g.mag + ' تیر • ' + magsTxt + ' • ' + rpm + ' تیر در دقیقه')
+    : ('DMG ' + g.dmg + ' • MAG ' + g.mag + ' • ' + magsTxt + ' • ' + rpm + ' RPM');
 }
 function renderShop() {
   var wrap = document.getElementById('shop-cards');
@@ -623,6 +673,7 @@ function renderShop() {
     else               { btnTxt = currentLang === 'fa' ? (fmtMoney(g.price) + ' تومان') : (fmtMoney(g.price) + ' TOMAN');
                          btnCls = canAfford ? 'buy' : 'cant'; }
     html += '<div class="shop-card' + (equipped ? ' equipped-card' : '') + '">'
+      + '<div class="shop-row">'
       + '<div class="shop-info">'
       + '<div class="shop-name">' + (currentLang === 'fa' ? g.nameFa : g.nameEn) + '</div>'
       + '<div class="shop-desc">' + (currentLang === 'fa' ? g.descFa : g.descEn) + '</div>'
@@ -630,8 +681,70 @@ function renderShop() {
       + '</div>'
       + '<button class="menu-btn shop-btn ' + btnCls + '" onclick="buyGun(' + i + ')">' + btnTxt + '</button>'
       + '</div>';
+    // v1.18.0: ammo reserve line + BUY AMMO stepper (owned guns only; P90 is infinite)
+    if (owned) {
+      var res = ammoReserve[i];
+      var resTxt = (res === -1) ? '∞' : fmtMoney(res);
+      html += '<div class="shop-ammo"><span class="shop-res">'
+        + (currentLang === 'fa' ? ('ذخیره تیر: ' + resTxt) : ('RESERVE: ' + resTxt)) + '</span>';
+      if (g.mags !== -1) {
+        var q = ammoQty[i] || 200;
+        var cost = q * AMMO_PRICE;
+        var costTxt = currentLang === 'fa' ? (fmtMoney(cost) + ' تومان') : (fmtMoney(cost) + ' TOMAN');
+        html += '<div class="ammo-picker">'
+          + '<span class="ammo-label">' + (currentLang === 'fa' ? 'خرید تیر' : 'BUY AMMO') + '</span>'
+          + '<button class="ammo-step" onclick="stepAmmoQty(' + i + ',-10)">−</button>'
+          + '<span class="ammo-count" id="aq-' + i + '">' + q + '</span>'
+          + '<button class="ammo-step" onclick="stepAmmoQty(' + i + ',10)">+</button>'
+          + '<span class="ammo-cost" id="ac-' + i + '">' + costTxt + '</span>'
+          + '<button class="menu-btn shop-btn buy ammo-buy" onclick="buyAmmo(' + i + ')">'
+          + (currentLang === 'fa' ? 'خرید' : 'BUY') + '</button>'
+          + '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
   }
   wrap.innerHTML = html;
+}
+function stepAmmoQty(idx, d) {
+  var q = (ammoQty[idx] || 200) + d;
+  q = Math.max(10, Math.min(2000, q));
+  ammoQty[idx] = q;
+  var ce = document.getElementById('aq-' + idx), cc = document.getElementById('ac-' + idx);
+  var cost = q * AMMO_PRICE;
+  if (ce) ce.textContent = String(q);
+  if (cc) cc.textContent = currentLang === 'fa' ? (fmtMoney(cost) + ' تومان') : (fmtMoney(cost) + ' TOMAN');
+}
+function buyAmmo(idx) {
+  var g = GUNS[idx];
+  if (!g || g.mags === -1 || ownedGuns.indexOf(idx) === -1) return;
+  var q = ammoQty[idx] || 200;
+  var cost = q * AMMO_PRICE;
+  if (statsMoney < cost) {
+    flashShopMsg(currentLang === 'fa' ? 'پول کافی نداری! زامبی بکش' : 'NOT ENOUGH MONEY - KILL ZOMBIES');
+    return;
+  }
+  statsMoney -= cost;
+  ammoReserve[idx] = (ammoReserve[idx] === -1) ? -1 : (ammoReserve[idx] || 0) + q;
+  saveSettings({statsMoney: statsMoney, ammoReserve: ammoReserve});
+  updateStatsLines();
+  renderShop();
+  flashShopMsg(currentLang === 'fa' ? (fmtMoney(q) + ' تیر خریداری شد!') : (fmtMoney(q) + ' ROUNDS PURCHASED!'));
+}
+var ammoWarnTimer = null, ammoWarnLast = 0;
+function flashAmmoWarning() {
+  var now = Date.now();
+  if (now - ammoWarnLast < 2200) return;
+  ammoWarnLast = now;
+  var el = document.getElementById('ammo-warning');
+  if (!el) return;
+  el.textContent = currentLang === 'fa'
+    ? 'تیر تمام شد! از فروشگاه اسلحه تیر بخر'
+    : 'OUT OF AMMO! BUY AMMO IN THE GUN SHOP';
+  el.classList.add('show');
+  clearTimeout(ammoWarnTimer);
+  ammoWarnTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
 }
 function buyGun(idx) {
   var g = GUNS[idx];
@@ -643,7 +756,8 @@ function buyGun(idx) {
   }
   statsMoney -= g.price;
   ownedGuns.push(idx);
-  saveSettings({statsMoney: statsMoney, ownedGuns: ownedGuns});
+  ammoReserve[idx] = seedReserve(idx); // v1.18.0: new gun arrives with its starter mags
+  saveSettings({statsMoney: statsMoney, ownedGuns: ownedGuns, ammoReserve: ammoReserve});
   updateStatsLines();
   equipGun(idx);
   flashShopMsg(currentLang === 'fa' ? 'خرید انجام شد!' : 'PURCHASED!');
@@ -653,8 +767,9 @@ function equipGun(idx) {
   currentGun = idx;
   saveSettings({currentGun: idx});
   maxAmmo = GUNS[idx].mag;
-  ammo = maxAmmo;
+  ammo = maxAmmo; // the gun comes loaded; reserve ammo is spent on RELOADS
   isReloading = false; canShoot = true;
+  resetGunAnim();
   buildGunModel();
   renderShop();
 }
@@ -715,6 +830,7 @@ function applySavedSettings() {
     if (isMobileDevice && !(savedSettings && savedSettings.rotateTutorialSeen)) showRotateTutorial();
     else { showMenu('main-menu'); setLang(currentLang); }
   }
+  if (!s) s = savedSettings || {}; // v1.18.0: fresh players must seed the gun/reserve state too
   if (!s) return;
   if (s.lang === 'fa' || s.lang === 'en') setLang(s.lang);
   if (typeof s.sens === 'number' && s.sens >= 1 && s.sens <= 20) {
@@ -731,19 +847,35 @@ function applySavedSettings() {
   if (typeof s.autoReload === 'boolean') autoReload = s.autoReload;
   if (typeof s.autoFire === 'boolean') autoFire = s.autoFire;
   if (typeof s.autoFullscreen === 'boolean') autoFullscreen = s.autoFullscreen;
-  // v1.17.0: gun shop ownership + equipped weapon (validated against GUNS)
-  if (Array.isArray(s.ownedGuns)) {
-    var own = [];
-    for (var ogi = 0; ogi < s.ownedGuns.length; ogi++) {
-      var ogv = s.ownedGuns[ogi];
-      if (typeof ogv === 'number' && ogv >= 0 && ogv < GUNS.length && own.indexOf(ogv) === -1) own.push(ogv);
+  // v1.18.0 AMMO ECONOMY - schema 2: gun rebalance + finite reserve ammo.
+  // ONE-TIME MIGRATION: every player's purchased guns are wiped (per the
+  // update design) and per-gun reserve ammo is seeded; money/stats are kept.
+  var SHOP_SCHEMA = 2;
+  if (!s.shopSchema || s.shopSchema !== SHOP_SCHEMA) {
+    ownedGuns = [0]; currentGun = 0;
+    ammoReserve = {};
+    for (var sgi = 0; sgi < GUNS.length; sgi++) ammoReserve[sgi] = seedReserve(sgi);
+    saveSettings({shopSchema: SHOP_SCHEMA, ownedGuns: ownedGuns, currentGun: currentGun, ammoReserve: ammoReserve});
+  } else {
+    if (Array.isArray(s.ownedGuns)) {
+      var own = [];
+      for (var ogi = 0; ogi < s.ownedGuns.length; ogi++) {
+        var ogv = s.ownedGuns[ogi];
+        if (typeof ogv === 'number' && ogv >= 0 && ogv < GUNS.length && own.indexOf(ogv) === -1) own.push(ogv);
+      }
+      if (own.length === 0) own = [0];
+      if (own.indexOf(0) === -1) own.push(0); // starter gun can never be lost
+      ownedGuns = own;
     }
-    if (own.length === 0) own = [0];
-    if (own.indexOf(0) === -1) own.push(0); // starter gun can never be lost
-    ownedGuns = own;
+    if (typeof s.currentGun === 'number' && s.currentGun >= 0 && s.currentGun < GUNS.length
+        && ownedGuns.indexOf(s.currentGun) > -1) currentGun = s.currentGun;
+    for (var rgi = 0; rgi < GUNS.length; rgi++) {
+      var rgv = s.ammoReserve ? s.ammoReserve[rgi] : undefined;
+      if (GUNS[rgi].mags === -1) { ammoReserve[rgi] = -1; continue; }
+      if (typeof rgv === 'number' && rgv >= 0 && rgv <= 999999) ammoReserve[rgi] = Math.floor(rgv);
+      else ammoReserve[rgi] = seedReserve(rgi);
+    }
   }
-  if (typeof s.currentGun === 'number' && s.currentGun >= 0 && s.currentGun < GUNS.length
-      && ownedGuns.indexOf(s.currentGun) > -1) currentGun = s.currentGun;
   maxAmmo = GUNS[currentGun].mag;
   ammo = maxAmmo;
   buildGunModel();
@@ -797,13 +929,17 @@ function resetAllSavedData(btn) {
   autoReload = true; autoFire = true; autoFullscreen = true;
   updateAutoButtons(); updateFullscreenButtons();
   ownedGuns = [0]; currentGun = 0;
+  ammoReserve = {};
+  for (var rsi = 0; rsi < GUNS.length; rsi++) ammoReserve[rsi] = seedReserve(rsi);
   maxAmmo = GUNS[0].mag; ammo = maxAmmo;
+  resetGunAnim();
   buildGunModel();
   var sl = document.getElementById('sens-slider'); if (sl) sl.value = 4; updateSens(4);
   var vl = document.getElementById('vol-slider'); if (vl) vl.value = 70; updateVol(70);
   currentMap = 0;
   restoreDefaultLayout();
   settingsMuted = false;
+  saveSettings({shopSchema: 2, ownedGuns: ownedGuns, currentGun: currentGun, ammoReserve: ammoReserve});
   updateStatsLines();
   // back to the very first screen, exactly like a factory-fresh player:
   // the device is re-detected above and saved - there is no chooser screen
@@ -1031,30 +1167,30 @@ const MEDKIT_HEAL = 10;
 // reload = ms, recoil = view-kick strength, sndFreq/sndDur/sndThump shape the
 // synthesized gunshot. Ids match the three.js models built in buildGunModel().
 var GUNS = [
-  { id:'default', price:0,
+  { id:'default', price:0, mags:6,
     nameEn:'DEFAULT GUN', nameFa:'تفنگ پیش‌فرض',
-    descEn:'Your trusty starter rifle', descFa:'تفنگ شروع قابل‌اعتماد شما',
-    dmg:1, fireCd:120, mag:30, reload:1800, recoil:0.06,
+    descEn:'Slow bolt-action starter - every shot counts', descFa:'تفنگ شروع کلاه‌گذاری آهسته - هر تیر حساب‌شده است',
+    dmg:1, fireCd:3000, mag:30, reload:1800, recoil:0.06,
     sndFreq:1000, sndDur:0.15, sndThump:150 },
-  { id:'golden', price:100000,
+  { id:'golden', price:100000, mags:7,
     nameEn:'GOLDEN GUN', nameFa:'گان گلدن',
     descEn:'GoldenEye 007 - one shot, one kill', descFa:'گلدن‌آی ۰۰۷ - یک شلیک، یک کیل',
-    dmg:5, fireCd:500, mag:7, reload:1500, recoil:0.11,
+    dmg:5, fireCd:2000, mag:7, reload:1500, recoil:0.11,
     sndFreq:1500, sndDur:0.18, sndThump:220 },
-  { id:'lancer', price:300000,
+  { id:'lancer', price:700000, mags:7,
     nameEn:'LANCER', nameFa:'لنسر',
     descEn:'Gears of War assault rifle + chainsaw', descFa:'مسلسل هجومی گیرز آو وار + اره برقی',
-    dmg:2, fireCd:90, mag:40, reload:2200, recoil:0.045,
+    dmg:2, fireCd:500, mag:40, reload:2200, recoil:0.045,
     sndFreq:1100, sndDur:0.12, sndThump:130 },
-  { id:'awp', price:500000,
+  { id:'awp', price:300000, mags:4,
     nameEn:'AWP', nameFa:'اِی دبلیو پی',
     descEn:'Counter-Strike sniper - one shot, one kill', descFa:'اسنایپر کانتر استرایک - یک شلیک، یک کیل',
     dmg:10, fireCd:1400, mag:5, reload:3000, recoil:0.16,
     sndFreq:450, sndDur:0.3, sndThump:90 },
-  { id:'p90', price:250000,
+  { id:'p90', price:1000000, mags:-1, sndEvery:3,
     nameEn:'P90', nameFa:'پی ۹۰',
-    descEn:'Counter-Strike PDW - 50 rounds of spray', descFa:'اسلحه دفاع شخصی کانتر استرایک - ۵۰ گلوله رگبار',
-    dmg:1, fireCd:75, mag:50, reload:2400, recoil:0.035,
+    descEn:'Counter-Strike PDW - infinite ammo, pixel armor', descFa:'اسلحه دفاع شخصی کانتر استرایک - تیر بی‌نهایت، زره پیکسلی',
+    dmg:1, fireCd:0, mag:50, reload:2400, recoil:0.035,
     sndFreq:1400, sndDur:0.08, sndThump:170 }
 ];
 var ownedGuns = [0];   // indices into GUNS - gun 0 is the free starter
@@ -1091,9 +1227,13 @@ function playFootstep() {
   src.start();
 }
 
+var shotCounter = 0;
 function playGunshot() {
   ensureAudio();
   var g = GUNS[currentGun] || GUNS[0];
+  // v1.18.0: zero-delay sprays (P90) throttle their sound to every sndEvery-th shot
+  shotCounter++;
+  if (g.sndEvery && (shotCounter % g.sndEvery) !== 1) return;
   const vol = masterVolume * 0.6;
   if (vol <= 0) return;
   const dur = g.sndDur;
@@ -1129,40 +1269,68 @@ function playGunshot() {
   osc.stop(audioCtx.currentTime + 0.1);
 }
 
-function playReloadSound() {
+function playReloadSound(rl) {
+  // v1.18.0: full reload foley scheduled on the audio clock to match the
+  // visual anim: mag-release click -> mag slides out -> slap back -> seat thunk
   ensureAudio();
-  const vol = masterVolume * 0.4;
+  const vol = masterVolume * 0.45;
   if (vol <= 0) return;
-  // Click sound
-  var buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
-  var d = buf.getChannelData(0);
-  for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.1));
-  var s = audioCtx.createBufferSource(); s.buffer = buf;
-  var g = audioCtx.createGain(); g.gain.setValueAtTime(vol, audioCtx.currentTime);
-  var f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 2;
-  s.connect(f).connect(g).connect(audioCtx.destination); s.start();
-  // Magazine slide sound after delay
-  setTimeout(function() {
-    var buf2 = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
-    var d2 = buf2.getChannelData(0);
-    for (var i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d2.length * 0.15)) * 0.6;
-    var s2 = audioCtx.createBufferSource(); s2.buffer = buf2;
-    var g2 = audioCtx.createGain(); g2.gain.setValueAtTime(vol * 0.7, audioCtx.currentTime);
-    var f2 = audioCtx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1500; f2.Q.value = 1;
-    s2.connect(f2).connect(g2).connect(audioCtx.destination); s2.start();
-  }, 300);
+  var total = (typeof rl === 'number' && rl > 0) ? rl : 1800;
+  var t0 = audioCtx.currentTime;
+  function noiseBurst(at, dur, freq, q, gainMul) {
+    var n = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
+    var buf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.25));
+    var s = audioCtx.createBufferSource(); s.buffer = buf;
+    var f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+    var g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol * gainMul, t0 + at);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + at + dur);
+    s.connect(f).connect(g).connect(audioCtx.destination);
+    s.start(t0 + at);
+  }
+  function click(at, freq) {
+    var o = audioCtx.createOscillator(); o.type = 'square';
+    o.frequency.setValueAtTime(freq, t0 + at);
+    var g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol * 0.22, t0 + at);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + at + 0.05);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0 + at); o.stop(t0 + at + 0.06);
+  }
+  click(total * 0.20, 1800);                       // mag release button
+  noiseBurst(total * 0.20, 0.07, 2400, 3, 0.5);
+  noiseBurst(total * 0.32, 0.14, 1200, 1.2, 0.4);  // mag slides out
+  click(total * 0.70, 1300);                       // mag slaps back in
+  noiseBurst(total * 0.72, 0.09, 1800, 2.5, 0.6);
+  noiseBurst(total * 0.85, 0.10, 700, 1.5, 0.7);   // seat thunk + bolt release
+  click(total * 0.90, 2200);
 }
 
 function startReload() {
   if (isReloading || ammo === maxAmmo) return;
+  // v1.18.0: reloading draws from the finite reserve (P90 reserve is infinite)
+  var res = ammoReserve[currentGun];
+  if (res !== -1 && res <= 0) { flashAmmoWarning(); return; }
   isReloading = true;
   canShoot = false;
   var rl = (GUNS[currentGun] || GUNS[0]).reload;
   reloadAnimTime = rl;
-  playReloadSound();
+  reloadTotalTime = rl;
+  playReloadSound(rl);
   document.getElementById('reload-hud').style.display = 'block';
   setTimeout(function() {
-    ammo = maxAmmo;
+    var take;
+    var res2 = ammoReserve[currentGun];
+    if (res2 === -1) {
+      take = maxAmmo - ammo;
+    } else {
+      take = Math.min(maxAmmo - ammo, res2);
+      ammoReserve[currentGun] = res2 - take;
+      saveSettings({ammoReserve: ammoReserve});
+    }
+    ammo += take;
     isReloading = false;
     canShoot = true;
     document.getElementById('reload-hud').style.display = 'none';
@@ -2977,7 +3145,12 @@ gunGroup.add(muzzleLight);
 // Called at boot, at boot-time settings restore, and whenever the player
 // equips a different gun from the shop. Old parts are disposed, the light
 // stays (its position is tuned per weapon length).
+// v1.18.0: reload animation needs a handle on the gun's magazine mesh/group.
+// magMesh is an Object3D whose position.y is animated out of the body by
+// magDir (+1 = ejects upward like the P90 top mag, -1 = drops down).
+var magMesh = null, magHomeY = 0, magDir = -1;
 function buildGunModel() {
+  magMesh = null;
   for (var i = gunGroup.children.length - 1; i >= 0; i--) {
     var ch = gunGroup.children[i];
     if (ch === muzzleLight) continue;
@@ -3002,7 +3175,8 @@ function buildGunModel() {
     part(0.07, 0.11, 0.34, gold,   0,  0,     0);
     part(0.035, 0.035, 0.2, goldD, 0,  0.02, -0.26);
     part(0.065, 0.16, 0.075, gold, 0, -0.12, 0.09, 0.25);
-    part(0.05, 0.1, 0.05, goldD,   0, -0.1, -0.02);
+    magMesh = part(0.05, 0.1, 0.05, goldD,   0, -0.1, -0.02);
+    magHomeY = -0.1; magDir = -1;
     part(0.025, 0.035, 0.025, goldD, 0, 0.075, -0.12);
     muzzleLight.position.set(0, 0.02, -0.4);
   } else if (g.id === 'lancer') {
@@ -3013,7 +3187,8 @@ function buildGunModel() {
     part(0.075, 0.11, 0.6, bodyM, 0, 0, -0.02);
     part(0.03, 0.03, 0.3, darkM,  0, 0.015, -0.44);
     part(0.07, 0.17, 0.08, darkM, 0, -0.13, 0.12, 0.2);
-    part(0.055, 0.16, 0.07, darkM, 0, -0.13, -0.04, 0.3);
+    magMesh = part(0.055, 0.16, 0.07, darkM, 0, -0.13, -0.04, 0.3);
+    magHomeY = -0.13; magDir = -1;
     part(0.02, 0.05, 0.02, darkM, 0, 0.085, -0.2);
     part(0.04, 0.045, 0.16, darkM, 0, 0.095, 0.05);
     part(0.055, 0.055, 0.4, sawM, 0, -0.055, -0.3);   // chainsaw body
@@ -3029,7 +3204,8 @@ function buildGunModel() {
     part(0.07, 0.12, 0.68, awpG, 0, 0, 0.02);
     part(0.028, 0.028, 0.52, awpD, 0, 0.02, -0.56);
     part(0.06, 0.15, 0.075, awpG, 0, -0.13, 0.16, 0.22);
-    part(0.055, 0.11, 0.08, awpD, 0, -0.11, 0);
+    magMesh = part(0.055, 0.11, 0.08, awpD, 0, -0.11, 0);
+    magHomeY = -0.11; magDir = -1;
     var scope = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.24, 10), scopeM);
     scope.rotation.x = Math.PI / 2;
     scope.position.set(0, 0.11, -0.05);
@@ -3039,23 +3215,70 @@ function buildGunModel() {
     part(0.02, 0.045, 0.02, awpD, 0, 0.08, -0.28);
     muzzleLight.position.set(0, 0.02, -0.85);
   } else if (g.id === 'p90') {
-    // Counter-Strike P90 - compact tan bullpup, magazine on TOP
-    var tanM = _std(0x8f8468, 0.6, 0.3), p90D = _std(0x2a2a24, 0.55, 0.4);
-    part(0.085, 0.12, 0.42, tanM, 0, 0, 0.02);
-    part(0.03, 0.03, 0.14, p90D, 0, 0.02, -0.27);
-    part(0.05, 0.035, 0.26, p90D, 0, 0.095, -0.02);   // top-mounted mag
-    part(0.055, 0.13, 0.06, tanM, 0, -0.12, 0.16, 0.25);
-    part(0.02, 0.04, 0.02, p90D, 0, 0.085, -0.2);
-    muzzleLight.position.set(0, 0.02, -0.38);
+    // v1.18.0 P90 - pixel/voxel armor: body built from unit cubes in three
+    // tan shades with dark pixel noise, blocky top magazine (ejects UP)
+    var u = 0.045;
+    var shades = [
+      _std(0xa89a72, 0.85, 0.15),
+      _std(0x8d815f, 0.85, 0.15),
+      _std(0x6e6449, 0.85, 0.15)
+    ];
+    var darkPx = _std(0x3c3a2c, 0.9, 0.1);
+    var pxSeed = 11;
+    function pxShade() {
+      pxSeed = (pxSeed * 31 + 7) % 97;
+      return (pxSeed % 7 === 0) ? darkPx : shades[pxSeed % 3];
+    }
+    function vox(x, y, z, mat) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(u * 0.96, u * 0.96, u * 0.96), mat || pxShade());
+      m.position.set(x * u, y * u, z * u);
+      gunGroup.add(m);
+      return m;
+    }
+    // main body: 10 columns x 3 rows of full-width pixels (stepped voxel shell)
+    for (var bz = -5; bz <= 4; bz++) {
+      for (var by = -1; by <= 1; by++) {
+        var bm = new THREE.Mesh(new THREE.BoxGeometry(0.09, u * 0.96, u * 0.96), pxShade());
+        bm.position.set(0, by * u, bz * u);
+        gunGroup.add(bm);
+      }
+    }
+    // stepped bullpup hump + pixel front sight
+    vox(0, 2, -1); vox(0, 2, 4);
+    vox(0, 2, -4, darkPx); vox(0, 3, -4, darkPx);
+    // chunky muzzle block
+    var mz = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.1), darkPx);
+    mz.position.set(0, 0, -6.4 * u);
+    gunGroup.add(mz);
+    // grip pixels (behind, below)
+    vox(0, -2, 3, darkPx); vox(0, -3, 3, darkPx); vox(0, -2, 4, darkPx);
+    // top magazine as its own group so the reload anim can eject it upward
+    var magGrp = new THREE.Group();
+    var mgBody = new THREE.Mesh(new THREE.BoxGeometry(0.055, u * 2.2, 0.24), shades[1]);
+    magGrp.add(mgBody);
+    var mgCap = new THREE.Mesh(new THREE.BoxGeometry(0.062, u * 0.5, 0.25), darkPx);
+    mgCap.position.y = u * 1.1;
+    magGrp.add(mgCap);
+    magGrp.position.set(0, 2 * u + 0.03, 0.5 * u);
+    gunGroup.add(magGrp);
+    magMesh = magGrp; magHomeY = magGrp.position.y; magDir = 1;
+    muzzleLight.position.set(0, 0, -0.34);
   } else {
     // default starter rifle (original model, texture-mapped)
     part(0.08, 0.12, 0.5, new THREE.MeshStandardMaterial({map:_gBT, roughness:0.3, metalness:0.8}), 0, 0, 0);
     part(0.04, 0.04, 0.35, new THREE.MeshStandardMaterial({map:_gBrT, roughness:0.2, metalness:0.9}), 0, 0.02, -0.35);
     part(0.07, 0.18, 0.08, new THREE.MeshStandardMaterial({map:_gGT, roughness:0.8, metalness:0.1}), 0, -0.13, 0.1, 0.2);
-    part(0.06, 0.15, 0.06, new THREE.MeshStandardMaterial({map:_gMT, roughness:0.4, metalness:0.7}), 0, -0.12, -0.02);
+    magMesh = part(0.06, 0.15, 0.06, new THREE.MeshStandardMaterial({map:_gMT, roughness:0.4, metalness:0.7}), 0, -0.12, -0.02);
+    magHomeY = -0.12; magDir = -1;
     part(0.03, 0.04, 0.03, _std(0x1a1a1a, 0.3, 0.9), 0, 0.09, -0.15);
     muzzleLight.position.set(0, 0.02, -0.55);
   }
+}
+// v1.18.0: clear all transient gun animation state (match start / menu exit)
+function resetGunAnim() {
+  shootAnimT = 0; reloadAnimTime = 0; reloadTotalTime = 1800;
+  gunGroup.rotation.z = 0; gunGroup.rotation.x = 0;
+  if (magMesh) { magMesh.position.y = magHomeY; magMesh.rotation.z = 0; }
 }
 buildGunModel();
 
@@ -3085,6 +3308,13 @@ function shoot() {
 
   // Gun recoil (Three.js, not DOM) - heavier guns kick harder
   recoilAmount = g.recoil;
+
+  // v1.18.0: fire-delay animation - the gun bobs up and down while the slow
+  // bolt cycles (default 3s -> 1.2s dip, golden 2s -> 0.9s, awp 1.4s -> 0.6s)
+  if (g.fireCd >= 200) {
+    shootAnimDur = Math.min(1200, Math.max(200, g.fireCd * 0.4));
+    shootAnimT = shootAnimDur;
+  }
 
   // Raycast
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -3133,14 +3363,20 @@ function shoot() {
     }
   }
 
-  // Fire rate cooldown - per-weapon (P90 75ms ... AWP 1400ms)
+  // Fire rate cooldown - per-weapon (Lancer 500ms ... default 3000ms, P90 none)
   setTimeout(() => { canShoot = true; }, g.fireCd);
 
-  // Auto reload: when the mag runs dry and the option is enabled
-  if (ammo <= 0 && autoReload) {
-    setTimeout(function() {
-      if (autoReload && ammo <= 0 && !isReloading && gameStarted) startReload();
-    }, 350);
+  // v1.18.0: auto reload only when the reserve has something to give;
+  // otherwise warn the player to buy ammo in the shop
+  if (ammo <= 0) {
+    var resNow = ammoReserve[currentGun];
+    if (autoReload && (resNow === -1 || resNow > 0)) {
+      setTimeout(function() {
+        if (autoReload && ammo <= 0 && !isReloading && gameStarted) startReload();
+      }, 350);
+    } else {
+      flashAmmoWarning();
+    }
   }
 }
 
@@ -3160,7 +3396,7 @@ function startGame() {
   document.getElementById('minimap-container').style.display = 'block';
   gameStarted = true;
   ammo = maxAmmo; isReloading = false; canShoot = true;
-  reloadAnimTime = 0; gunGroup.rotation.z = 0;
+  resetGunAnim();
   playerHealth = MAX_HEALTH; killCount = 0;
   updateHealthBar();
   document.getElementById('reload-hud').style.display = 'none';
@@ -3252,7 +3488,7 @@ function exitToMenu() {
   player.position.set(0, PLAYER_HEIGHT, 0);
   player.rotation.y = 0; pitchObj.rotation.x = 0;
   ammo = maxAmmo; isReloading = false; canShoot = true;
-  reloadAnimTime = 0; gunGroup.rotation.z = 0;
+  resetGunAnim();
   playerHealth = MAX_HEALTH; killCount = 0;
   updateHealthBar();
   clearBulletHoles(); clearEnemies(); clearMedkits();
@@ -3437,35 +3673,62 @@ function animate() {
     if (bobWeight > 0.003) bobPhase += dt * 7.5;
     var bobY = Math.sin(bobPhase) * 0.0055 * bobWeight;
     var bobX = Math.cos(bobPhase * 0.5) * 0.0028 * bobWeight;
-    // Reload animation
+    // Reload animation (v1.18.0: gun tilts, the MAGAZINE slides out and back in)
     var reloadDrop = 0;
     if (reloadAnimTime > 0) {
       reloadAnimTime -= dt * 1000;
       if (reloadAnimTime < 0) reloadAnimTime = 0;
-      var rProg = 1 - (reloadAnimTime / 1800);
-      var rAngle;
-      if (rProg < 0.35) {
-        rAngle = (rProg / 0.35) * (Math.PI / 2);
-      } else if (rProg < 0.65) {
-        rAngle = Math.PI / 2;
-      } else {
-        rAngle = (1 - (rProg - 0.65) / 0.35) * (Math.PI / 2);
+      var rProg = 1 - (reloadAnimTime / (reloadTotalTime || 1800));
+      var rTilt;
+      if (rProg < 0.18) rTilt = rProg / 0.18;
+      else if (rProg < 0.82) rTilt = 1;
+      else rTilt = 1 - (rProg - 0.82) / 0.18;
+      rTilt = rTilt * rTilt * (3 - 2 * rTilt); // smoothstep
+      gunGroup.rotation.z = -rTilt * 0.5;
+      reloadDrop = Math.sin(rProg * Math.PI) * 0.1;
+      if (magMesh) {
+        var mout;
+        if (rProg < 0.18)      mout = 0;                          // grip + tilt
+        else if (rProg < 0.36) mout = (rProg - 0.18) / 0.18;      // mag slides out
+        else if (rProg < 0.58) mout = 1;                          // mag hangs out
+        else if (rProg < 0.78) mout = 1 - (rProg - 0.58) / 0.2;   // mag back in
+        else                   mout = 0;                          // seated
+        if (mout < 0) mout = 0; else if (mout > 1) mout = 1;
+        magMesh.position.y = magHomeY + magDir * mout * 0.3;
+        magMesh.rotation.z = magDir * mout * 0.35;
       }
-      gunGroup.rotation.z = -rAngle;
-      reloadDrop = Math.sin(rProg * Math.PI) * 0.12;
     } else {
       gunGroup.rotation.z = 0;
+      if (magMesh) { magMesh.position.y = magHomeY; magMesh.rotation.z = 0; }
     }
-    gunGroup.position.y = -0.22 + bobY + recoilAmount - reloadDrop;
+    // Fire-delay animation (v1.18.0): slow guns bob up and down after each shot
+    var shootDip = 0;
+    if (shootAnimT > 0 && reloadAnimTime <= 0) {
+      shootAnimT -= dt * 1000;
+      if (shootAnimT < 0) shootAnimT = 0;
+      var sp = 1 - (shootAnimT / shootAnimDur);
+      shootDip = Math.sin(sp * Math.PI) * 0.05;
+      gunGroup.rotation.x = Math.sin(sp * Math.PI) * 0.14;
+    } else if (reloadAnimTime <= 0) {
+      gunGroup.rotation.x = 0;
+    }
+    gunGroup.position.y = -0.22 + bobY + recoilAmount - reloadDrop + shootDip;
     gunGroup.position.x = 0.25 + bobX;
 
-    // Ammo HUD (with equipped weapon name)
+    // Ammo HUD (with equipped weapon name + v1.18.0 reserve bullets)
     var gName = (currentLang === 'fa' ? GUNS[currentGun].nameFa : GUNS[currentGun].nameEn);
     var gNameLine = '<div style="font-size:11px;letter-spacing:1px;color:rgba(255,255,255,0.55);margin-bottom:2px">' + gName + '</div>';
     if (isReloading) {
       debugEl.innerHTML = gNameLine + '<span style="color:#ffaa00">RELOADING...</span>';
     } else {
-      debugEl.innerHTML = gNameLine + '<span style="color:#fff">' + ammo + '</span><span style="color:rgba(255,255,255,0.5);font-size:20px"> / ' + maxAmmo + '</span>';
+      var resHud = ammoReserve[currentGun];
+      var resTxt = (resHud === -1) ? '∞' : String(resHud);
+      var resCol = (resHud !== -1 && resHud <= 0) ? '#ff7b7b' : 'rgba(123,216,143,0.85)';
+      var lowMag = ammo <= Math.ceil(maxAmmo * 0.2);
+      debugEl.innerHTML = gNameLine
+        + '<span style="color:' + (lowMag ? '#ff7b7b' : '#fff') + '">' + ammo + '</span>'
+        + '<span style="color:rgba(255,255,255,0.5);font-size:20px"> / ' + maxAmmo + '</span>'
+        + ' <span style="color:' + resCol + ';font-size:15px">▸ ' + resTxt + '</span>';
     }
     
     // Draw minimap
