@@ -30,7 +30,7 @@ desktop/
 ```bash
 # one-time: portable makensis (Debian debs nsis_3.12-1_amd64 + nsis-common, dpkg -x)
 ./build/build.sh
-# -> dist/GLM-FPS-Game-Setup-1.1.0.exe
+# -> dist/GLM-FPS-Game-Setup-1.1.1.exe
 ```
 
 ## Installer features

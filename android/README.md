@@ -3,7 +3,7 @@
 بازی به‌صورت APK اندرویدی با **آپدیت خودکار از گیت‌هاب**. (Android APK with GitHub auto-update.)
 
 ## نصب / Install
-1. `GLM-FPS-Game-Android-1.0.0.apk` را دانلود کنید (از صفحه Releases).
+1. `GLM-FPS-Game-Android-1.0.1.apk` را دانلود کنید (از صفحه Releases).
 2. فایل را روی گوشی باز کنید؛ اگر پیام «منابع ناشناس» آمد، اجازه نصب را بدهید.
 3. بازی را باز کنید — نیازی به اینترنت برای بازی کردن نیست.
 
@@ -27,7 +27,7 @@
 
 ## بیلد / Build
 ```bash
-bash android/build.sh   # -> /home/z/my-project/download/GLM-FPS-Game-Android-1.0.0.apk
+bash android/build.sh   # -> /home/z/my-project/download/GLM-FPS-Game-Android-1.0.1.apk
 ```
 Tools: Android build-tools 33.0.2 + platform-33 android.jar + ecj (no Gradle, no Android Studio needed).
 

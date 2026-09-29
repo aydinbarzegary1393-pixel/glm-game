@@ -14,8 +14,8 @@ PROJ="$REPO/android"
 BUILD="$TOOLS_DIR/apk-build"
 OUT="/home/z/my-project/download"
 
-VERSION_CODE=1
-VERSION_NAME="1.0.0"
+VERSION_CODE=2
+VERSION_NAME="1.0.1"
 PKG="com.glmgame.fps"
 APK_NAME="GLM-FPS-Game-Android-$VERSION_NAME.apk"
 
