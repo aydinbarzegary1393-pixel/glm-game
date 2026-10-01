@@ -618,12 +618,14 @@ function openStatsMenu() {
   showMenu('stats-menu');
 }
 
-// ===== GUN SHOP (v1.17.0, ammo economy v1.18.0) =====
+// ===== GUN SHOP (v1.17.0, ammo economy v1.18.x) =====
 var AMMO_PRICE = 25; // toman per single bullet - 5,000 buys 200 rounds
 var shopReturn = false; // shop opened from the pause overlay -> BACK returns there
-var ammoQty = {};       // per-gun ammo purchase stepper quantity
-var ammoReserve = {};   // per-gun reserve bullets; -1 = infinite (P90)
-function seedReserve(i) { return GUNS[i].mags === -1 ? -1 : GUNS[i].mags * GUNS[i].mag; }
+var ammoQty = 200;      // ammo purchase stepper quantity (shared pool - default 200 = 5,000)
+// v1.18.1: ONE bullet pool shared by EVERY gun - rounds bought in the shop are
+// spent by whichever weapon is equipped. The P90 never draws from it (infinite).
+var spareAmmo = 0;
+function seedReserve() { return GUNS[0].mags * GUNS[0].mag; } // default gun's starter mags
 function openShopMenu() {
   shopReturn = false;
   renderShop();
@@ -661,7 +663,30 @@ function renderShop() {
   var sm = document.getElementById('shop-money');
   if (sm) sm.textContent = currentLang === 'fa'
     ? (fmtMoney(statsMoney) + ' تومان') : (fmtMoney(statsMoney) + ' TOMAN');
+  var fa = currentLang === 'fa';
   var html = '';
+  // v1.18.1: ONE universal AMMO card on top - bought rounds feed every gun
+  var cost = ammoQty * AMMO_PRICE;
+  html += '<div class="shop-card">'
+    + '<div class="shop-row">'
+    + '<div class="shop-info">'
+    + '<div class="shop-name">' + (fa ? 'خرید مهمات' : 'AMMO SUPPLY') + '</div>'
+    + '<div class="shop-desc">' + (fa ? 'هر تیر ۲۵ تومان - این تیرها برای همه ی اسلحه ها مصرف می شوند'
+                                       : '25 toman per round - one shared pool feeds every gun') + '</div>'
+    + '<div class="shop-stats">' + (fa ? ('ذخیره تیر: ' + fmtMoney(spareAmmo))
+                                       : ('RESERVE: ' + fmtMoney(spareAmmo))) + '</div>'
+    + '</div>'
+    + '<button class="menu-btn shop-btn buy ammo-buy" onclick="buyAmmo()">' + (fa ? 'خرید' : 'BUY') + '</button>'
+    + '</div>'
+    + '<div class="shop-ammo"><div class="ammo-picker">'
+    + '<span class="ammo-label">' + (fa ? 'تعداد تیر' : 'ROUNDS') + '</span>'
+    + '<button class="ammo-step" onclick="stepAmmoQty(-10)">−</button>'
+    + '<span class="ammo-count" id="aq-ammo">' + ammoQty + '</span>'
+    + '<button class="ammo-step" onclick="stepAmmoQty(10)">+</button>'
+    + '<span class="ammo-cost" id="ac-ammo">'
+    + (fa ? (fmtMoney(cost) + ' تومان') : (fmtMoney(cost) + ' TOMAN')) + '</span>'
+    + '</div></div>'
+    + '</div>';
   for (var i = 0; i < GUNS.length; i++) {
     var g = GUNS[i];
     var owned = ownedGuns.indexOf(i) > -1;
@@ -680,54 +705,28 @@ function renderShop() {
       + '<div class="shop-stats">' + gunStatLine(g) + '</div>'
       + '</div>'
       + '<button class="menu-btn shop-btn ' + btnCls + '" onclick="buyGun(' + i + ')">' + btnTxt + '</button>'
+      + '</div>'
       + '</div>';
-    // v1.18.0: ammo reserve line + BUY AMMO stepper (owned guns only; P90 is infinite)
-    if (owned) {
-      var res = ammoReserve[i];
-      var resTxt = (res === -1) ? '∞' : fmtMoney(res);
-      html += '<div class="shop-ammo"><span class="shop-res">'
-        + (currentLang === 'fa' ? ('ذخیره تیر: ' + resTxt) : ('RESERVE: ' + resTxt)) + '</span>';
-      if (g.mags !== -1) {
-        var q = ammoQty[i] || 200;
-        var cost = q * AMMO_PRICE;
-        var costTxt = currentLang === 'fa' ? (fmtMoney(cost) + ' تومان') : (fmtMoney(cost) + ' TOMAN');
-        html += '<div class="ammo-picker">'
-          + '<span class="ammo-label">' + (currentLang === 'fa' ? 'خرید تیر' : 'BUY AMMO') + '</span>'
-          + '<button class="ammo-step" onclick="stepAmmoQty(' + i + ',-10)">−</button>'
-          + '<span class="ammo-count" id="aq-' + i + '">' + q + '</span>'
-          + '<button class="ammo-step" onclick="stepAmmoQty(' + i + ',10)">+</button>'
-          + '<span class="ammo-cost" id="ac-' + i + '">' + costTxt + '</span>'
-          + '<button class="menu-btn shop-btn buy ammo-buy" onclick="buyAmmo(' + i + ')">'
-          + (currentLang === 'fa' ? 'خرید' : 'BUY') + '</button>'
-          + '</div>';
-      }
-      html += '</div>';
-    }
-    html += '</div>';
   }
   wrap.innerHTML = html;
 }
-function stepAmmoQty(idx, d) {
-  var q = (ammoQty[idx] || 200) + d;
-  q = Math.max(10, Math.min(2000, q));
-  ammoQty[idx] = q;
-  var ce = document.getElementById('aq-' + idx), cc = document.getElementById('ac-' + idx);
-  var cost = q * AMMO_PRICE;
-  if (ce) ce.textContent = String(q);
+function stepAmmoQty(d) {
+  ammoQty = Math.max(10, Math.min(2000, ammoQty + d));
+  var ce = document.getElementById('aq-ammo'), cc = document.getElementById('ac-ammo');
+  var cost = ammoQty * AMMO_PRICE;
+  if (ce) ce.textContent = String(ammoQty);
   if (cc) cc.textContent = currentLang === 'fa' ? (fmtMoney(cost) + ' تومان') : (fmtMoney(cost) + ' TOMAN');
 }
-function buyAmmo(idx) {
-  var g = GUNS[idx];
-  if (!g || g.mags === -1 || ownedGuns.indexOf(idx) === -1) return;
-  var q = ammoQty[idx] || 200;
+function buyAmmo() {
+  var q = ammoQty;
   var cost = q * AMMO_PRICE;
   if (statsMoney < cost) {
     flashShopMsg(currentLang === 'fa' ? 'پول کافی نداری! زامبی بکش' : 'NOT ENOUGH MONEY - KILL ZOMBIES');
     return;
   }
   statsMoney -= cost;
-  ammoReserve[idx] = (ammoReserve[idx] === -1) ? -1 : (ammoReserve[idx] || 0) + q;
-  saveSettings({statsMoney: statsMoney, ammoReserve: ammoReserve});
+  spareAmmo += q; // v1.18.1: rounds join the ONE shared pool - any gun can spend them
+  saveSettings({statsMoney: statsMoney, spareAmmo: spareAmmo});
   updateStatsLines();
   renderShop();
   flashShopMsg(currentLang === 'fa' ? (fmtMoney(q) + ' تیر خریداری شد!') : (fmtMoney(q) + ' ROUNDS PURCHASED!'));
@@ -756,8 +755,9 @@ function buyGun(idx) {
   }
   statsMoney -= g.price;
   ownedGuns.push(idx);
-  ammoReserve[idx] = seedReserve(idx); // v1.18.0: new gun arrives with its starter mags
-  saveSettings({statsMoney: statsMoney, ownedGuns: ownedGuns, ammoReserve: ammoReserve});
+  // v1.18.1: a new gun drops its starter mags into the SHARED pool (P90: none)
+  if (GUNS[idx].mags !== -1) spareAmmo += GUNS[idx].mags * GUNS[idx].mag;
+  saveSettings({statsMoney: statsMoney, ownedGuns: ownedGuns, spareAmmo: spareAmmo});
   updateStatsLines();
   equipGun(idx);
   flashShopMsg(currentLang === 'fa' ? 'خرید انجام شد!' : 'PURCHASED!');
@@ -847,15 +847,15 @@ function applySavedSettings() {
   if (typeof s.autoReload === 'boolean') autoReload = s.autoReload;
   if (typeof s.autoFire === 'boolean') autoFire = s.autoFire;
   if (typeof s.autoFullscreen === 'boolean') autoFullscreen = s.autoFullscreen;
-  // v1.18.0 AMMO ECONOMY - schema 2: gun rebalance + finite reserve ammo.
-  // ONE-TIME MIGRATION: every player's purchased guns are wiped (per the
-  // update design) and per-gun reserve ammo is seeded; money/stats are kept.
-  var SHOP_SCHEMA = 2;
-  if (!s.shopSchema || s.shopSchema !== SHOP_SCHEMA) {
+  // v1.18.1 AMMO ECONOMY - schema 3: ONE shared bullet pool for every gun.
+  // v1.18.0's one-time wipe of purchased guns still applies to players who
+  // never loaded it (schema < 2). Schema-2 saves (v1.18.0) keep their guns and
+  // MERGE the per-gun reserves into the shared pool. Money/stats are always kept.
+  var SHOP_SCHEMA = 3;
+  if (!s.shopSchema || s.shopSchema < 2) {
     ownedGuns = [0]; currentGun = 0;
-    ammoReserve = {};
-    for (var sgi = 0; sgi < GUNS.length; sgi++) ammoReserve[sgi] = seedReserve(sgi);
-    saveSettings({shopSchema: SHOP_SCHEMA, ownedGuns: ownedGuns, currentGun: currentGun, ammoReserve: ammoReserve});
+    spareAmmo = seedReserve();
+    saveSettings({shopSchema: SHOP_SCHEMA, ownedGuns: ownedGuns, currentGun: currentGun, spareAmmo: spareAmmo});
   } else {
     if (Array.isArray(s.ownedGuns)) {
       var own = [];
@@ -869,11 +869,21 @@ function applySavedSettings() {
     }
     if (typeof s.currentGun === 'number' && s.currentGun >= 0 && s.currentGun < GUNS.length
         && ownedGuns.indexOf(s.currentGun) > -1) currentGun = s.currentGun;
-    for (var rgi = 0; rgi < GUNS.length; rgi++) {
-      var rgv = s.ammoReserve ? s.ammoReserve[rgi] : undefined;
-      if (GUNS[rgi].mags === -1) { ammoReserve[rgi] = -1; continue; }
-      if (typeof rgv === 'number' && rgv >= 0 && rgv <= 999999) ammoReserve[rgi] = Math.floor(rgv);
-      else ammoReserve[rgi] = seedReserve(rgi);
+    if (s.shopSchema === 2) {
+      // v1.18.0 -> v1.18.1: fold every per-gun reserve into the shared pool
+      var hadRes = false, sumRes = 0;
+      if (s.ammoReserve) {
+        for (var mri = 0; mri < GUNS.length; mri++) {
+          var mrv = s.ammoReserve[mri];
+          if (typeof mrv === 'number' && mrv >= 0) { sumRes += Math.floor(mrv); hadRes = true; }
+        }
+      }
+      spareAmmo = hadRes ? Math.min(sumRes, 999999) : seedReserve();
+      saveSettings({shopSchema: SHOP_SCHEMA, spareAmmo: spareAmmo});
+    } else if (typeof s.spareAmmo === 'number' && s.spareAmmo >= 0 && s.spareAmmo <= 999999) {
+      spareAmmo = Math.floor(s.spareAmmo);
+    } else {
+      spareAmmo = seedReserve();
     }
   }
   maxAmmo = GUNS[currentGun].mag;
@@ -929,8 +939,7 @@ function resetAllSavedData(btn) {
   autoReload = true; autoFire = true; autoFullscreen = true;
   updateAutoButtons(); updateFullscreenButtons();
   ownedGuns = [0]; currentGun = 0;
-  ammoReserve = {};
-  for (var rsi = 0; rsi < GUNS.length; rsi++) ammoReserve[rsi] = seedReserve(rsi);
+  spareAmmo = seedReserve();
   maxAmmo = GUNS[0].mag; ammo = maxAmmo;
   resetGunAnim();
   buildGunModel();
@@ -939,7 +948,7 @@ function resetAllSavedData(btn) {
   currentMap = 0;
   restoreDefaultLayout();
   settingsMuted = false;
-  saveSettings({shopSchema: 2, ownedGuns: ownedGuns, currentGun: currentGun, ammoReserve: ammoReserve});
+  saveSettings({shopSchema: 3, ownedGuns: ownedGuns, currentGun: currentGun, spareAmmo: spareAmmo});
   updateStatsLines();
   // back to the very first screen, exactly like a factory-fresh player:
   // the device is re-detected above and saved - there is no chooser screen
@@ -1166,16 +1175,18 @@ const MEDKIT_HEAL = 10;
 // dmg per hit (zombie HP = 5), fireCd = ms between shots, mag = rounds,
 // reload = ms, recoil = view-kick strength, sndFreq/sndDur/sndThump shape the
 // synthesized gunshot. Ids match the three.js models built in buildGunModel().
+// v1.18.1 rebalance: default 1s delay, golden 0.7s delay and dmg 1.25 so a
+// zombie (HP 5) dies with exactly FOUR golden shots; ammo is one shared pool.
 var GUNS = [
   { id:'default', price:0, mags:6,
     nameEn:'DEFAULT GUN', nameFa:'تفنگ پیش‌فرض',
-    descEn:'Slow bolt-action starter - every shot counts', descFa:'تفنگ شروع کلاه‌گذاری آهسته - هر تیر حساب‌شده است',
-    dmg:1, fireCd:3000, mag:30, reload:1800, recoil:0.06,
+    descEn:'Bolt-action starter - one round every second', descFa:'تفنگ شروع کلاه‌گذار - هر ثانیه یک شلیک',
+    dmg:1, fireCd:1000, mag:30, reload:1800, recoil:0.06,
     sndFreq:1000, sndDur:0.15, sndThump:150 },
   { id:'golden', price:100000, mags:7,
     nameEn:'GOLDEN GUN', nameFa:'گان گلدن',
-    descEn:'GoldenEye 007 - one shot, one kill', descFa:'گلدن‌آی ۰۰۷ - یک شلیک، یک کیل',
-    dmg:5, fireCd:2000, mag:7, reload:1500, recoil:0.11,
+    descEn:'GoldenEye 007 - four shots, one kill', descFa:'گلدن‌آی ۰۰۷ - چهار شلیک، یک کیل',
+    dmg:1.25, fireCd:700, mag:7, reload:1500, recoil:0.11,
     sndFreq:1500, sndDur:0.18, sndThump:220 },
   { id:'lancer', price:700000, mags:7,
     nameEn:'LANCER', nameFa:'لنسر',
@@ -1310,9 +1321,9 @@ function playReloadSound(rl) {
 
 function startReload() {
   if (isReloading || ammo === maxAmmo) return;
-  // v1.18.0: reloading draws from the finite reserve (P90 reserve is infinite)
-  var res = ammoReserve[currentGun];
-  if (res !== -1 && res <= 0) { flashAmmoWarning(); return; }
+  // v1.18.1: reloading draws from the ONE shared pool (the P90 never touches it)
+  var p90Inf = GUNS[currentGun].mags === -1;
+  if (!p90Inf && spareAmmo <= 0) { flashAmmoWarning(); return; }
   isReloading = true;
   canShoot = false;
   var rl = (GUNS[currentGun] || GUNS[0]).reload;
@@ -1322,13 +1333,12 @@ function startReload() {
   document.getElementById('reload-hud').style.display = 'block';
   setTimeout(function() {
     var take;
-    var res2 = ammoReserve[currentGun];
-    if (res2 === -1) {
+    if (GUNS[currentGun].mags === -1) {
       take = maxAmmo - ammo;
     } else {
-      take = Math.min(maxAmmo - ammo, res2);
-      ammoReserve[currentGun] = res2 - take;
-      saveSettings({ammoReserve: ammoReserve});
+      take = Math.min(maxAmmo - ammo, spareAmmo);
+      spareAmmo -= take;
+      saveSettings({spareAmmo: spareAmmo});
     }
     ammo += take;
     isReloading = false;
@@ -3363,14 +3373,14 @@ function shoot() {
     }
   }
 
-  // Fire rate cooldown - per-weapon (Lancer 500ms ... default 3000ms, P90 none)
+  // Fire rate cooldown - per-weapon (lancer 500ms ... default 1000ms, P90 none)
   setTimeout(() => { canShoot = true; }, g.fireCd);
 
-  // v1.18.0: auto reload only when the reserve has something to give;
-  // otherwise warn the player to buy ammo in the shop
+  // v1.18.1: auto reload only when the shared pool has something to give
+  // (the P90 is infinite); otherwise warn the player to buy ammo in the shop
   if (ammo <= 0) {
-    var resNow = ammoReserve[currentGun];
-    if (autoReload && (resNow === -1 || resNow > 0)) {
+    var poolNow = (GUNS[currentGun].mags === -1) ? -1 : spareAmmo;
+    if (autoReload && (poolNow === -1 || poolNow > 0)) {
       setTimeout(function() {
         if (autoReload && ammo <= 0 && !isReloading && gameStarted) startReload();
       }, 350);
@@ -3721,7 +3731,7 @@ function animate() {
     if (isReloading) {
       debugEl.innerHTML = gNameLine + '<span style="color:#ffaa00">RELOADING...</span>';
     } else {
-      var resHud = ammoReserve[currentGun];
+      var resHud = (GUNS[currentGun].mags === -1) ? -1 : spareAmmo;
       var resTxt = (resHud === -1) ? '∞' : String(resHud);
       var resCol = (resHud !== -1 && resHud <= 0) ? '#ff7b7b' : 'rgba(123,216,143,0.85)';
       var lowMag = ammo <= Math.ceil(maxAmmo * 0.2);
