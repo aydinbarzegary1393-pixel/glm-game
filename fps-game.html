@@ -4,18 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FPS Game</title>
-<!-- v1.18.2 Telegram Mini App integration: dynamic loader, silently ignored outside Telegram -->
-<script>
-try{
-var tgEl=document.createElement('script');tgEl.src='https://telegram.org/js/telegram-web-app.js';
-tgEl.onload=function(){try{var w=window.Telegram&&window.Telegram.WebApp;if(!w)return;
-w.ready();w.expand();
-if(typeof w.disableVerticalSwipes==='function')w.disableVerticalSwipes();
-else if(typeof w.setVerticalSwipesEnabled==='function')w.setVerticalSwipesEnabled(false);
-}catch(e){}};
-document.head.appendChild(tgEl);
-}catch(e){}
-</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#000;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#fff;user-select:none}
