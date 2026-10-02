@@ -1165,6 +1165,7 @@ const ENEMY_MAX_HP = 5;
 const ENEMY_SPEED = 3;
 const ENEMY_ATK_RANGE = 1.8;
 const ENEMY_ATK_CD = 1.0;
+const ZOMBIE_CLIMB_SPEED = 1.8; // v1.18.2: climb rate (units/s) at an obstacle face
 const enemies = [];
 let killCount = 0;
 const medkits = [];
@@ -1927,7 +1928,10 @@ function createEnemy(x, z) {
     animTime: Math.random() * Math.PI * 2,
     leftArm: null, rightArm: null,
     leftLeg: null, rightLeg: null,
-    bodyMat: null
+    bodyMat: null,
+    // v1.18.2 AI state: anti-stuck sidestep + obstacle-face climbing
+    stuckT: 0, avoidT: 0, avoidDir: 0, avoidAng: 0.9,
+    climbing: false, climbTop: 0, stepOverT: 0
   };
   const bMat = new THREE.MeshStandardMaterial({map:tex.zombieSkin, roughness:0.9, metalness:0.05});
   enemy.bodyMat = bMat;
@@ -2112,15 +2116,69 @@ function updateEnemies(dt) {
     if (!canHit) {
       var speed = ENEMY_SPEED * dt * (yielding ? 0.3 : 1);
       var nx = dx/dist, nz = dz/dist;
-      var mvx = nx*speed + sepX * 2.2 * dt;
-      var mvz = nz*speed + sepZ * 2.2 * dt;
-      if (!checkEnemyWall(ex + mvx, ez, e.group.position.y)) e.group.position.x = ex + mvx;
-      if (!checkEnemyWall(e.group.position.x, ez + mvz, e.group.position.y)) e.group.position.z = ez + mvz;
-      e.animTime += dt * 6;
-      e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
-      e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
-      e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
-      e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+      if (e.climbing) {
+        // v1.18.2: vertical climb at the obstacle face - no horizontal chase
+        e.group.position.y += ZOMBIE_CLIMB_SPEED * dt;
+        e.animTime += dt * 4;
+        e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
+        e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
+        e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
+        e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+        if (e.group.position.y >= e.climbTop - 0.02) {
+          e.group.position.y = e.climbTop;
+          e.climbing = false;
+          // Grace window: the ground lerp must not drag the zombie back off
+          // the obstacle before it has walked over the edge
+          e.stepOverT = 0.6;
+        }
+      } else {
+        var dirX = nx, dirZ = nz;
+        // v1.18.2 anti-stuck: while escaping, run along a rotated tangent heading
+        if (e.avoidT > 0) {
+          e.avoidT -= dt;
+          var av = Math.atan2(dx, dz) + e.avoidDir * e.avoidAng;
+          dirX = Math.sin(av); dirZ = Math.cos(av);
+        }
+        var mvx = dirX*speed + sepX * 2.2 * dt;
+        var mvz = dirZ*speed + sepZ * 2.2 * dt;
+        if (!checkEnemyWall(ex + mvx, ez, e.group.position.y)) {
+          e.group.position.x = ex + mvx;
+        } else {
+          // v1.18.2: blocked by a climbable obstacle -> climb it instead
+          var cTopX = enemyClimbTop(ex + mvx, ez, e.group.position.y, pg);
+          if (cTopX !== null) { e.climbing = true; e.climbTop = cTopX; }
+        }
+        if (!checkEnemyWall(e.group.position.x, ez + mvz, e.group.position.y)) {
+          e.group.position.z = ez + mvz;
+        } else if (!e.climbing) {
+          var cTopZ = enemyClimbTop(e.group.position.x, ez + mvz, e.group.position.y, pg);
+          if (cTopZ !== null) { e.climbing = true; e.climbTop = cTopZ; }
+        }
+        // v1.18.2 anti-stuck: no chasing progress -> sidestep around the obstacle
+        var mdx2 = e.group.position.x - ex, mdz2 = e.group.position.z - ez;
+        var minMove = ENEMY_SPEED * dt * 0.3;
+        if (mdx2*mdx2 + mdz2*mdz2 < minMove*minMove) {
+          e.stuckT += dt;
+        } else {
+          e.stuckT = Math.max(0, e.stuckT - dt * 2);
+        }
+        if (e.stuckT > 0.7) {
+          var rot = Math.atan2(dx, dz);
+          var probe = 1.1;
+          var lFree = !checkEnemyWall(ex + Math.sin(rot - 0.9)*probe, ez + Math.cos(rot - 0.9)*probe, e.group.position.y);
+          var rFree = !checkEnemyWall(ex + Math.sin(rot + 0.9)*probe, ez + Math.cos(rot + 0.9)*probe, e.group.position.y);
+          e.avoidDir = (lFree && rFree) ? (e.avoidDir || (i % 2 ? 1 : -1))
+                     : lFree ? -1 : (rFree ? 1 : (e.avoidDir || 1));
+          e.avoidAng = (lFree || rFree) ? 0.9 : 2.0;
+          e.avoidT = 0.9 + (i % 3) * 0.25;
+          e.stuckT = 0;
+        }
+        e.animTime += dt * 6;
+        e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
+        e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
+        e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
+        e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+      }
     } else {
       // Attacking: still push apart so zombies never stack inside each other
       var spx = sepX * 2.2 * dt, spz = sepZ * 2.2 * dt;
@@ -2134,8 +2192,12 @@ function updateEnemies(dt) {
       e.leftLeg.rotation.x = 0;
       e.rightLeg.rotation.x = 0;
     }
-    // Multi-level support: zombies smoothly follow stairs/ramps height
-    var zgy = zombieGroundY(e.group.position.x, e.group.position.z, e.group.position.y);
+    // Multi-level support: zombies smoothly follow stairs/ramps height.
+    // v1.18.2: while climbing (or just stepping over), the climb target wins so
+    // the ground lerp cannot pull the zombie back down mid-climb.
+    var zgy = (e.climbing || e.stepOverT > 0) ? e.climbTop
+              : zombieGroundY(e.group.position.x, e.group.position.z, e.group.position.y);
+    e.stepOverT = Math.max(0, e.stepOverT - dt);
     e.group.position.y += (zgy - e.group.position.y) * Math.min(1, dt * 8);
   }
 }
@@ -2417,16 +2479,39 @@ function floorTopAt(x, z) {
 
 // Ground height a zombie can reach from its current height (climbs steps <= 0.6).
 // Uses a small pad so seams/gaps between adjacent slabs and steps don't drop it through.
+// v1.18.2: the old "thin slabs only" rule is gone - any collider top counts once
+// the zombie can reach it (climbed crate tops / roofs must stay walkable).
 function zombieGroundY(x, z, curY) {
   var best = 0;
   var pad = 0.3;
   for (var i = 0; i < colliders.length; i++) {
     var c = colliders[i];
     if (x < c.minX - pad || x > c.maxX + pad || z < c.minZ - pad || z > c.maxZ + pad) continue;
-    if (c.maxY - c.minY > 0.75) continue;
     if (c.maxY <= curY + 0.6 && c.maxY > best) best = c.maxY;
   }
   return best;
+}
+
+// v1.18.2: top of the collider blocking point (px,pz) at zombie feet height feetY,
+// when that obstacle is climbable; null when it is not (regular tall walls).
+// Zombies always climb low obstacles (rise <= 1.3) and, when chasing an elevated
+// player, ANY stack whose top reaches the player's feet level - no safe camping spot.
+function enemyClimbTop(px, pz, feetY, playerFeetY) {
+  var bandTop = feetY + 1.6;
+  for (var i = 0; i < colliders.length; i++) {
+    var c = colliders[i];
+    if (c.maxY - c.minY < 0.35) continue;
+    if (c.maxY < feetY + 0.2 || c.minY > bandTop) continue;
+    if (px + 0.5 > c.minX && px - 0.5 < c.maxX &&
+        pz + 0.5 > c.minZ && pz - 0.5 < c.maxZ) {
+      var rise = c.maxY - feetY;
+      if (rise < 0.15) return null;
+      if (rise <= 1.3) return c.maxY;
+      if (playerFeetY - feetY > 0.6 && c.maxY <= playerFeetY + 0.4) return c.maxY;
+      return null;
+    }
+  }
+  return null;
 }
 
 // Line of sight between two 3D points (sampled on the XZ plane).
