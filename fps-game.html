@@ -3310,78 +3310,100 @@ function buildGunModel() {
     part(0.02, 0.045, 0.02, awpD, 0, 0.08, -0.28);
     muzzleLight.position.set(0, 0.02, -0.85);
   } else if (g.id === 'p90') {
-    // v1.18.3 P90 - rebuilt to match the owner's FN P90 reference photo:
-    // matte black bullpup polymer shell, translucent amber top magazine with
-    // brass cartridges inside (ejects UP), ring reflex sight with red dot,
-    // the two signature circular body voids, grooved front shroud and the
-    // stock flowing into a buttplate. Replaces the v1.18.0 tan voxel look.
-    var poly  = _std(0x141519, 0.55, 0.2);   // matte black polymer shell
-    var polyD = _std(0x0a0b0d, 0.5, 0.3);    // darker trim / shroud / grip
-    var steel = _std(0x08090a, 0.35, 0.65);  // barrel, muzzle, sight housing
-    var magAm = new THREE.MeshStandardMaterial({color: 0x9a6a2f, transparent: true, opacity: 0.55, roughness: 0.3, metalness: 0.1});
-    var brass = _std(0xb08a3e, 0.35, 0.7);
-    var rimM  = _std(0x23262c, 0.45, 0.45);
+    // v1.18.4 P90 - rebuilt after the "fn p90" 3D reference on Sketchfab
+    // (puresaltt, model b31ab8d0): grey faceted bullpup polymer shell (not
+    // black), a long solid CLAY-TAN top magazine with transverse ribs and
+    // angled caps, a dark bridge crossing OVER the mag, rear sight hump with
+    // a notch, light charging rod with a dark knurled knob up front, the two
+    // signature circular body voids, trigger blade in the grip void, small
+    // dark body bolts and a stepped muzzle. Still ejects the top mag UP
+    // on reload (magDir=1 contract unchanged).
+    var poly  = _std(0x686c72, 0.65, 0.15);  // grey polymer shell
+    var polyD = _std(0x3a3d42, 0.6, 0.2);    // dark trim: bridge/shroud/grip
+    var steel = _std(0x232529, 0.4, 0.55);   // barrel + stepped muzzle
+    var tanM  = _std(0xb08458, 0.75, 0.05);  // solid clay-tan top magazine
+    var tanD  = _std(0x7a5c3e, 0.8, 0.05);   // mag rib seams
+    var rodM  = _std(0xd6d7d8, 0.35, 0.6);   // light charging rod
+    var boltM = _std(0x2b2e33, 0.5, 0.4);    // body bolts + trigger
     // main bullpup receiver
-    part(0.09, 0.13, 0.40, poly, 0, 0.01, 0.01);
-    // stock block flowing into the buttplate
-    part(0.088, 0.15, 0.10, poly,  0, -0.02, 0.26);
-    part(0.084, 0.17, 0.022, polyD, 0, -0.02, 0.315);
-    // front nose sloping into the barrel shroud
-    part(0.086, 0.10, 0.11, poly, 0, -0.005, -0.245);
-    // signature vertical grooves wrapping the shroud
-    for (var fin = 0; fin < 4; fin++) {
-      part(0.09, 0.104, 0.012, polyD, 0, -0.005, -0.215 - fin * 0.025);
-    }
-    // barrel + stepped muzzle
-    var bar = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.09, 10), steel);
-    bar.rotation.x = Math.PI / 2; bar.position.set(0, -0.005, -0.345);
+    part(0.09, 0.125, 0.42, poly, 0, 0.01, 0.02);
+    // rear stock flowing down into the buttplate
+    part(0.088, 0.15, 0.09, poly, 0, -0.02, 0.25);
+    part(0.084, 0.175, 0.022, polyD, 0, -0.03, 0.305);
+    // front nose + darker faceted shroud cap
+    part(0.088, 0.105, 0.12, poly, 0, -0.005, -0.25);
+    part(0.09, 0.098, 0.05, polyD, 0, -0.005, -0.315);
+    // barrel + stepped muzzle with a dark bore
+    var bar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.08, 10), steel);
+    bar.rotation.x = Math.PI / 2; bar.position.set(0, -0.005, -0.35);
     gunGroup.add(bar);
-    var muz = new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.028, 10), steel);
-    muz.rotation.x = Math.PI / 2; muz.position.set(0, -0.005, -0.379);
-    gunGroup.add(muz);
-    // the two signature circular body voids (recessed ports + ring rims)
+    var mz1 = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.03, 10), steel);
+    mz1.rotation.x = Math.PI / 2; mz1.position.set(0, -0.005, -0.385);
+    gunGroup.add(mz1);
+    var mz2 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.024, 10), steel);
+    mz2.rotation.x = Math.PI / 2; mz2.position.set(0, -0.005, -0.407);
+    gunGroup.add(mz2);
+    var bore = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.008, 8),
+                              new THREE.MeshBasicMaterial({color: 0x050505}));
+    bore.rotation.x = Math.PI / 2; bore.position.set(0, -0.005, -0.42);
+    gunGroup.add(bore);
+    // the two signature circular body voids (faceted recessed rims)
     var voidHole = function(r, y, z) {
-      var plug = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.094, 18), polyD);
+      var plug = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.094, 14), polyD);
       plug.rotation.z = Math.PI / 2; plug.position.set(0, y, z);
       gunGroup.add(plug);
-      var rimR = new THREE.Mesh(new THREE.TorusGeometry(r, 0.0045, 8, 20), rimM);
-      rimR.rotation.y = Math.PI / 2; rimR.position.set(0.047, y, z);
+      var rimR = new THREE.Mesh(new THREE.TorusGeometry(r, 0.005, 6, 14), polyD);
+      rimR.rotation.y = Math.PI / 2; rimR.position.set(0.0465, y, z);
       gunGroup.add(rimR);
-      var rimL = rimR.clone(); rimL.position.x = -0.047;
+      var rimL = rimR.clone(); rimL.position.x = -0.0465;
       gunGroup.add(rimL);
     };
-    voidHole(0.032, -0.018, -0.105);
-    voidHole(0.036, -0.012, 0.135);
-    // integrated front grip
-    part(0.07, 0.115, 0.085, polyD, 0, -0.115, -0.07, 0.14);
-    // ring reflex sight with a glowing red dot, ahead of the magazine
-    part(0.032, 0.03, 0.05, polyD, 0, 0.075, -0.135);
-    var sight = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 8, 20), steel);
-    sight.position.set(0, 0.098, -0.135);
-    gunGroup.add(sight);
-    var redDot = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.004, 8),
-                                new THREE.MeshBasicMaterial({color: 0xff2a2a}));
-    redDot.rotation.x = Math.PI / 2; redDot.position.set(0, 0.098, -0.128);
-    gunGroup.add(redDot);
-    // translucent amber top magazine - cartridges visible through the shell
+    voidHole(0.034, -0.015, 0.06);    // rear body void
+    voidHole(0.03, -0.02, -0.125);    // grip/trigger void
+    // integrated faceted grip + trigger blade at the front void
+    part(0.07, 0.12, 0.08, polyD, 0, -0.115, -0.09, 0.14);
+    part(0.014, 0.045, 0.012, boltM, 0, -0.042, -0.125);
+    // rear sight hump with a notch, behind the magazine
+    part(0.06, 0.045, 0.12, poly, 0, 0.088, 0.18);
+    part(0.05, 0.012, 0.04, polyD, 0, 0.113, 0.2);
+    // dark bridge crossing OVER the magazine
+    part(0.062, 0.034, 0.06, polyD, 0, 0.1, -0.1);
+    // solid clay-tan top magazine - transverse ribs + angled caps
     var magGrp = new THREE.Group();
-    magGrp.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.034, 0.26), magAm));
-    for (var c = 0; c < 9; c++) {
-      var cart = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.015, 0.017), brass);
-      cart.position.set(0, 0.001, -0.115 + c * 0.029);
-      magGrp.add(cart);
+    var mBody = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.032, 0.34), tanM);
+    mBody.position.z = -0.08; magGrp.add(mBody);
+    for (var rb = 0; rb < 2; rb++) {   // mid rib seams
+      var rib = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.032, 0.008), tanD);
+      rib.position.z = 0.02 - rb * 0.08; magGrp.add(rib);
     }
-    var capF = new THREE.Mesh(new THREE.BoxGeometry(0.056, 0.042, 0.016), polyD);
-    capF.position.z = -0.132; magGrp.add(capF);
-    var capR = new THREE.Mesh(new THREE.BoxGeometry(0.056, 0.042, 0.016), polyD);
-    capR.position.z = 0.132; magGrp.add(capR);
-    magGrp.position.set(0, 0.093, 0.03);
+    for (var rf = 0; rf < 4; rf++) {   // denser ribs on the front section
+      var fr = new THREE.Mesh(new THREE.BoxGeometry(0.0535, 0.032, 0.007), tanD);
+      fr.position.z = -0.15 - rf * 0.028; magGrp.add(fr);
+    }
+    var capR = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.036, 0.04), tanM);
+    capR.position.set(0, 0.001, 0.095); capR.rotation.x = 0.15; magGrp.add(capR);
+    var capF = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.034, 0.04), tanM);
+    capF.position.set(0, -0.004, -0.255); capF.rotation.x = -0.28; magGrp.add(capF);
+    magGrp.position.set(0, 0.094, 0);
     gunGroup.add(magGrp);
     magMesh = magGrp; magHomeY = magGrp.position.y; magDir = 1;
-    // rear cocking-handle rail + ejection-port band
-    part(0.03, 0.012, 0.07, polyD, 0, 0.061, 0.26);
-    part(0.094, 0.026, 0.05, polyD, 0, 0.02, -0.01);
-    muzzleLight.position.set(0, -0.005, -0.42);
+    // light charging rod + dark knurled knob at the front
+    var rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 8), rodM);
+    rod.rotation.x = Math.PI / 2; rod.position.set(0, 0.072, -0.175);
+    gunGroup.add(rod);
+    var knob = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.03, 10), polyD);
+    knob.rotation.x = Math.PI / 2; knob.position.set(0, 0.072, -0.295);
+    gunGroup.add(knob);
+    // small dark body bolts (cap heads showing on both faces)
+    var boltSpots = [[0.028, 0.195], [-0.03, 0.195], [0.028, -0.03], [-0.03, -0.03],
+                     [0.028, -0.17], [-0.03, -0.17], [0.026, 0.26], [-0.026, 0.26]];
+    for (var bl = 0; bl < boltSpots.length; bl++) {
+      var bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.094, 8), boltM);
+      bolt.rotation.z = Math.PI / 2;
+      bolt.position.set(0, boltSpots[bl][0], boltSpots[bl][1]);
+      gunGroup.add(bolt);
+    }
+    muzzleLight.position.set(0, -0.005, -0.46);
   } else {
     // default starter rifle (original model, texture-mapped)
     part(0.08, 0.12, 0.5, new THREE.MeshStandardMaterial({map:_gBT, roughness:0.3, metalness:0.8}), 0, 0, 0);
