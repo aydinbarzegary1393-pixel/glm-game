@@ -96,6 +96,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .lang-btn{flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s}
 .lang-btn.active{background:rgba(79,195,247,0.2);border-color:#4fc3f7;color:#4fc3f7}
 .lang-btn:hover{border-color:#4fc3f7}
+/* v1.18.5 secret gift code row in settings */
+.gift-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+.gift-input{flex:1;background:rgba(0,0,0,0.55);border:1px solid rgba(79,195,247,0.45);color:#e8f7ff;font-family:inherit;font-size:14px;letter-spacing:1px;padding:10px 12px;border-radius:8px;outline:none;text-align:center}
+.gift-input:focus{border-color:#4fc3f7;box-shadow:0 0 8px rgba(79,195,247,0.25)}
+#gift-btn{flex-shrink:0;width:110px;padding:10px 0;font-size:13px}
+#gift-msg{min-height:15px;margin-top:6px;opacity:0;transition:opacity 0.25s;font-weight:700}
+#gift-msg.show{opacity:1}
+#gift-msg.ok{color:#7bdc7b}
+#gift-msg.err{color:#ff7b7b}
 
 /* HUD */
 #crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none}
@@ -383,6 +392,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="lang-btn active" id="fs-on" onclick="setAutoFullscreen(true)" data-en="ON" data-fa="روشن">ON</button>
 <button class="lang-btn" id="fs-off" onclick="setAutoFullscreen(false)" data-en="OFF" data-fa="خاموش">OFF</button>
 </div>
+</div>
+<div class="setting-group" id="gift-group">
+<div class="setting-label" data-en="GIFT CODE / کد هدیه" data-fa="GIFT CODE / کد هدیه">GIFT CODE / کد هدیه</div>
+<div class="gift-row">
+<input type="text" id="gift-input" class="gift-input" placeholder="کد را وارد کنید / ENTER CODE" autocomplete="off" spellcheck="false">
+<button class="lang-btn" id="gift-btn" onclick="redeemGiftCode()" data-en="REDEEM" data-fa="ثبت">REDEEM</button>
+</div>
+<p class="setting-hint" id="gift-msg"></p>
 </div>
 <button class="menu-btn" id="btn-gameplay-settings" onclick="openGameplayMenu()" data-en="GAMEPLAY SETTINGS" data-fa="گیم پلی ستینگ">GAMEPLAY SETTINGS</button>
 <button class="menu-btn" id="btn-hud-customize" onclick="openHudEditor()" data-en="CUSTOMIZE HUD" data-fa="تنظیم جای دکمه‌ها">CUSTOMIZE HUD</button>
@@ -781,6 +798,44 @@ function flashShopMsg(txt) {
   el.classList.add('show');
   clearTimeout(shopMsgTimer);
   shopMsgTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
+}
+// ===== v1.18.5 secret gift code (settings) =====
+// One-time reward, enforced by the persisted giftRedeemed flag. The code is
+// deliberately NEVER present in plain text anywhere in this file (only its
+// base64 form below), never logged and never announced in news/releases.
+var GIFT_REWARD = 5000000;
+var GIFT_CODE_B64 = 'YWlkaW5iLno=';
+var giftMsgTimer = null;
+function giftMsgShow(txt, ok) {
+  var el = document.getElementById('gift-msg');
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.remove('ok', 'err');
+  el.classList.add('show', ok ? 'ok' : 'err');
+  clearTimeout(giftMsgTimer);
+  giftMsgTimer = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+function redeemGiftCode() {
+  var inp = document.getElementById('gift-input');
+  if (!inp) return;
+  var fa = currentLang === 'fa';
+  if (savedSettings && savedSettings.giftRedeemed) {
+    giftMsgShow(fa ? 'این کد قبلاً استفاده شده!' : 'THIS CODE WAS ALREADY USED!', false);
+    return;
+  }
+  var v = (inp.value || '').trim().toLowerCase();
+  var ok = false;
+  if (v) { try { ok = (btoa(v) === GIFT_CODE_B64); } catch (e) { ok = false; } }
+  if (!ok) {
+    giftMsgShow(fa ? 'کد اشتباه است!' : 'INVALID CODE!', false);
+    return;
+  }
+  statsMoney += GIFT_REWARD;
+  saveSettings({statsMoney: statsMoney, giftRedeemed: true});
+  inp.value = '';
+  giftMsgShow(fa ? ('جایزه فعال شد! ' + fmtMoney(GIFT_REWARD) + ' تومان به پول شما اضافه شد')
+                 : ('GIFT ACTIVATED! +' + fmtMoney(GIFT_REWARD) + ' TOMAN'), true);
+  updateStatsLines();
 }
 function loadSavedSettings() {
   try {
