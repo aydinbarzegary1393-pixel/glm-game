@@ -799,12 +799,16 @@ function flashShopMsg(txt) {
   clearTimeout(shopMsgTimer);
   shopMsgTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
 }
-// ===== v1.18.5 secret gift code (settings) =====
-// One-time reward, enforced by the persisted giftRedeemed flag. The code is
-// deliberately NEVER present in plain text anywhere in this file (only its
-// base64 form below), never logged and never announced in news/releases.
-var GIFT_REWARD = 5000000;
-var GIFT_CODE_B64 = 'YWlkaW5iLno=';
+// ===== v1.18.6 secret gift codes (settings) =====
+// One-time rewards, each enforced by its own persisted flag. The codes are
+// deliberately NEVER present in plain text anywhere in this file (only their
+// base64 forms below), never logged and never announced in news/releases.
+// Each code is independent: one flag per code, so a player can redeem every
+// valid code exactly once.
+var GIFT_CODES = [
+  { b64: 'YWlkaW5iLno=', reward: 5000000, flag: 'giftRedeemed'  },
+  { b64: 'c2hhaHlhZA==', reward: 1000000, flag: 'giftRedeemed2' }
+];
 var giftMsgTimer = null;
 function giftMsgShow(txt, ok) {
   var el = document.getElementById('gift-msg');
@@ -819,22 +823,30 @@ function redeemGiftCode() {
   var inp = document.getElementById('gift-input');
   if (!inp) return;
   var fa = currentLang === 'fa';
-  if (savedSettings && savedSettings.giftRedeemed) {
-    giftMsgShow(fa ? 'این کد قبلاً استفاده شده!' : 'THIS CODE WAS ALREADY USED!', false);
-    return;
-  }
   var v = (inp.value || '').trim().toLowerCase();
-  var ok = false;
-  if (v) { try { ok = (btoa(v) === GIFT_CODE_B64); } catch (e) { ok = false; } }
-  if (!ok) {
+  var hit = null;
+  if (v) {
+    var b = '';
+    try { b = btoa(v); } catch (e) { b = ''; }
+    for (var i = 0; i < GIFT_CODES.length; i++) {
+      if (b && b === GIFT_CODES[i].b64) { hit = GIFT_CODES[i]; break; }
+    }
+  }
+  if (!hit) {
     giftMsgShow(fa ? 'کد اشتباه است!' : 'INVALID CODE!', false);
     return;
   }
-  statsMoney += GIFT_REWARD;
-  saveSettings({statsMoney: statsMoney, giftRedeemed: true});
+  if (savedSettings && savedSettings[hit.flag]) {
+    giftMsgShow(fa ? 'این کد قبلاً استفاده شده!' : 'THIS CODE WAS ALREADY USED!', false);
+    return;
+  }
+  statsMoney += hit.reward;
+  var patch = { statsMoney: statsMoney };
+  patch[hit.flag] = true;
+  saveSettings(patch);
   inp.value = '';
-  giftMsgShow(fa ? ('جایزه فعال شد! ' + fmtMoney(GIFT_REWARD) + ' تومان به پول شما اضافه شد')
-                 : ('GIFT ACTIVATED! +' + fmtMoney(GIFT_REWARD) + ' TOMAN'), true);
+  giftMsgShow(fa ? ('جایزه فعال شد! ' + fmtMoney(hit.reward) + ' تومان به پول شما اضافه شد')
+                 : ('GIFT ACTIVATED! +' + fmtMoney(hit.reward) + ' TOMAN'), true);
   updateStatsLines();
 }
 function loadSavedSettings() {
