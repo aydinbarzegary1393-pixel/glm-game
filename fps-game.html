@@ -187,6 +187,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #victory-screen h2{font-size:58px;color:#2ecc71;margin-bottom:10px;letter-spacing:8px;text-shadow:0 0 40px rgba(46,204,113,0.6),0 0 80px rgba(46,204,113,0.3)}
 #victory-screen .victory-sub{color:rgba(150,255,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
 #victory-screen .pause-btn{width:280px}
+/* v1.19.0 Level-Complete Screen + Level HUD */
+#level-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,40,0,0.88)}
+#level-screen.hidden{display:none}
+#level-screen h2{font-size:52px;color:#2ecc71;margin-bottom:10px;letter-spacing:6px;text-shadow:0 0 40px rgba(46,204,113,0.6),0 0 80px rgba(46,204,113,0.3)}
+#level-screen .victory-sub{color:rgba(150,255,150,0.6);font-size:14px;margin-bottom:35px;letter-spacing:2px}
+#level-screen .pause-btn{width:280px}
+#level-hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:40;display:none;background:rgba(0,0,0,0.55);border:1px solid rgba(46,204,113,0.75);color:#2ecc71;font-size:15px;font-weight:700;letter-spacing:2px;padding:6px 18px;border-radius:20px;pointer-events:none}
 /* Medkit Notify */
 #medkit-notify{position:fixed;top:55px;left:50%;transform:translateX(-50%);z-index:55;pointer-events:none;color:#2ecc71;font-size:20px;font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(46,204,113,0.6);opacity:0;transition:opacity 0.3s}
 #medkit-notify.show{opacity:1}
@@ -272,12 +279,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   #pause-overlay .pause-sub{font-size:11px;margin-bottom:18px}
   #death-screen h2{font-size:36px;letter-spacing:5px}
   #victory-screen h2{font-size:34px;letter-spacing:5px}
+  #level-screen h2{font-size:28px;letter-spacing:3px}
+  #level-hud{font-size:12px;top:10px;padding:5px 14px}
   .rt-title{font-size:20px;letter-spacing:2px;margin-bottom:6px}
   .rt-sub{font-size:11px;margin-bottom:12px}
   .rt-scale{transform:scale(0.8)}
   .rt-great{font-size:13px;margin-top:8px}
   .rt-skip{margin-top:6px}
-  #death-screen .pause-btn,#victory-screen .pause-btn{width:220px}
+  #death-screen .pause-btn,#victory-screen .pause-btn,#level-screen .pause-btn{width:220px}
 }
 </style>
 </head>
@@ -316,11 +325,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h1 id="t_title" data-en="FPS GAME" data-fa="بازی شوتر">FPS GAME</h1>
 <p class="subtitle" id="t_subtitle" data-en="SHOOTER EXPERIENCE" data-fa="تجربه تیراندازی">SHOOTER EXPERIENCE</p>
-<button class="menu-btn" onclick="startGame()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
+<button class="menu-btn" id="btn-start" onclick="openModeMenu()" data-en="START GAME" data-fa="شروع بازی">START GAME</button>
 <button class="menu-btn" onclick="showMenu('map-menu')" data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</button>
 <button class="menu-btn" onclick="openStatsMenu()" data-en="ACHIEVEMENTS" data-fa="دست‌آوردها">ACHIEVEMENTS</button>
 <button class="menu-btn" onclick="openShopMenu()" data-en="GUN SHOP" data-fa="فروشگاه اسلحه">GUN SHOP</button>
 <button class="menu-btn" onclick="updateDeviceButtons();showMenu('settings-menu')" data-en="SETTINGS" data-fa="تنظیمات">SETTINGS</button>
+</div>
+</div>
+
+<!-- MODE SELECT (v1.19.0) -->
+<div id="mode-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="GAME MODE" data-fa="نوع بازی">GAME MODE</h2>
+<p class="subtitle" data-en="HOW DO YOU WANT TO PLAY?" data-fa="چطور می‌خوای بازی کنی؟">HOW DO YOU WANT TO PLAY?</p>
+<button class="menu-btn" id="btn-mode-normal" onclick="pickMode('normal')" data-en="NORMAL GAME" data-fa="بازی معمولی">NORMAL GAME</button>
+<button class="menu-btn" id="btn-mode-levels" onclick="pickMode('levels')">LEVEL GAME</button>
+<button class="menu-btn back-btn" onclick="backFromModeMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 
@@ -495,9 +515,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="victory-screen" class="hidden">
 <div style="position:relative;z-index:1;text-align:center">
 <h2 data-en="YOU WON!" data-fa="&#x062A;&#x0648; &#x0628;&#x0631;&#x062F;&#x06CC;!">YOU WON!</h2>
-<p class="victory-sub" data-en="ALL ENEMIES ELIMINATED" data-fa="&#x0647;&#x0645;&#x0647; &#x062F;&#x0634;&#x0645;&#x0646;&#x0627;&#x0646; &#x0646;&#x0627;&#x0628;&#x0648;&#x062F; &#x0634;&#x062F;&#x0646;&#x062F;">ALL ENEMIES ELIMINATED</p>
+<p class="victory-sub" id="victory-sub" data-en="ALL ENEMIES ELIMINATED" data-fa="&#x0647;&#x0645;&#x0647; &#x062F;&#x0634;&#x0645;&#x0646;&#x0627;&#x0646; &#x0646;&#x0627;&#x0628;&#x0648;&#x062F; &#x0634;&#x062F;&#x0646;&#x062F;">ALL ENEMIES ELIMINATED</p>
 <button class="pause-btn" onclick="restartGame()" data-en="PLAY AGAIN" data-fa="&#x0628;&#x0627;&#x0632;&#x06CC; &#x062F;&#x0648;&#x0628;&#x0627;&#x0631;&#x0647;">PLAY AGAIN</button>
 <button class="pause-btn exit-btn" onclick="backToMenuFromVictory()" data-en="MAIN MENU" data-fa="&#x0645;&#x0646;&#x0648;&#x06CC; &#x0627;&#x0635;&#x0644;&#x06CC;">MAIN MENU</button>
+</div>
+</div>
+
+<!-- LEVEL COMPLETE SCREEN (v1.19.0) -->
+<div id="level-screen" class="hidden">
+<div style="position:relative;z-index:1;text-align:center">
+<h2 id="level-done-title">LEVEL 1 COMPLETE!</h2>
+<p class="victory-sub" id="level-done-sub"></p>
+<button class="pause-btn" onclick="nextLevel()" data-en="NEXT LEVEL" data-fa="مرحله بعد">NEXT LEVEL</button>
+<button class="pause-btn exit-btn" onclick="backToMenuFromLevel()" data-en="MAIN MENU" data-fa="منوی اصلی">MAIN MENU</button>
 </div>
 </div>
 
@@ -505,6 +535,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="medkit-notify" data-en="+10 HEALTH" data-fa="+10 &#x0633;&#x0644;&#x0627;&#x0645;&#x062A;&#x06CC;">+10 HEALTH</div>
 
 <!-- GAME HUD -->
+<div id="level-hud">LEVEL 1 — 0/1</div>
 <div id="crosshair" style="display:none"></div>
 <div id="ammo-warning">OUT OF AMMO!</div>
 <div id="muzzle-flash"></div>
@@ -961,6 +992,7 @@ function applySavedSettings() {
   updateFullscreenButtons();
   if (typeof s.lastMap === 'number' && s.lastMap >= 0 && s.lastMap <= 3) currentMap = s.lastMap;
   if (typeof s.bestKills === 'number' && s.bestKills > 0) bestKills = s.bestKills;
+  if (typeof s.levelCurrent === 'number' && s.levelCurrent >= 1 && s.levelCurrent <= TOTAL_LEVELS) levelCurrent = s.levelCurrent;
   if (typeof s.statsKills === 'number' && s.statsKills > 0) statsKills = s.statsKills;
   if (typeof s.statsDeaths === 'number' && s.statsDeaths > 0) statsDeaths = s.statsDeaths;
   if (typeof s.statsWins === 'number' && s.statsWins > 0) statsWins = s.statsWins;
@@ -992,7 +1024,7 @@ function resetAllSavedData(btn) {
   try { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem('hudLayoutV1'); } catch(e) {}
   savedSettings = null;
   bestKills = 0;
-  statsKills = 0; statsDeaths = 0; statsWins = 0; statsScore = 0; statsMoney = 0;
+  levelCurrent = 1; gameMode = 'normal';
   setLang('en');
   if (IS_PHONE_EDITION) {
     // phone edition has no device choice: stay mobile, return to main menu
@@ -1235,6 +1267,21 @@ const ENEMY_ATK_CD = 1.0;
 const ZOMBIE_CLIMB_SPEED = 1.8; // v1.18.2: climb rate (units/s) at an obstacle face
 const enemies = [];
 let killCount = 0;
+// ===== v1.19.0 GAME MODES: 'normal' (classic round) + 'levels' (100 levels) =====
+const TOTAL_LEVELS = 100;
+const LEVEL_ALIVE_CAP = 20;      // max zombies alive at once in level mode (perf)
+const LEVEL_BONUS_PER = 5000;    // completion bonus = level number x this (toman)
+var gameMode = 'normal';         // 'normal' | 'levels'
+var levelCurrent = 1;            // persisted: the level the player plays next
+var levelTarget = 0;             // zombies in the current level (= level number)
+var levelQueue = 0;              // zombies still to trickle-spawn this level
+var modeFromPause = false;       // mode menu opened via pause > change map
+function updateLevelHud() {
+  var el = document.getElementById('level-hud');
+  if (!el) return;
+  el.textContent = (currentLang === 'fa' ? ('مرحله ' + levelCurrent) : ('LEVEL ' + levelCurrent))
+                 + ' — ' + Math.min(killCount, levelTarget) + '/' + levelTarget;
+}
 const medkits = [];
 const MEDKIT_HEAL = 10;
 
@@ -1867,6 +1914,7 @@ function setLang(lang) {
   saveSettings({lang: lang});
   updateStatsLines();
   renderShop();
+  if (gameMode === 'levels' && gameStarted) updateLevelHud(); // v1.19.0 keep level HUD localized
 }
 
 function showMenu(id) {
@@ -1877,7 +1925,12 @@ function showMenu(id) {
   if (hudBtn) hudBtn.style.display = isMobileDevice ? '' : 'none';
 }
 
-function selectMap(idx) { currentMap = idx; saveSettings({lastMap: idx}); startGame(); }
+function selectMap(idx) {
+  currentMap = idx; saveSettings({lastMap: idx});
+  // v1.19.0: every start goes through the mode-select now
+  modeFromPause = changeMapReturn; changeMapReturn = false;
+  openModeMenu();
+}
 
 function updateSens(v) {
   MOUSE_SENS = v * 0.001;
@@ -2060,23 +2113,44 @@ function spawnEnemies() {
   clearEnemies();
   clearMedkits();
   killCount = 0;
-  var count = DIFFICULTY_COUNTS[difficulty];
   var zones = mapSpawnZones[currentMap] || mapSpawnZones[0];
   var px = player.position.x, pz = player.position.z;
-  for (var i = 0; i < count; i++) {
-    var ex, ez, attempts = 0, valid = false;
-    do {
-      var zone = zones[Math.floor(Math.random() * zones.length)];
-      ex = zone.x1 + Math.random() * (zone.x2 - zone.x1);
-      ez = zone.z1 + Math.random() * (zone.z2 - zone.z1);
-      if (!checkEnemyWall(ex, ez)) {
-        var dx = ex - px, dz = ez - pz;
-        if (Math.sqrt(dx*dx + dz*dz) >= 6) valid = true;
-      }
-      attempts++;
-    } while (!valid && attempts < 50);
-    if (valid) createEnemy(ex, ez);
+  var count, cap;
+  if (gameMode === 'levels') {
+    // v1.19.0: level N spawns exactly N zombies - at most LEVEL_ALIVE_CAP at
+    // once, the rest wait in levelQueue and trickle in as kills happen
+    count = levelTarget;
+    cap = Math.min(LEVEL_ALIVE_CAP, count);
+  } else {
+    count = DIFFICULTY_COUNTS[difficulty];
+    cap = count;
   }
+  var spawned = 0;
+  for (var i = 0; i < cap; i++) {
+    if (spawnOneEnemy(zones, px, pz)) spawned++;
+  }
+  levelQueue = (gameMode === 'levels') ? Math.max(0, count - spawned) : 0;
+}
+
+function spawnOneEnemy(zones, px, pz) {
+  var ex, ez, attempts = 0, valid = false;
+  do {
+    var zone = zones[Math.floor(Math.random() * zones.length)];
+    ex = zone.x1 + Math.random() * (zone.x2 - zone.x1);
+    ez = zone.z1 + Math.random() * (zone.z2 - zone.z1);
+    if (!checkEnemyWall(ex, ez)) {
+      var dx = ex - px, dz = ez - pz;
+      if (Math.sqrt(dx*dx + dz*dz) >= 6) valid = true;
+    }
+    attempts++;
+  } while (!valid && attempts < 50);
+  if (valid) createEnemy(ex, ez);
+  return valid;
+}
+
+function spawnQueuedEnemy() {
+  var zones = mapSpawnZones[currentMap] || mapSpawnZones[0];
+  return spawnOneEnemy(zones, player.position.x, player.position.z);
 }
 
 function clearMedkits() {
@@ -2295,6 +2369,7 @@ function playerDie() {
   recordDeathStats();
   gameStarted = false;
   document.getElementById('death-screen').classList.remove('hidden');
+  document.getElementById('level-hud').style.display = 'none';
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('debug').style.display = 'none';
   document.getElementById('health-bar-container').style.display = 'none';
@@ -2308,7 +2383,14 @@ function playerWin() {
   recordBestKills();
   recordWinStats();
   gameStarted = false;
+  // v1.19.0: in level mode this is the GRAND win (all 100 levels cleared);
+  // the subtitle reflects which victory the player just scored.
+  var vs = document.getElementById('victory-sub');
+  if (vs) vs.textContent = (gameMode === 'levels')
+    ? (currentLang === 'fa' ? 'هر ۱۰۰ مرحله کامل شد! قهرمانی! 🏆' : 'ALL 100 LEVELS COMPLETE! CHAMPION!')
+    : (currentLang === 'fa' ? 'همه دشمنان نابود شدند' : 'ALL ENEMIES ELIMINATED');
   document.getElementById('victory-screen').classList.remove('hidden');
+  document.getElementById('level-hud').style.display = 'none';
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('debug').style.display = 'none';
   document.getElementById('reload-hud').style.display = 'none';
@@ -2330,6 +2412,38 @@ function restartGame() {
 
 function backToMenuFromDeath() {
   document.getElementById('death-screen').classList.add('hidden');
+  clearEnemies(); clearMedkits(); exitToMenu();
+}
+
+// ===== v1.19.0 LEVEL MODE =====
+function levelComplete() {
+  gameStarted = false;
+  var bonus = levelTarget * LEVEL_BONUS_PER;
+  statsMoney += bonus;
+  if (levelCurrent >= TOTAL_LEVELS) {
+    saveSettings({statsMoney: statsMoney});   // grand win - stay on level 100
+    playerWin();
+    return;
+  }
+  levelCurrent++;
+  saveSettings({statsMoney: statsMoney, levelCurrent: levelCurrent});
+  document.getElementById('level-hud').style.display = 'none';
+  document.getElementById('level-done-title').textContent = (currentLang === 'fa')
+    ? ('مرحله ' + levelTarget + ' کامل شد!')
+    : ('LEVEL ' + levelTarget + ' COMPLETE!');
+  document.getElementById('level-done-sub').textContent = (currentLang === 'fa')
+    ? ('+' + fmtMoney(bonus) + ' تومان جایزه — آماده مرحله ' + levelCurrent + ' با ' + levelCurrent + ' زامبی')
+    : ('+' + fmtMoney(bonus) + ' TOMAN BONUS — GET READY FOR LEVEL ' + levelCurrent + ' WITH ' + levelCurrent + ' ZOMBIES');
+  document.getElementById('level-screen').classList.remove('hidden');
+  if (document.pointerLockElement) document.exitPointerLock();
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+}
+function nextLevel() {
+  document.getElementById('level-screen').classList.add('hidden');
+  startGame('levels');   // fresh health/ammo + spawns levelCurrent zombies
+}
+function backToMenuFromLevel() {
+  document.getElementById('level-screen').classList.add('hidden');
   clearEnemies(); clearMedkits(); exitToMenu();
 }
 
@@ -3550,7 +3664,16 @@ function shoot() {
         killCount++;
         recordKillStats();
         if (killCount % 2 === 0) dropMedkit(dropX, dropZ, dropY);
-        if (enemies.length === 0) playerWin();
+        if (gameMode === 'levels') {
+          // v1.19.0: trickle-spawn the queue so the arena stays populated
+          updateLevelHud();
+          if (killCount < levelTarget && levelQueue > 0 && enemies.length < LEVEL_ALIVE_CAP) {
+            if (spawnQueuedEnemy()) levelQueue--;
+          }
+          if (killCount >= levelTarget) levelComplete();
+        } else if (enemies.length === 0) {
+          playerWin();
+        }
       }
     } else {
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
@@ -3591,7 +3714,10 @@ function shoot() {
 // ===== POINTER LOCK =====
 const pauseOvl = document.getElementById('pause-overlay');
 
-function startGame() {
+function startGame(mode) {
+  // v1.19.0: mode comes from the mode-select menu ('normal' | 'levels');
+  // restarts (PLAY AGAIN / NEXT LEVEL) keep the current mode when omitted.
+  if (mode === 'normal' || mode === 'levels') gameMode = mode;
   // v1.16.0: starting a match is an explicit intent to play - (re)enter
   // fullscreen if the auto-fullscreen setting is on (no-op if already there)
   if (autoFullscreen) goFullscreenSafe();
@@ -3606,11 +3732,13 @@ function startGame() {
   ammo = maxAmmo; isReloading = false; canShoot = true;
   resetGunAnim();
   playerHealth = MAX_HEALTH; killCount = 0;
+  levelTarget = (gameMode === 'levels') ? levelCurrent : 0;
   updateHealthBar();
   document.getElementById('reload-hud').style.display = 'none';
   document.getElementById('health-bar-container').style.display = 'flex';
   document.getElementById('death-screen').classList.add('hidden');
   document.getElementById('victory-screen').classList.add('hidden');
+  document.getElementById('level-screen').classList.add('hidden');
   yaw = 0; pitch = 0;
   player.rotation.y = 0; pitchObj.rotation.x = 0;
   if (isMobileDevice) {
@@ -3620,6 +3748,32 @@ function startGame() {
     renderer.domElement.requestPointerLock();
   }
   spawnEnemies();
+  // v1.19.0: level HUD only in level mode
+  var lh = document.getElementById('level-hud');
+  lh.style.display = (gameMode === 'levels') ? 'block' : 'none';
+  if (gameMode === 'levels') updateLevelHud();
+}
+
+// ===== v1.19.0 MODE SELECT (START GAME asks: normal or levels?) =====
+function openModeMenu() {
+  var b = document.getElementById('btn-mode-levels');
+  if (b) b.textContent = (currentLang === 'fa')
+    ? ('بازی مرحله‌ای — مرحله ' + levelCurrent + ' از ' + TOTAL_LEVELS)
+    : ('LEVEL GAME — LEVEL ' + levelCurrent + '/' + TOTAL_LEVELS);
+  showMenu('mode-menu');
+}
+function pickMode(mode) {
+  startGame(mode);
+}
+function backFromModeMenu() {
+  if (modeFromPause) {
+    modeFromPause = false;
+    document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+    pauseOvl.classList.remove('hidden');
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'block';
+  } else {
+    showMenu('main-menu');
+  }
 }
 
 let returnToGame = false;
@@ -3691,6 +3845,8 @@ function exitToMenu() {
   document.getElementById('minimap-container').style.display = 'none';
   document.getElementById('death-screen').classList.add('hidden');
   document.getElementById('victory-screen').classList.add('hidden');
+  document.getElementById('level-screen').classList.add('hidden');
+  document.getElementById('level-hud').style.display = 'none';
   if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
   yaw = 0; pitch = 0;
   player.position.set(0, PLAYER_HEIGHT, 0);

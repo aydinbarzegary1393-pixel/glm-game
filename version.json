@@ -1,12 +1,12 @@
 {
-  "version": "v1.18.6",
-  "generated": "2026-10-07T19:43:54Z",
+  "version": "v1.19.0",
+  "generated": "2026-10-07T20:28:10Z",
   "entry": "fps-game.html",
   "files": [
     {
       "path": "fps-game.html",
-      "sha256": "b102368fb69ea0aca33812aba65ad4cd4bf5d74bc2525f926ce800a63756c522",
-      "size": 184455
+      "sha256": "dbaa75c2b5ccf1482cb03a9adcd16bda1d0b7cd6374d6a5e748edf1adcb4120b",
+      "size": 192536
     },
     {
       "path": "fps-game-assets/bg_menu.png",
