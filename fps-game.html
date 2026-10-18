@@ -349,23 +349,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h2 data-en="SELECT MAP" data-fa="انتخاب نقشه">SELECT MAP</h2>
 <div class="map-grid">
-<div class="map-card playable" onclick="selectMap(0)"><div class="map-icon">🏗️</div>
-<div class="map-name">Test Map</div>
-<div class="map-status" data-en="PLAYABLE" data-fa="آماده بازی">PLAYABLE</div>
+<div class="map-card playable" onclick="selectMap(0)"><div class="map-icon">⚙️</div>
+<div class="map-name" data-en="Scrapyard" data-fa="آهن‌قراضه">Scrapyard</div>
+<div class="map-status" data-en="SUNSET JUNKYARD" data-fa="غروب آهن‌قراضه">SUNSET JUNKYARD</div>
 </div>
 <div class="map-card playable" onclick="selectMap(1)">
-<div class="map-icon">📜</div>
-<div class="map-name" data-en="Vertigo" data-fa="ورتیگو">Vertigo</div>
-<div class="map-status" data-en="CONSTRUCTION SITE" data-fa="ساحت خرابی">CONSTRUCTION SITE</div>
+<div class="map-icon">🏙️</div>
+<div class="map-name" data-en="Skyscraper" data-fa="آسمان‌خراش">Skyscraper</div>
+<div class="map-status" data-en="ROOFTOP CONSTRUCTION" data-fa="بام آسمان‌خراش">ROOFTOP CONSTRUCTION</div>
 </div>
 <div class="map-card playable" onclick="selectMap(2)">
 <div class="map-icon">🏜️</div>
-<div class="map-name" data-en="Dust 2" data-fa="داست دو">Dust 2</div>
+<div class="map-name" data-en="Sandstorm" data-fa="توفان شن">Sandstorm</div>
 <div class="map-status" data-en="DESERT CLASSIC" data-fa="کلاسیک بیابانی">DESERT CLASSIC</div>
 </div>
 <div class="map-card playable" onclick="selectMap(3)">
-<div class="map-icon">💥</div>
-<div class="map-name" data-en="Shoot House" data-fa="شوت هاوس">Shoot House</div>
+<div class="map-icon">🎯</div>
+<div class="map-name" data-en="Killhouse" data-fa="خانه مرگ">Killhouse</div>
 <div class="map-status" data-en="CLOSE QUARTERS" data-fa="نبرد نزدیک">CLOSE QUARTERS</div>
 </div>
 </div>
@@ -2239,7 +2239,9 @@ function clearBulletHoles() {
 
 // ===== ENEMY SYSTEM =====
 const mapSpawnZones = [
-  [{x1:-18,z1:-18,x2:18,z2:18}],
+  // v1.20.0 Scrapyard: open junkyard lanes (container edges + crane legs are
+  // handled by the wall-rejection retry in spawnOneEnemy)
+  [{x1:-17,z1:-14,x2:-7,z2:-5},{x1:7,z1:-14,x2:17,z2:-5},{x1:-17,z1:0,x2:-6,z2:10},{x1:6,z1:0,x2:17,z2:10},{x1:-3,z1:-16,x2:3,z2:-6}],
   [{x1:-23,z1:-5,x2:-20,z2:-1},{x1:-18,z1:-4,x2:-14,z2:12},{x1:-12,z1:-7,x2:-9,z2:-2},{x1:-14,z1:14,x2:2,z2:23},{x1:6,z1:4,x2:8,z2:7},{x1:12,z1:20,x2:22,z2:23}],
   [{x1:-14,z1:-3,x2:3,z2:8},{x1:-9,z1:8,x2:0,z2:28},{x1:5,z1:1,x2:12,z2:16},{x1:10,z1:16,x2:26,z2:28},{x1:1,z1:-2,x2:14,z2:6}],
   [{x1:-15,z1:-20,x2:15,z2:20}]
@@ -2979,44 +2981,122 @@ function getGroundY(px, py, pz) {
 
 // ===== MAPS =====
 
-// ----- TEST MAP -----
-function loadTestMap() {
-  scene.background = new THREE.Color(0x87CEEB);
-  scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
-  setGround(0x4a7c3f, 0x000000, 0x2a5c1f);
-  addBox(0,0.75,-8,1.5,1.5,1.5,0xe74c3c);
-  addBox(-6,1,-4,2,2,2,0x3498db);
-  addBox(6,0.5,-6,1,1,4,0xf39c12);
-  addBox(0,1.5,8,3,3,3,0x9b59b6);
-  addBox(-4,0.5,5,1,1,1,0x1abc9c);
-  addBox(8,2,3,2,4,2,0xe67e22);
-  addBox(-8,0.75,-10,1.5,1.5,1.5,0x2ecc71);
-  addBox(5,1,10,2,2,1,0xe84393);
-  addCyl(10,1,-5,0.5,2,0xc0392b);
-  addCyl(-10,1.5,5,0.7,3,0x2980b9);
-  addCyl(3,0.75,-12,0.75,1.5,0x27ae60);
-  // Brick ruins (brick texture showcase)
-  addWall(-13, 1.5, -13, 6, 3, 0.6, tex.brick);
-  addWall(-10.4, 1.5, -10.2, 0.6, 3, 5.6, tex.brick);
-  addWall(-13, 1.1, -10.2, 2.4, 2.2, 0.6, tex.brick);
-  addWall(13, 1.25, 12, 5, 2.5, 0.6, tex.brick);
-  addWall(15.5, 1.25, 14.6, 0.6, 2.5, 3.2, tex.brick);
-  addWall(11, 0.75, 9, 1.5, 1.5, 1.5, tex.brick);
-  // Boundary walls (hedge)
-  addWall(0, 2.5, -20, 42, 5, 0.8, tex.hedge);
-  addWall(0, 2.5, 20, 42, 5, 0.8, tex.hedge);
-  addWall(-20, 2.5, 0, 0.8, 5, 42, tex.hedge);
-  addWall(20, 2.5, 0, 0.8, 5, 42, tex.hedge);
-  player.position.set(0, PLAYER_HEIGHT, 0);
+// ----- SCRAPYARD (sunset junkyard) -----
+// Golden-hour junkyard: shipping-container lanes, wrecked cars, a rusted
+// crane tower with a hanging hook, tire stacks, barrel clusters and
+// floodlight poles. Replaces the old flat test-grid map as the default map.
+function loadScrapyardMap() {
+  scene.background = new THREE.Color(0xc97f3f);
+  scene.fog = new THREE.Fog(0xc97f3f, 26, 95);
+  // dry cracked dirt ground
+  var syTex = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#7d5f3d'; c.fillRect(0, 0, w, h);
+    for (var i = 0; i < 900; i++) { c.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.09) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    for (var j = 0; j < 450; j++) { c.fillStyle = 'rgba(255,222,170,' + (Math.random() * 0.06) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    c.strokeStyle = 'rgba(52,36,20,0.55)'; c.lineWidth = 1.5;
+    for (var k = 0; k < 14; k++) {
+      c.beginPath();
+      var x0 = Math.random() * w, y0 = Math.random() * h;
+      c.moveTo(x0, y0);
+      for (var s = 0; s < 4; s++) c.lineTo(x0 + (Math.random() - 0.5) * 44, y0 + (Math.random() - 0.5) * 44);
+      c.stroke();
+    }
+  }, 256, 256);
+  syTex.repeat.set(6, 6);
+  var DIRT = new THREE.MeshStandardMaterial({ map: syTex, roughness: 1, metalness: 0 });
+  setGround(DIRT, 0x4a3520, 0x5c4429);
+  var MET = tex.metalWall, DARK = tex.darkMetal, CRATE = tex.crate, BRICK = tex.brick;
+  var RUSTC = 0x7a4b33, GRAY = 0x666666, TIRE = 0x1a1a1a, ORNG = 0xd9822b;
+  var GLOW = new THREE.MeshStandardMaterial({ color: 0xffe0a0, emissive: 0xffa030, emissiveIntensity: 1.3, roughness: 0.4 });
+
+  // wrecked car helper (body + cabin + four flat tires)
+  function wreckCar(x, z, col) {
+    addBox(x, 0.55, z, 2.6, 0.9, 1.5, col);
+    addBox(x - 0.2, 1.25, z, 1.4, 0.6, 1.35, 0x3a3a3a);
+    addCyl(x - 0.9, 0.35, z + 0.82, 0.35, 0.22, TIRE, 0.95);
+    addCyl(x + 0.9, 0.35, z + 0.82, 0.35, 0.22, TIRE, 0.95);
+    addCyl(x - 0.9, 0.35, z - 0.82, 0.35, 0.22, TIRE, 0.95);
+    addCyl(x + 0.9, 0.35, z - 0.82, 0.35, 0.22, TIRE, 0.95);
+  }
+
+  // corrugated steel boundary
+  addWall(0, 2.5, -20, 42, 5, 0.8, MET);
+  addWall(0, 2.5, 20, 42, 5, 0.8, MET);
+  addWall(-20, 2.5, 0, 0.8, 5, 42, MET);
+  addWall(20, 2.5, 0, 0.8, 5, 42, MET);
+
+  // ===== CRANE TOWER (center landmark, hook hanging over a wreck) =====
+  addCyl(-2.2, 3, -12.2, 0.28, 6, RUSTC, 0.6);
+  addCyl(2.2, 3, -12.2, 0.28, 6, RUSTC, 0.6);
+  addCyl(-2.2, 3, -7.8, 0.28, 6, RUSTC, 0.6);
+  addCyl(2.2, 3, -7.8, 0.28, 6, RUSTC, 0.6);
+  addBox(0, 6.6, -10, 6, 0.8, 5, DARK);          // operator platform
+  addBox(1.8, 7.6, -10.8, 2.2, 1.8, 2.2, ORNG);  // cab
+  addBox(0, 7.3, -10, 2.6, 1, 1, RUSTC);         // tower head
+  addBox(0, 7.5, -6.5, 1.4, 0.6, 13, ORNG);      // jib reaching south
+  addCyl(0, 4.4, -2.5, 0.05, 5.8, DARK, 0.8);    // hoist cable
+  addBox(0, 1.25, -2.5, 0.7, 0.7, 0.7, DARK);    // hook block
+  wreckCar(0, -2.5, 0x7a2f2a);                   // the wreck being hoisted
+  wreckCar(-7, 11, 0x2f4a5f);                    // SW sedan
+  wreckCar(13, -13, 0x6a3a2a);                   // NE pickup
+
+  // ===== CONTAINER LANES =====
+  // north row (one stacked pair)
+  addBox(-9, 1.3, -17.2, 6.4, 2.6, 2.6, 0xa83232);
+  addBox(-2, 1.3, -17.2, 6.4, 2.6, 2.6, 0x2e6b8a);
+  addBox(-2, 3.9, -17.2, 6.4, 2.6, 2.6, 0x3f7a3a);
+  addBox(8, 1.3, -17.2, 6.4, 2.6, 2.6, 0x9a7a2e);
+  // west edge
+  addBox(-17.4, 1.3, -4, 2.6, 2.6, 6.4, 0x6b4a2e);
+  // east edge (one stacked pair)
+  addBox(17.4, 1.3, -8, 2.6, 2.6, 6.4, 0x3f7a3a);
+  addBox(17.4, 1.3, 6, 2.6, 2.6, 6.4, 0xa83232);
+  addBox(17.4, 3.9, 6, 2.6, 2.6, 6.4, 0x2e6b8a);
+  // mid-west alley pair (2m shooting lane between them)
+  addBox(-11.2, 1.3, 2, 2.6, 2.6, 6.4, 0x9a7a2e);
+  addBox(-14.6, 1.3, 2, 2.6, 2.6, 6.4, 0x6b4a2e);
+
+  // ===== TIRES / BARRELS / JUNK PILES =====
+  addCyl(15, 0.3, 6, 0.55, 0.3, TIRE, 0.95);     // tire stacks
+  addCyl(15, 0.65, 6, 0.55, 0.3, TIRE, 0.95);
+  addCyl(15, 1.0, 6, 0.55, 0.3, TIRE, 0.95);
+  addCyl(-16, 0.3, 9, 0.55, 0.3, TIRE, 0.95);
+  addCyl(-16, 0.65, 9, 0.55, 0.3, TIRE, 0.95);
+  addCyl(2, 0.3, -18.5, 0.55, 0.3, TIRE, 0.95);
+  addCyl(13, 0.6, -3, 0.42, 1.2, RUSTC, 0.6);    // barrel pairs
+  addCyl(13.9, 0.6, -3.6, 0.42, 1.2, GRAY, 0.5);
+  addCyl(-6, 0.6, 1, 0.42, 1.2, GRAY, 0.5);
+  addCyl(-6.8, 0.6, 1.7, 0.42, 1.2, RUSTC, 0.6);
+  addCyl(18, 0.6, 14, 0.42, 1.2, RUSTC, 0.6);
+  addCyl(18.8, 0.6, 14.5, 0.42, 1.2, GRAY, 0.5);
+  addBox(-5, 0.4, -3, 1.6, 0.8, 1.2, CRATE);     // junk piles
+  addBox(-4.2, 1.15, -3.2, 1, 0.7, 1, RUSTC);
+  addBox(12, 0.4, 9, 1.4, 0.8, 1.4, CRATE);
+  addBox(12.9, 1.1, 9.2, 1, 0.6, 1, 0x8a6a2e);
+
+  // ===== COVER / DETAILS =====
+  addWall(0, 0.65, 6, 4, 1.3, 0.6, MET);         // low steel barrier at spawn side
+  addWall(0, 0.65, -14, 4, 1.3, 0.6, MET);       // second barrier under the crane
+  addWall(-18, 1.25, 16, 0.6, 2.5, 6, BRICK);    // brick shed ruin (SW corner)
+  addWall(-15.6, 1.25, 18.6, 5, 2.5, 0.6, BRICK);
+  // floodlight poles (warm emissive heads, sunset mood)
+  var poleP = [[18.6, 18.6], [-18.6, 18.6], [18.6, -18.6], [-18.6, -18.6], [8, 16], [-8, 16]];
+  for (var pi = 0; pi < poleP.length; pi++) {
+    addCyl(poleP[pi][0], 3.5, poleP[pi][1], 0.14, 7, RUSTC, 0.6);
+    addBox(poleP[pi][0], 7.2, poleP[pi][1], 0.9, 0.4, 0.5, GLOW);
+  }
+
+  player.position.set(0, PLAYER_HEIGHT, 16);
 }
 
-// ----- VERTIGO (CS2) -----
-// Faithful rebuild of the CS2 Vertigo radar layout (top of an unfinished skyscraper).
+// ----- SKYSCRAPER (rooftop construction site) -----
+// Two-level unfinished skyscraper rooftop (upper B/CT side, lower T/bridge
+// side, in the spirit of the classic vertical radar layout).
+function loadSkyscraperMap() {
 // UPPER level (y=3): B Site, Back of B, B Platform, CT Start, Back Door, Mid,
 //   Top of Mid, Back of A, Elevator, T Corridor Up, Side, A Site
 // LOWER level (y=0): T Start, Tunnels, Pit, Connector, Bridge, Ladder,
 //   A Ramp, A Platform  (+ stair shafts: T stairs, B stairs, elevator shaft)
-function loadVertigoMap() {
   scene.background = new THREE.Color(0x9cc3e6);
   scene.fog = new THREE.Fog(0xaacdea, 55, 170);
   setGround(tex.concreteFloor, 0x444444, 0x555555);
@@ -3426,15 +3506,33 @@ function loadVertigoMap() {
     mapGroup.add(tw); sceneObjects.push(tw);
   }
 
+  // ===== v1.20.0 SKYSCRAPER POLISH =====
+  // antenna mast cluster with red beacon tips on the CT roof (visual landmark)
+  var antM = new THREE.MeshStandardMaterial({ color: 0xb0b4b8, roughness: 0.4, metalness: 0.7 });
+  var tipM = new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff2020, emissiveIntensity: 1.4 });
+  var antPos = [[10, -25], [12.5, -23.5], [8.5, -22]];
+  for (var ai = 0; ai < 3; ai++) {
+    var ah = 2.2 + (ai % 3) * 0.7;
+    var mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, ah, 6), antM);
+    mast.position.set(antPos[ai][0], 6.3 + ah / 2, antPos[ai][1]); deco(mast);
+    var tip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), tipM);
+    tip.position.set(antPos[ai][0], 6.3 + ah + 0.08, antPos[ai][1]);
+    mapGroup.add(tip); sceneObjects.push(tip);
+  }
+  // sandbag nest in Back Door (low cover between the two doorways)
+  addBox(10, 3.2, -13.5, 1.6, 0.45, 0.7, BAGS);
+  addBox(10, 3.62, -13.5, 1.2, 0.4, 0.55, BAGS);
+  addBox(9.2, 3.2, -13.5, 0.5, 0.45, 0.6, BAGS);
+
   player.position.set(-6, PLAYER_HEIGHT, 18);
 }
 
-// ----- DUST 2 (CS:GO) -----
-// Classic: T Spawn -> Long A / Mid / B Tunnels
-// A Site with long doors, pit, boxes. B Site with car, platforms
-function loadDustMap() {
-  scene.background = new THREE.Color(0xd4b88c);
-  scene.fog = new THREE.Fog(0xd4b88c, 35, 110);
+// ----- SANDSTORM (desert classic) -----
+// T Spawn -> Long A / Mid / B Tunnels; A Site with long doors and crates,
+// B Site with car and platform - now with heavier dust haze + extra cover.
+function loadSandstormMap() {
+  scene.background = new THREE.Color(0xd2a878);
+  scene.fog = new THREE.Fog(0xd2a878, 28, 90);
   setGround(tex.sandGround, 0x9e8060, 0xb09870);
   var SAND=tex.sand, DARK_SAND=tex.sand, BRICK=tex.brick, CRATE=tex.crate, STONE=tex.concrete, BARREL=0x555555;
 
@@ -3543,12 +3641,26 @@ function loadDustMap() {
   addWall(-15, 2.5, 13, 0.6, 5, 34, tex.sand); // west
   addWall(28, 2.5, 13, 0.6, 5, 34, tex.sand); // east
 
+  // ===== v1.20.0 SANDSTORM POLISH =====
+  // sandbag nest on A site (double-stacked cover)
+  addBox(1.5, 0.45, 5, 1.7, 0.45, 0.7, 0xcfc5a5);
+  addBox(1.5, 0.87, 5, 1.2, 0.4, 0.55, 0xcfc5a5);
+  // broken wall chunk in Mid (splits the sightline, 1m gaps each side)
+  addWall(10, 0.9, 11, 2, 1.8, 0.6, BRICK);
+  // wrecked car on B site
+  addBox(21, 0.55, 10, 2.6, 0.9, 1.5, 0x4a4a4a);
+  addBox(20.8, 1.25, 10, 1.4, 0.6, 1.35, 0x333333);
+  // extra barrels near CT spawn
+  addCyl(6, 0.6, -1, 0.42, 1.2, 0x555555, 0.3);
+  addCyl(6.9, 0.6, -2.2, 0.42, 1.2, 0x7a4b33, 0.6);
+
   player.position.set(0, PLAYER_HEIGHT, 24);
 }
 
-// ----- SHOOT HOUSE (CQB training) -----
-// Close quarters indoor facility with rooms, corridors, doorways
-function loadShootMap() {
+// ----- KILLHOUSE (CQB training) -----
+// Close quarters indoor facility with rooms, corridors, doorways,
+// target boards and ammo caches.
+function loadKillhouseMap() {
   scene.background = new THREE.Color(0x8899aa);
   scene.fog = new THREE.Fog(0x8899aa, 15, 60);
   setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
@@ -3641,11 +3753,36 @@ function loadShootMap() {
   addBox(-14, 0.15, 17, 2, 0.3, 2, WOOD);
   addBox(14, 0.15, 17, 2, 0.3, 2, WOOD);
 
+  // ===== v1.20.0 KILLHOUSE POLISH =====
+  // low metal barrier splitting the arena entrance (step-over cover)
+  addWall(0, 0.4, 1, 4, 0.8, 0.5, METAL);
+  // target boards on posts in the arena (procedural bullseye texture)
+  var tgTex = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#e8e4d8'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#b03030'; c.lineWidth = 6;
+    for (var r = 20; r <= 56; r += 18) { c.beginPath(); c.arc(w/2, h/2, r, 0, Math.PI*2); c.stroke(); }
+    c.fillStyle = '#b03030'; c.beginPath(); c.arc(w/2, h/2, 8, 0, Math.PI*2); c.fill();
+  }, 128, 128);
+  var tgMat = new THREE.MeshBasicMaterial({ map: tgTex });
+  var tgP = [[-6, 8.5], [6, 8.5]];
+  for (var ti = 0; ti < 2; ti++) {
+    addBox(tgP[ti][0], 0.75, tgP[ti][1], 0.12, 1.5, 0.12, 0x333333);
+    var bd = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), tgMat);
+    bd.position.set(tgP[ti][0], 1.6, tgP[ti][1]); bd.rotation.y = Math.PI;
+    mapGroup.add(bd); sceneObjects.push(bd);
+  }
+  // green ammo caches in the back corridor
+  addBox(-2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
+  addBox(2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
+
   player.position.set(0, PLAYER_HEIGHT, -18);
 }
 
-const mapLoaders = [loadTestMap, loadVertigoMap, loadDustMap, loadShootMap];
-loadTestMap(); // Load default map behind menu
+const mapLoaders = [loadScrapyardMap, loadSkyscraperMap, loadSandstormMap, loadKillhouseMap];
+// v1.20.0: spawn facing per map (yaw applied by startGame) - Killhouse spawns
+// 3m from the north boundary, so it must face the hall (+Z), not the wall
+const mapSpawnYaw = [0, 0, 0, Math.PI];
+loadScrapyardMap(); // Load default map behind menu
 
 // ===== FPS GUN MODEL (v1.17.0: one 3D model per shop weapon) =====
 const gunGroup = new THREE.Group();
@@ -3983,8 +4120,8 @@ function startGame(mode) {
   document.getElementById('death-screen').classList.add('hidden');
   document.getElementById('victory-screen').classList.add('hidden');
   document.getElementById('level-screen').classList.add('hidden');
-  yaw = 0; pitch = 0;
-  player.rotation.y = 0; pitchObj.rotation.x = 0;
+  yaw = mapSpawnYaw[currentMap] || 0; pitch = 0;
+  player.rotation.y = yaw; pitchObj.rotation.x = 0;
   if (isMobileDevice) {
     document.getElementById('mobile-controls').style.display = 'block';
     if (!joyStick) initJoystick();
