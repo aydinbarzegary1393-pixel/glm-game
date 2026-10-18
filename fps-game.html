@@ -356,17 +356,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="map-card playable" onclick="selectMap(1)">
 <div class="map-icon">🏙️</div>
 <div class="map-name" data-en="Skyscraper" data-fa="آسمان‌خراش">Skyscraper</div>
-<div class="map-status" data-en="ROOFTOP CONSTRUCTION" data-fa="بام آسمان‌خراش">ROOFTOP CONSTRUCTION</div>
+<div class="map-status" data-en="HIGH-RISE ROOFTOP" data-fa="پشت‌بام آسمان‌خراش">HIGH-RISE ROOFTOP</div>
 </div>
 <div class="map-card playable" onclick="selectMap(2)">
 <div class="map-icon">🏜️</div>
 <div class="map-name" data-en="Sandstorm" data-fa="توفان شن">Sandstorm</div>
-<div class="map-status" data-en="DESERT CLASSIC" data-fa="کلاسیک بیابانی">DESERT CLASSIC</div>
+<div class="map-status" data-en="CAUGHT IN THE STORM" data-fa="گرفتار توفان شن">CAUGHT IN THE STORM</div>
 </div>
 <div class="map-card playable" onclick="selectMap(3)">
 <div class="map-icon">🎯</div>
 <div class="map-name" data-en="Killhouse" data-fa="خانه مرگ">Killhouse</div>
-<div class="map-status" data-en="CLOSE QUARTERS" data-fa="نبرد نزدیک">CLOSE QUARTERS</div>
+<div class="map-status" data-en="THE DEATH HOUSE" data-fa="خانه‌ی مرگ">THE DEATH HOUSE</div>
 </div>
 </div>
 <button class="menu-btn back-btn" onclick="backFromMapMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
@@ -1090,12 +1090,11 @@ initMinimap();
 // sites / labels: bombsite callouts and tiny area names.
 const MAP_RADAR = [
   { levelMode: false, sites: [], labels: [] },
-  { levelMode: true,
-    sites: [{t:'A', x:20, z:6.5}, {t:'B', x:-18, z:-22.5}],
+  { levelMode: false,
+    sites: [],
     labels: [
-      {t:'MID', x:-0.5, z:-10.5}, {t:'CT', x:7, z:-22.5}, {t:'T', x:-6, z:18.5},
-      {t:'TUN', x:-16, z:3.5}, {t:'PIT', x:-21.5, z:-3}, {t:'BRDG', x:9.5, z:5.5},
-      {t:'RAMP', x:9.5, z:10.5}, {t:'CONN', x:-8, z:-4.5}
+      {t:'PAD', x:10, z:-9}, {t:'AC', x:16.5, z:-14.5}, {t:'TANK', x:-13.5, z:-8},
+      {t:'HUT', x:-15, z:12.5}, {t:'BULK', x:0, z:-2}, {t:'ANT', x:17.5, z:-17}
     ]},
   { levelMode: false,
     sites: [{t:'A', x:-5, z:3}, {t:'B', x:19.8, z:12.3}],
@@ -1120,6 +1119,9 @@ function radarRebuild() {
         else if (c.maxY <= 7) roofs.push(c);
       }
       // base-mode maps: ground plane is the olive base, thin decals skipped
+    } else if (h <= 3 && (c.maxX - c.minX) > 30 && (c.maxZ - c.minZ) > 25) {
+      // v1.21.0: huge flat slabs (rooftop floor / killhouse ceiling) are the
+      // base itself, not walls - skip them so the walkable base shows through
     } else {
       structs.push(c);
     }
@@ -2209,8 +2211,9 @@ player.add(pitchObj);
 pitchObj.add(camera);
 camera.position.set(0,0,0);
 
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+// Lights (v1.21.0: named so map loaders can retune them per environment)
+const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambLight);
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(10, 20, 10);
 dirLight.castShadow = true;
@@ -2227,6 +2230,10 @@ scene.add(bulletHoles);
 const sceneObjects = [];
 const colliders = []; // {minX, maxX, minY, maxY, minZ, maxZ}
 let currentMap = 0;
+// v1.21.0: per-map per-frame hook (drifting clouds / blinking beacons /
+// sandstorm dust / flickering killhouse lights). Set by each map loader,
+// receives the frame delta. Cheap no-op when a map needs no animation.
+let mapTickFn = null;
 
 function clearBulletHoles() {
   while(bulletHoles.children.length > 0) {
@@ -2242,7 +2249,9 @@ const mapSpawnZones = [
   // v1.20.0 Scrapyard: open junkyard lanes (container edges + crane legs are
   // handled by the wall-rejection retry in spawnOneEnemy)
   [{x1:-17,z1:-14,x2:-7,z2:-5},{x1:7,z1:-14,x2:17,z2:-5},{x1:-17,z1:0,x2:-6,z2:10},{x1:6,z1:0,x2:17,z2:10},{x1:-3,z1:-16,x2:3,z2:-6}],
-  [{x1:-23,z1:-5,x2:-20,z2:-1},{x1:-18,z1:-4,x2:-14,z2:12},{x1:-12,z1:-7,x2:-9,z2:-2},{x1:-14,z1:14,x2:2,z2:23},{x1:6,z1:4,x2:8,z2:7},{x1:12,z1:20,x2:22,z2:23}],
+  // v1.21.0 Skyscraper: true high-rise rooftop - zones spread across the roof
+  // (helipad/AC farm, water tower quarter, west + east walk, center bulkhead)
+  [{x1:-18,z1:-16,x2:-6,z2:-6},{x1:5,z1:-17,x2:18,z2:-4},{x1:-18,z1:-2,x2:-8,z2:9},{x1:7,z1:1,x2:18,z2:12},{x1:-5,z1:-12,x2:5,z2:-5}],
   [{x1:-14,z1:-3,x2:3,z2:8},{x1:-9,z1:8,x2:0,z2:28},{x1:5,z1:1,x2:12,z2:16},{x1:10,z1:16,x2:26,z2:28},{x1:1,z1:-2,x2:14,z2:6}],
   [{x1:-15,z1:-20,x2:15,z2:20}]
 ];
@@ -2986,6 +2995,8 @@ function getGroundY(px, py, pz) {
 // crane tower with a hanging hook, tire stacks, barrel clusters and
 // floodlight poles. Replaces the old flat test-grid map as the default map.
 function loadScrapyardMap() {
+  ambLight.intensity = 0.5; dirLight.intensity = 0.8;   // restore defaults (v1.21.0)
+  mapTickFn = null;
   scene.background = new THREE.Color(0xc97f3f);
   scene.fog = new THREE.Fog(0xc97f3f, 26, 95);
   // dry cracked dirt ground
@@ -3089,450 +3100,251 @@ function loadScrapyardMap() {
   player.position.set(0, PLAYER_HEIGHT, 16);
 }
 
-// ----- SKYSCRAPER (rooftop construction site) -----
-// Two-level unfinished skyscraper rooftop (upper B/CT side, lower T/bridge
-// side, in the spirit of the classic vertical radar layout).
+// ----- SKYSCRAPER (v1.21.0: true high-rise rooftop) -----
+// You fight on TOP of a skyscraper: open sky, a helipad, AC units, a water
+// tank, an antenna cluster with blinking beacons, a maintenance hut and an
+// elevator bulkhead - and the whole city far BELOW the parapet edge.
 function loadSkyscraperMap() {
-// UPPER level (y=3): B Site, Back of B, B Platform, CT Start, Back Door, Mid,
-//   Top of Mid, Back of A, Elevator, T Corridor Up, Side, A Site
-// LOWER level (y=0): T Start, Tunnels, Pit, Connector, Bridge, Ladder,
-//   A Ramp, A Platform  (+ stair shafts: T stairs, B stairs, elevator shaft)
-  scene.background = new THREE.Color(0x9cc3e6);
-  scene.fog = new THREE.Fog(0xaacdea, 55, 170);
-  setGround(tex.concreteFloor, 0x444444, 0x555555);
+  ambLight.intensity = 0.55; dirLight.intensity = 0.85;
+  scene.background = new THREE.Color(0x8db8e8);
+  scene.fog = new THREE.Fog(0xa9c6e4, 40, 150);
+
+  // ---- rooftop surface (finite slab - the void and the city are below) ----
+  var rfTex = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#6d6f72'; c.fillRect(0, 0, w, h);
+    for (var i = 0; i < 700; i++) { c.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.08) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    for (var j = 0; j < 300; j++) { c.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.05) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    // tar patch repairs
+    for (var p = 0; p < 6; p++) { c.fillStyle = 'rgba(40,38,36,' + (0.25 + Math.random() * 0.2) + ')'; c.beginPath(); c.arc(Math.random() * w, Math.random() * h, 8 + Math.random() * 16, 0, Math.PI * 2); c.fill(); }
+    // panel seams
+    c.strokeStyle = 'rgba(45,45,48,0.6)'; c.lineWidth = 2;
+    for (var g = 0; g <= 4; g++) { c.beginPath(); c.moveTo(g * 64, 0); c.lineTo(g * 64, h); c.stroke(); c.beginPath(); c.moveTo(0, g * 64); c.lineTo(w, g * 64); c.stroke(); }
+  }, 256, 256);
+  rfTex.repeat.set(6, 5.5);
+  var ROOFTOP = new THREE.MeshStandardMaterial({ map: rfTex, roughness: 0.95, metalness: 0.02 });
+  addBox(0, -0.5, 0, 44, 1, 40, ROOFTOP);   // roof slab, top at y=0
 
   // ---- materials ----
-  var WALL = new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), roughness: 0.9, metalness: 0.04, color: 0xd8d4c8 });
-  var ROOFM = new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), roughness: 0.95, color: 0xa8a49a });
-  var ORANGE = 0xd9822b, YELLOW = 0xd9a52e, RUST = 0x7a4b33, BLUEB = 0x3d6b8a;
-  var METWALL = tex.metalWall, DARK = tex.darkMetal, CRATE = tex.crate;
-  var BAGS = new THREE.MeshStandardMaterial({ color: 0xcfc5a5, roughness: 1 });
+  var CONC = new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), roughness: 0.9, color: 0xcfcabd });
+  var METW = tex.metalWall, DARK = tex.darkMetal, CRATE = tex.crate, BRICK = tex.brick;
+  var RUST = 0x7a4b33, BAGS = new THREE.MeshStandardMaterial({ color: 0xcfc5a5, roughness: 1 });
   var PIPE = new THREE.MeshStandardMaterial({ color: 0x9aa2a8, roughness: 0.4, metalness: 0.7 });
+  var GLASS = new THREE.MeshStandardMaterial({ color: 0x9fd4e8, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.55, emissive: 0x224455, emissiveIntensity: 0.25 });
+  var GREENL = new THREE.MeshStandardMaterial({ color: 0x9fe8b0, emissive: 0x2fbf5f, emissiveIntensity: 1.2 });
 
-  // upper floor: light tan concrete tiles (radar olive tone)
-  var upTex = makeCanvasTex(function(c, w, h) {
-    c.fillStyle = '#b5ae9d'; c.fillRect(0, 0, w, h);
-    for (var i = 0; i < 800; i++) { c.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.06) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    for (var j = 0; j < 300; j++) { c.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.07) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    c.strokeStyle = 'rgba(96,90,74,0.5)'; c.lineWidth = 2;
-    for (var g = 0; g <= 4; g++) { c.beginPath(); c.moveTo(g * 64, 0); c.lineTo(g * 64, h); c.stroke(); c.beginPath(); c.moveTo(0, g * 64); c.lineTo(w, g * 64); c.stroke(); }
+  // helper: add a decorative mesh (no collider, but bullet-hittable)
+  function deco(mesh) { mesh.castShadow = true; mesh.receiveShadow = true; mapGroup.add(mesh); sceneObjects.push(mesh); return mesh; }
+
+  // ---- parapet (1.4m: see the city over it, but nobody climbs out) ----
+  addWall(0, 0.7, -19.75, 44, 1.4, 0.5, CONC);
+  addWall(0, 0.7, 19.75, 44, 1.4, 0.5, CONC);
+  addWall(-21.75, 0.7, 0, 0.5, 1.4, 40, CONC);
+  addWall(21.75, 0.7, 0, 0.5, 1.4, 40, CONC);
+
+  // ---- THE CITY FAR BELOW (visual only, every tower top is UNDER the roof) ----
+  var winTex = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#5a6672'; c.fillRect(0, 0, w, h);
+    for (var y = 6; y < h - 6; y += 10) for (var x = 5; x < w - 5; x += 9) {
+      c.fillStyle = Math.random() < 0.24 ? 'rgba(255,226,158,0.95)' : 'rgba(24,32,42,0.95)';
+      c.fillRect(x, y, 5, 6);
+    }
+  }, 128, 128);
+  winTex.repeat.set(3, 6);
+  // [x, z, width, height, topY] - tuned to the parapet sight-line:
+  // near neighbors rise ABOVE our roof (adjacent high-rises), mid ring sits
+  // at the skyline, low blocks in the gaps show the drop, far ring is haze
+  var cityTowers = [
+    [-38, -14, 16, 52, 6], [10, -48, 18, 46, 4], [44, 8, 15, 55, 7], [-12, 52, 16, 48, 5],
+    [-58, -44, 18, 40, 0], [-64, 22, 16, 34, -1], [2, -78, 16, 36, 1],
+    [62, -40, 17, 38, 2], [76, 24, 19, 40, 0], [40, 62, 16, 34, -2],
+    [-30, 30, 13, 22, -9], [26, 28, 12, 20, -11], [-20, -44, 14, 24, -7],
+    [-100, -60, 22, 80, 12], [98, -48, 18, 70, 8], [116, 30, 24, 88, 14],
+    [-112, 28, 20, 72, 9], [8, -108, 20, 76, 10], [-70, 84, 18, 64, 6], [72, 88, 20, 70, 8]
+  ];
+  var cityMats = [new THREE.MeshStandardMaterial({ map: winTex, color: 0x93a9bc, roughness: 1 }),
+                  new THREE.MeshStandardMaterial({ map: winTex, color: 0xa3b6c6, roughness: 1 }),
+                  new THREE.MeshStandardMaterial({ map: winTex, color: 0x8ba0b3, roughness: 1 })];
+  for (var si = 0; si < cityTowers.length; si++) {
+    var st = cityTowers[si];
+    var tw = new THREE.Mesh(new THREE.BoxGeometry(st[2], st[3], st[2]), cityMats[si % 3]);
+    tw.position.set(st[0], st[4] - st[3] / 2, st[1]);   // top ends BELOW the roof
+    deco(tw);
+  }
+  var haze = new THREE.Mesh(new THREE.PlaneGeometry(520, 520), new THREE.MeshBasicMaterial({ color: 0x55647a }));
+  haze.rotation.x = -Math.PI / 2; haze.position.y = -40; deco(haze);
+
+  // ---- sun + drifting clouds ----
+  var sun = new THREE.Mesh(new THREE.CircleGeometry(11, 24), new THREE.MeshBasicMaterial({ color: 0xfff3d0, fog: false }));
+  sun.position.set(150, 58, -95); sun.lookAt(0, 0, 0); deco(sun);
+  var clouds = [];
+  var cloudSpots = [[-60, 30, -70, 26], [30, 34, -90, 30], [80, 28, 10, 22], [60, 36, 55, 28], [-30, 32, 70, 24], [-90, 30, 30, 20]];
+  for (var ci = 0; ci < cloudSpots.length; ci++) {
+    var cs = cloudSpots[ci];
+    var cl = new THREE.Mesh(new THREE.PlaneGeometry(cs[3], cs[3] * 0.42),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
+    cl.position.set(cs[0], cs[1], cs[2]); cl.rotation.x = -Math.PI / 2; deco(cl);
+    clouds.push(cl);
+  }
+
+  // =================== HELIPAD (E side landmark) ===================
+  var pad = new THREE.Mesh(new THREE.CircleGeometry(5.5, 40), new THREE.MeshStandardMaterial({ color: 0x2e3134, roughness: 0.95 }));
+  pad.rotation.x = -Math.PI / 2; pad.position.set(10, 0.02, -9); pad.receiveShadow = true; deco(pad);
+  var ring = new THREE.Mesh(new THREE.RingGeometry(5.0, 5.4, 40), new THREE.MeshBasicMaterial({ color: 0xe8e8e0 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(10, 0.035, -9); deco(ring);
+  var hTex = makeCanvasTex(function(c, w, h) {
+    c.clearRect(0, 0, w, h); c.strokeStyle = '#f2f2ea'; c.lineWidth = 26; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(70, 30); c.lineTo(70, 198); c.stroke();
+    c.beginPath(); c.moveTo(186, 30); c.lineTo(186, 198); c.stroke();
+    c.beginPath(); c.moveTo(70, 114); c.lineTo(186, 114); c.stroke();
   }, 256, 256);
-  upTex.repeat.set(5, 5);
-  var UPFLOOR = new THREE.MeshStandardMaterial({ map: upTex, roughness: 0.92 });
+  var hDecal = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: hTex, transparent: true }));
+  hDecal.rotation.x = -Math.PI / 2; hDecal.position.set(10, 0.05, -9); deco(hDecal);
+  var padLights = [];
+  for (var li = 0; li < 8; li++) {
+    var ang = li * Math.PI / 4;
+    var pl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.2), GREENL.clone());
+    pl.position.set(10 + Math.cos(ang) * 6.1, 0.07, -9 + Math.sin(ang) * 6.1); deco(pl);
+    padLights.push(pl);
+  }
+  // wind sock pole at the pad edge
+  addCyl(14.8, 1.1, -4.2, 0.06, 2.2, METW, 0.5);
+  var sock = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 8), new THREE.MeshStandardMaterial({ color: 0xe07020, roughness: 0.8 }));
+  sock.position.set(15.25, 2.0, -4.2); sock.rotation.z = Math.PI / 2; deco(sock);
 
-  // lower floor: red-brown oxide concrete (radar maroon lower level)
-  var lwTex = makeCanvasTex(function(c, w, h) {
-    c.fillStyle = '#8a4a3a'; c.fillRect(0, 0, w, h);
-    for (var i = 0; i < 800; i++) { c.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.08) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    for (var j = 0; j < 250; j++) { c.fillStyle = 'rgba(255,220,200,' + (Math.random() * 0.05) + ')'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    c.strokeStyle = 'rgba(80,40,30,0.55)'; c.lineWidth = 2;
-    for (var g = 0; g <= 4; g++) { c.beginPath(); c.moveTo(g * 64, 0); c.lineTo(g * 64, h); c.stroke(); c.beginPath(); c.moveTo(0, g * 64); c.lineTo(w, g * 64); c.stroke(); }
-  }, 256, 256);
-  lwTex.repeat.set(5, 5);
-  var LWFLOOR = new THREE.MeshStandardMaterial({ map: lwTex, roughness: 0.95 });
+  // =================== AC UNIT FARM (NE corner + E edge) ===================
+  var acSpots = [[13.5, -16.5], [16.5, -16.5], [19.2, -16.2], [14, -13.2], [17, -13.2], [18.5, -5], [14.5, -3]];
+  for (var ai = 0; ai < acSpots.length; ai++) {
+    var ap = acSpots[ai];
+    addBox(ap[0], 0.75, ap[1], 2.2, 1.5, 1.7, METW);
+    addCyl(ap[0], 1.56, ap[1], 0.55, 0.1, DARK, 0.6);   // fan housing
+    addCyl(ap[0], 1.62, ap[1], 0.18, 0.06, 0x33383d, 0.4);
+  }
 
-  // hazard stripe decal
-  var hzTex = makeCanvasTex(function(c, w, h) {
+  // =================== WATER TOWER (W landmark) ===================
+  var wtX = -13.5, wtZ = -8;
+  addCyl(wtX - 1.4, 1.6, wtZ - 1.4, 0.14, 3.2, RUST, 0.6);
+  addCyl(wtX + 1.4, 1.6, wtZ - 1.4, 0.14, 3.2, RUST, 0.6);
+  addCyl(wtX - 1.4, 1.6, wtZ + 1.4, 0.14, 3.2, RUST, 0.6);
+  addCyl(wtX + 1.4, 1.6, wtZ + 1.4, 0.14, 3.2, RUST, 0.6);
+  addCyl(wtX, 4.4, wtZ, 2.2, 2.8, 0x8a4a3a, 0.75);      // tank
+  var cone = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 2.25, 1.0, 16), new THREE.MeshStandardMaterial({ color: 0x6d3a2c, roughness: 0.8 }));
+  cone.position.set(wtX, 6.3, wtZ); deco(cone);
+  addBox(wtX, 7.0, wtZ, 0.16, 0.5, 0.16, RUST);          // little finial
+
+  // =================== MAINTENANCE HUT (SW, walk-in cover) ===================
+  addWall(-17.25, 1.4, 12.5, 0.5, 2.8, 4, BRICK);        // back (west)
+  addWall(-15, 1.4, 10.75, 5, 2.8, 0.5, BRICK);          // north side
+  addWall(-15, 1.4, 14.25, 5, 2.8, 0.5, BRICK);          // south side
+  addWall(-12.75, 1.4, 11.4, 0.5, 2.8, 1.5, BRICK);      // front east (door gap z 12.1..13.4)
+  addWall(-12.75, 1.4, 13.9, 0.5, 2.8, 0.8, BRICK);
+  addWall(-12.75, 2.45, 12.65, 0.5, 0.7, 1.7, BRICK);    // lintel
+  addWall(-15, 2.95, 12.5, 5.6, 0.35, 4.6, DARK);        // hut roof
+  addWall(-16.4, 0.9, 12.5, 0.9, 1.8, 3, METW);          // shelf inside
+  addBox(-11.2, 0.75, 12.5, 1.5, 1.5, 1.5, CRATE);       // step crate by the door
+  // satellite dish on the hut roof (visual)
+  var dish = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.12, 20), new THREE.MeshStandardMaterial({ color: 0xd8dcd8, roughness: 0.5 }));
+  dish.position.set(-16.2, 3.9, 13.3); dish.rotation.z = 0.9; dish.rotation.y = 0.5; deco(dish);
+  addCyl(-16.2, 3.45, 13.3, 0.07, 0.7, DARK, 0.5);
+
+  // =================== ELEVATOR BULKHEAD (center landmark) ===================
+  addBox(0, 1.5, -2, 3.8, 3, 3.2, DARK);
+  var hzTex2 = makeCanvasTex(function(c, w, h) {
     c.fillStyle = '#d9a52e'; c.fillRect(0, 0, w, h);
     c.fillStyle = '#26231d';
     for (var i = -2; i < 10; i++) { c.save(); c.translate(i * 32, 0); c.rotate(Math.PI / 4); c.fillRect(0, -60, 16, 240); c.restore(); }
   }, 128, 128);
-  var HZMAT = new THREE.MeshBasicMaterial({ map: hzTex, transparent: true, opacity: 0.85, depthWrite: false });
+  var hz2 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.5), new THREE.MeshBasicMaterial({ map: hzTex2 }));
+  hz2.position.set(0, 0.6, -0.39); deco(hz2);
+  var bkDoor = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.2), new THREE.MeshStandardMaterial({ color: 0x1d2126, roughness: 0.6 }));
+  bkDoor.position.set(0, 1.5, -0.36); deco(bkDoor);
+  addBox(2.3, 2.9, -2, 0.5, 0.5, 0.5, 0xa83232);         // red exit light box
 
-  // ---- helpers ----
-  function deco(mesh) { mesh.castShadow = true; mesh.receiveShadow = true; mapGroup.add(mesh); sceneObjects.push(mesh); return mesh; }
-  function slab(x1, z1, x2, z2, upper) {
-    return addWall((x1 + x2) / 2, upper ? 2.85 : -0.13, (z1 + z2) / 2, Math.abs(x2 - x1), 0.3, Math.abs(z2 - z1), upper ? UPFLOOR : LWFLOOR);
-  }
-  function roof(x1, z1, x2, z2) {
-    addWall((x1 + x2) / 2, 6.15, (z1 + z2) / 2, Math.abs(x2 - x1), 0.3, Math.abs(z2 - z1), ROOFM);
-  }
-  // wall along constant X spanning z1..z2 ; lvl 0=lower(0..2.7) 1=upper(3..6) 2=full(0..6)
-  function wX(x, z1, z2, lvl) {
-    var h = lvl === 2 ? 6 : (lvl === 1 ? 3 : 2.7);
-    var yc = lvl === 2 ? 3 : (lvl === 1 ? 4.5 : 1.35);
-    return addWall(x, yc, (z1 + z2) / 2, 0.5, h, Math.abs(z2 - z1), WALL);
-  }
-  function wZ(z, x1, x2, lvl) {
-    var h = lvl === 2 ? 6 : (lvl === 1 ? 3 : 2.7);
-    var yc = lvl === 2 ? 3 : (lvl === 1 ? 4.5 : 1.35);
-    return addWall((x1 + x2) / 2, yc, z, Math.abs(x2 - x1), h, 0.5, WALL);
-  }
-  // stairs climbing 0 -> 3 (10 steps, 0.3 rise); run along Z from z0 toward dir
-  function stairZ(x, w, z0, dir, d) {
-    for (var i = 0; i < 10; i++) {
-      var top = (i + 1) * 0.3;
-      addWall(x, top - 0.15, z0 + dir * (i + 0.5) * d, w, 0.3, d, WALL);
-    }
-  }
-  function stairX(z, d_, x0, dir, d) {
-    for (var i = 0; i < 10; i++) {
-      var top = (i + 1) * 0.3;
-      addWall(x0 + dir * (i + 0.5) * d, top - 0.15, z, d, 0.3, d_, WALL);
-    }
-  }
-  function stripe(x, z, y, w, d) {
-    var m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), HZMAT);
-    m.rotation.x = -Math.PI / 2; m.position.set(x, y, z);
-    mapGroup.add(m);
-  }
-  function siteDecal(letter, x, z, y, size) {
-    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
-    var c = cv.getContext('2d');
-    c.strokeStyle = '#e8961e'; c.lineWidth = 14; c.strokeRect(14, 14, 228, 228);
-    c.font = 'bold 150px Arial'; c.fillStyle = 'rgba(232,150,30,0.85)';
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(letter, 128, 134);
-    var t = new THREE.CanvasTexture(cv);
-    var m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.8, depthWrite: false }));
-    m.rotation.x = -Math.PI / 2; m.position.set(x, y, z);
-    mapGroup.add(m);
-  }
-
-  // =================== UPPER LEVEL ===================
-
-  // ====== B SITE (NW rooftop, crane + bombsite B) ======
-  slab(-24, -27, -12, -18, true);
-  wZ(-27.5, -24, -12, 2);            // north
-  wX(-24.5, -27, -18, 2);            // west (perimeter)
-  wZ(-18.5, -21, -12, 2);            // south (gap x[-24,-21] = B stairs top)
-  wX(-12, -27, -25, 1);              // east to Back of B (door z[-25,-21])
-  wX(-12, -21, -18, 1);
-  // crane
-  addCyl(-15, 9, -24, 0.4, 12, ORANGE, 0.5);
-  addBox(-15, 15.4, -24, 1.2, 1, 1.2, DARK);
-  addBox(-8, 15, -24, 14, 0.5, 0.7, ORANGE);
-  addBox(-18.5, 15, -24, 5, 0.5, 0.7, ORANGE);
-  var cb1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 10.5, 6), DARK);
-  cb1.position.set(-8, 16.2, -24); cb1.rotation.z = 0.24; deco(cb1);
-  var cb2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 5.5, 6), DARK);
-  cb2.position.set(-18, 16.2, -24); cb2.rotation.z = -0.5; deco(cb2);
-  var hkc = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 8, 6), DARK);
-  hkc.position.set(-6, 11, -24); deco(hkc);
-  var hkb = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), DARK);
-  hkb.position.set(-6, 6.7, -24); deco(hkb);
-  siteDecal('B', -18, -22.5, 3.02, 5);
-  addBox(-21, 3.75, -20.5, 1.5, 1.5, 1.5, CRATE);
-  addBox(-19.4, 3.75, -20.5, 1.5, 1.5, 1.5, CRATE);
-  addBox(-20.2, 5.15, -20.5, 1.2, 1.2, 1.2, CRATE);
-  addBox(-14, 3.5, -20, 1, 1, 1, CRATE);
-  addBox(-22, 3.5, -25, 1.2, 1.2, 1.2, CRATE);
-  addCyl(-13.5, 3.55, -26, 0.4, 1.1, RUST, 0.6);
-  addCyl(-13.5, 3.55, -24.8, 0.4, 1.1, RUST, 0.6);
-  stripe(-22.5, -18.7, 3.02, 3.6, 0.9);
-
-  // ====== BACK OF B (corridor between B and CT) ======
-  slab(-12, -28, -1, -19, true);
-  wZ(-28.5, -12, 15, 2);             // north perimeter (Back of B + CT)
-  wX(-1, -28, -25, 1);               // east to CT (door z[-25,-21])
-  wX(-1, -21, -19, 1);
-  wZ(-19.5, -12, -8, 1);             // south to B Platform (door x[-8,-4])
-  wZ(-19.5, -4, -1, 1);
-  addBox(-4, 3.5, -26, 1.2, 1.2, 1.2, CRATE);
-  addBox(-9, 3.5, -22, 1, 1, 1, CRATE);
-  roof(-12, -28, -1, -19);
-
-  // ====== B PLATFORM ======
-  slab(-8, -19, -1, -13, true);
-  wX(-8, -19, -13, 1);               // west
-  wX(-1, -17, -13, 1);               // east (door z[-19,-17] to CT open)
-  roof(-8, -19, -1, -13);
-
-  // ====== CT START ======
-  slab(-1, -28, 15, -17, true);
-  wX(15, -28, -17, 2);               // east
-  wZ(-17.5, -1, 8, 1);               // south (gap x[8,13] = Back Door)
-  wZ(-17.5, 13, 15, 1);
-  addBox(6, 3.8, -24, 3, 1.6, 2.2, DARK);
-  addBox(1, 3.2, -20, 1.2, 0.4, 0.6, BAGS);
-  addBox(2.2, 3.2, -20, 1.2, 0.4, 0.6, BAGS);
-  addBox(1.6, 3.6, -20, 1.2, 0.4, 0.6, BAGS);
-  addBox(12, 3.5, -26, 1.4, 1.4, 1.4, CRATE);
-  addBox(12, 4.9, -26, 1.1, 1.1, 1.1, CRATE);
-  roof(-1, -28, 15, -17);
-
-  // ====== BACK DOOR ======
-  slab(7, -17.5, 13, -6, true);
-  wX(7, -17, -12, 1);                // west to Mid (door z[-12,-9])
-  wX(7, -9, -6, 1);
-  wX(13, -17, -11, 1);               // east to Back of A (door z[-11,-8])
-  wX(13, -8, -6, 1);
-  addCyl(11.5, 3.55, -9, 0.4, 1.1, BLUEB, 0.5);
-  roof(7, -17.5, 13, -6);
-
-  // ====== MID (central hall) ======
-  slab(-8, -13, 7, -8, true);
-  wZ(-13.5, -8, -6, 1);              // north to B Platform (door x[-6,-2])
-  wZ(-13.5, -2, 7, 1);
-  wZ(-8.5, -8, -7, 2);               // south: stairs gap x[-7,-4], ToM gap x[3,6]
-  wZ(-8.5, -4, 3, 2);
-  wZ(-8.5, 6, 7, 2);
-  addCyl(-4, 4.5, -10.5, 0.35, 3, WALL, 0.8);
-  addCyl(2, 4.5, -10.5, 0.35, 3, WALL, 0.8);
-  addBox(-6.5, 3.5, -12, 1, 1, 1, CRATE);
-  addBox(5.5, 3.5, -9.5, 1.2, 1.2, 1.2, CRATE);
-
-  // ====== TOP OF MID ======
-  slab(2, -8, 7, -1, true);
-  wX(2, -8, -1, 2);                  // west
-  wX(7, -8, -6, 2);                  // east
-  addBox(6.2, 3.15, -4, 0.25, 0.3, 5, PIPE);
-  roof(2, -8, 7, -1);
-
-  // ====== BACK OF A ======
-  slab(13, -12, 24, -6, true);
-  wZ(-12.5, 13, 24, 2);              // north
-  wX(24, -12, -6, 1);                // east
-  wZ(-6.5, 13, 16, 1);               // south: gap x[16,20] to Elevator, gap x[21,23] to A corridor
-  wZ(-6.5, 20, 21, 1);
-  wZ(-6.5, 23, 24, 1);
-  addBox(22, 3.5, -10, 1.3, 1.3, 1.3, CRATE);
-  addBox(22, 4.8, -10, 1, 1, 1, CRATE);
-  addBox(14, 3.15, -11.2, 4, 0.3, 0.25, PIPE);
-  roof(13, -12, 24, -6);
-
-  // ====== ELEVATOR ROOM ======
-  slab(2, -6, 20, -1, true);
-  wX(2, -6, -1, 2);                  // west
-  wZ(-1, 2, 5, 2);                   // south (gap x[5,8] = elevator shaft stairs)
-  wZ(-1, 8, 20, 2);
-  wX(20, -6, 2, 2);                  // east (also wall of A-site corridor)
-  addCyl(15.2, 5.25, -4.8, 0.14, 4.5, METWALL, 0.3);
-  addCyl(18.2, 5.25, -4.8, 0.14, 4.5, METWALL, 0.3);
-  addCyl(15.2, 5.25, -2.2, 0.14, 4.5, METWALL, 0.3);
-  addCyl(18.2, 5.25, -2.2, 0.14, 4.5, METWALL, 0.3);
-  var evb = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.35, 0.35), DARK);
-  evb.position.set(16.7, 7.4, -3.5); deco(evb);
-  var ec1 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 3.8, 6), DARK);
-  ec1.position.set(16.2, 5.3, -3.2); deco(ec1);
-  var ec2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 3.8, 6), DARK);
-  ec2.position.set(17.1, 5.3, -3.8); deco(ec2);
-  addBox(16.7, 4, -3.5, 2.4, 2, 2.2, DARK);
-
-  // ====== A-SITE CORRIDOR (Back of A -> A Site, east side) ======
-  slab(20, -6, 23, 2, true);
-  wX(23, -6, 2, 1);                  // east
-  roof(20, -6, 23, 2);
-
-  // ====== A SITE (E side, bombsite A) ======
-  slab(14, 2, 25, 11, true);
-  wZ(2, 14, 20, 1);                  // north (gap x[20,23] = A corridor)
-  wZ(2, 23, 25, 1);
-  wZ(11, 14, 17, 1);                 // south (gap x[17,20] = stairs to A Platform)
-  wZ(11, 20, 25, 1);
-  wX(14, 2, 4.5, 1);                 // west (doors: z[4.5,7] bridge stairs, z[8,10] ramp landing)
-  wX(14, 7, 8, 1);
-  wX(14, 10, 11, 1);
-  siteDecal('A', 20, 6.5, 3.02, 6);
-  addBox(17.5, 3.75, 4, 1.5, 1.5, 1.5, CRATE);
-  addBox(19.1, 3.75, 4, 1.5, 1.5, 1.5, CRATE);
-  addBox(18.3, 5.15, 4, 1.2, 1.2, 1.2, CRATE);
-  addBox(23, 3.5, 9, 1.2, 1.2, 1.2, CRATE);
-  addBox(24.2, 3.15, 5, 0.25, 0.3, 5, PIPE);
-  addCyl(15.5, 3.55, 9.5, 0.4, 1.1, RUST, 0.6);
-  stripe(18.5, 11.4, 3.02, 3.6, 0.9);
-
-  // =================== LOWER LEVEL ===================
-
-  // ====== T START (S spawn, double staircase up to T Corridor) ======
-  slab(-16, 13, 4, 24, false);
-  wZ(13.5, -7, -2, 0);               // north (gaps: x[-16,-7] Tunnels+T stairs, x[-2,2] Ladder)
-  wZ(13.5, 2, 4, 0);
-  wX(-16, 13, 24, 2);                // west
-  wX(4, 13, 19, 0);                  // east (door z[19,22] to A Platform)
-  wX(4, 22, 24, 0);
-  addBox(-13, 0.25, 21, 1, 0.5, 0.6, BAGS);
-  addBox(-11.8, 0.25, 21, 1, 0.5, 0.6, BAGS);
-  addBox(-12.4, 0.75, 21, 1, 0.5, 0.6, BAGS);
-  addBox(-2, 0.15, 22, 4, 0.3, 0.3, PIPE);
-  addBox(-2, 0.45, 22, 4, 0.3, 0.3, PIPE);
-  addBox(1, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
-  addCyl(-14.5, 0.55, 16, 0.4, 1.1, RUST, 0.6);
-  // double staircase shaft (two lanes + divider), rises north into T Corridor
-  slab(-13, 3, -7, 13, false);
-  stairZ(-11.5, 3, 12.45, -1, 0.9);
-  stairZ(-8.5, 3, 12.45, -1, 0.9);
-  wX(-10, 3, 13, 2);                 // lane divider
-  wX(-13, 3, 13, 2);                 // shaft west
-  wX(-7, 3, 13, 2);                  // shaft east
-  roof(-13, 3, -7, 13);
-
-  // ====== TUNNELS (lower, west vertical corridor) ======
-  slab(-19, -6, -13, 13, false);
-  wX(-19, -6, -5, 0);                // west to Pit (door z[-5,-1])
-  wX(-19, -1, 13, 0);
-  wX(-13, -6, -5, 0);                // east to Connector (door z[-5,-2])
-  wX(-13, -2, 3, 0);
-  wZ(-6, -19, -13, 0);               // north
-  wZ(13, -19, -16, 0);               // south (gap x[-16,-13] to T Start)
-  addBox(-18.3, 0.15, 3, 0.3, 0.3, 7, PIPE);
-  addBox(-18.3, 0.45, 3, 0.3, 0.3, 7, PIPE);
-  addCyl(-14.5, 0.55, 9, 0.4, 1.1, BLUEB, 0.5);
-  addBox(-15, 0.5, -4, 1, 1, 1, CRATE);
-
-  // ====== PIT (lower, far west) ======
-  slab(-24, -6, -19, 0, false);
-  wZ(-6.5, -21, -19, 0);             // north (gap x[-24,-21] = B stairs landing)
-  wZ(0.5, -24, -19, 0);              // south
-  addBox(-21.5, 0.4, -3, 3, 0.8, 2.5, WALL);
-
-  // ====== B STAIRS (B Site -> Pit shaft) ======
-  stairZ(-22.5, 3, -8, -1, 0.95);
-  slab(-24, -8, -21, -6, false);
-  wX(-21, -18, -6, 2);               // shaft east
-  roof(-24, -18, -21, -6);
-
-  // ====== CONNECTOR (lower, under Mid) ======
-  slab(-13, -8, -3, -1, false);
-  wZ(-8.5, -13, -8, 0);              // north
-  wZ(-1.5, -13, -3, 0);              // south
-  wX(-13, -8, -6, 0);                // west corner (door z[-5,-2] shared with Tunnels)
-  wX(-3, -8, -1, 0);                 // east
-  addBox(-11, 0.5, -6.5, 1.2, 1.2, 1.2, CRATE);
-  addBox(-9.6, 0.5, -6.5, 1.2, 1.2, 1.2, CRATE);
-  addBox(-10.3, 1.7, -6.5, 1, 1, 1, CRATE);
-  addCyl(-11.5, 0.55, -2.2, 0.4, 1.1, RUST, 0.6);
-  // stairs up to Mid (gap x[-7,-4] in Mid south wall)
-  stairZ(-5.5, 3, -1.6, -1, 0.64);
-
-  // ====== ELEVATOR SHAFT STAIRS (Elevator -> Bridge) ======
-  stairZ(6.5, 3, 2.6, -1, 0.36);
-  wX(5, -1, 3, 2);                   // shaft west
-  wX(8, -1, 3, 2);                   // shaft east
-
-  // ====== BRIDGE (lower, Elevator -> A Site) ======
-  slab(5, 3, 14, 8, false);
-  wZ(3, 8, 14, 0);                   // north (gap x[5,8] = shaft landing)
-  wZ(8, 5, 14, 2);                   // south / ramp-landing north (full height)
-  stairX(5.75, 2.5, 8, 1, 0.6);      // stairs rising east into A Site (door z[4.5,7])
-  addBox(9, 0.15, 7.4, 4, 0.3, 0.3, PIPE);
-  stripe(9.5, 3.4, 0.02, 3, 0.8);
-  roof(5, 3, 14, 8);
-
-  // ====== A RAMP LANDING (upper, Side -> A Site west door) ======
-  slab(5, 8, 14, 12.9, true);
-  wX(5, 10, 19, 2);                  // west (door z[8,10] from Side, then ramp west wall)
-  wX(14, 11, 13, 1);                 // east (south of A Site door)
-  wZ(13, 9, 14, 1);                  // south edge
-  roof(5, 8, 14, 13);
-
-  // ====== T CORRIDOR UP (upper corridor above Connector/Tunnels) ======
-  slab(-15, -1, 5, 3, true);
-  wZ(3.5, -15, -13, 1);              // south (gaps x[-13,-7] T stairs, x[-2,2] Ladder, x[2,5] Side)
-  wZ(3.5, -7, -2, 1);
-  wZ(-1.5, -3, 2, 1);                // north (dead block east of Connector)
-  wX(-15, -1, 3, 1);                 // west
-  wX(5, -1, 3, 1);                   // east
-  roof(-15, -1, 5, 3);
-
-  // ====== SIDE (upper walkway along east of Ladder) ======
-  slab(2, 3, 5, 13, true);
-  wX(5, 3, 8, 2);                    // east (door z[8,10] to ramp landing)
-  wX(5, 10, 19, 2);
-  wZ(13, 2, 5, 1);                   // south end
-  var sc1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3, 8), METWALL);
-  sc1.position.set(4.5, 1.5, 13.4); deco(sc1);
-  roof(2, 3, 5, 13);
-
-  // ====== LADDER (steep shaft T Corridor -> T Start) ======
-  slab(-2, 3, 2, 5, true);           // top landing
-  stairZ(0, 4, 8.5, -1, 0.35);
-  slab(-2, 8.5, 2, 13, false);       // bottom landing
-  wX(-2, 3, 13, 2);                  // shaft west
-  wX(2, 3, 13, 2);                   // shaft east
-  var rungMat = new THREE.MeshStandardMaterial({ color: 0xb8bcbf, roughness: 0.4, metalness: 0.7 });
-  for (var ri = 0; ri < 9; ri++) {
-    var rung = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.7), rungMat);
-    rung.position.set(1.55, 3.3 + ri * 0.32, 6.5);
-    mapGroup.add(rung); sceneObjects.push(rung);
-  }
-  var rl1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.9, 0.06), rungMat);
-  rl1.position.set(1.55, 4.6, 6.1); deco(rl1);
-  var rl2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.9, 0.06), rungMat);
-  rl2.position.set(1.55, 4.6, 6.9); deco(rl2);
-  roof(-2, 3, 2, 13);
-
-  // ====== A RAMP (lower stairs T-Start side -> A Site) ======
-  stairZ(7, 4, 18.95, -1, 0.6);
-  wX(9, 11, 19, 2);                  // ramp east
-
-  // ====== A SITE STAIRS (A Site -> A Platform, east shaft) ======
-  stairZ(18.5, 3, 18.2, -1, 0.72);
-  wX(17, 11, 19, 2);                 // shaft west
-  wX(20, 11, 19, 2);                 // shaft east
-
-  // ====== A PLATFORM (lower, S of A Site + scaffolding) ======
-  slab(4, 19, 23, 24, false);
-  wZ(19, 4, 5, 0);                   // north (gaps x[5,9] ramp, x[17,20] stairs)
-  wZ(19, 9, 17, 0);
-  wZ(19, 20, 23, 0);
-  wX(4, 22, 24, 0);                  // west (door z[19,22] to T Start)
-  wX(23, 19, 24, 0);                 // east
-  var skm = new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.6, metalness: 0.4 });
-  var skPos = [[5.2, 20.2], [5.2, 22.8], [7.8, 20.2], [7.8, 22.8]];
-  for (var sk = 0; sk < 4; sk++) {
-    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 5, 8), skm);
-    pole.position.set(skPos[sk][0], 2.5, skPos[sk][1]); deco(pole);
-  }
-  var deck = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 3), skm);
-  deck.position.set(6.5, 4.9, 21.5); deco(deck);
-  var deck2 = new THREE.Mesh(new THREE.BoxGeometry(3, 0.08, 0.5), skm);
-  deck2.position.set(6.5, 2.5, 21.5); deco(deck2);
-  var rp1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6, 8), skm);
-  rp1.position.set(9.4, 3, 14); deco(rp1);
-  var rp2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6, 8), skm);
-  rp2.position.set(9.4, 3, 17); deco(rp2);
-  var rpl = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 3.4), skm);
-  rpl.position.set(9.4, 5.8, 15.5); deco(rpl);
-  stripe(13, 19.5, 0.02, 4, 0.9);
-  addBox(15, 0.15, 23, 5, 0.3, 0.3, PIPE);
-  addBox(20, 0.75, 21, 1.5, 1.5, 1.5, CRATE);
-
-  // ====== EXTERIOR PERIMETER (remaining sides) ======
-  wX(25, -28, 11, 2);                // far east
-  wZ(24.5, -16, 23, 2);              // far south (T Start + A Platform)
-  wX(-24.5, -27, -6, 2);             // far west (B Site + B stairs + Pit)
-  wX(-24.5, -6, 0, 2);
-
-  // ====== CITY SKYLINE (visual only, beyond the building) ======
-  var skyTowers = [[-70,-40,18,45],[-45,-75,22,60],[0,-85,16,38],[40,-70,20,52],[75,-35,14,30],[85,5,18,44],[70,45,22,58],[30,80,16,36],[-15,88,20,50],[-55,60,14,32],[-85,15,18,40],[-60,-10,12,26],[-30,-65,14,34],[55,-15,12,28]];
-  var skyMats = [new THREE.MeshStandardMaterial({ color: 0x93a9bc, roughness: 1 }),
-                 new THREE.MeshStandardMaterial({ color: 0xa3b6c6, roughness: 1 }),
-                 new THREE.MeshStandardMaterial({ color: 0x8ba0b3, roughness: 1 })];
-  for (var si = 0; si < skyTowers.length; si++) {
-    var st = skyTowers[si];
-    var tw = new THREE.Mesh(new THREE.BoxGeometry(st[2], st[3], st[2]), skyMats[si % 3]);
-    tw.position.set(st[0], st[3] / 2 - 14, st[1]);
-    mapGroup.add(tw); sceneObjects.push(tw);
-  }
-
-  // ===== v1.20.0 SKYSCRAPER POLISH =====
-  // antenna mast cluster with red beacon tips on the CT roof (visual landmark)
+  // =================== ANTENNA CLUSTER (NE, blinking beacons) ===================
   var antM = new THREE.MeshStandardMaterial({ color: 0xb0b4b8, roughness: 0.4, metalness: 0.7 });
   var tipM = new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff2020, emissiveIntensity: 1.4 });
-  var antPos = [[10, -25], [12.5, -23.5], [8.5, -22]];
-  for (var ai = 0; ai < 3; ai++) {
-    var ah = 2.2 + (ai % 3) * 0.7;
-    var mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, ah, 6), antM);
-    mast.position.set(antPos[ai][0], 6.3 + ah / 2, antPos[ai][1]); deco(mast);
-    var tip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), tipM);
-    tip.position.set(antPos[ai][0], 6.3 + ah + 0.08, antPos[ai][1]);
-    mapGroup.add(tip); sceneObjects.push(tip);
+  var antPos = [[17.5, -17.6], [19.6, -16.4], [16.2, -15.6]];
+  var beacons = [];
+  for (var bi = 0; bi < 3; bi++) {
+    var ah = 2.4 + bi * 0.8;
+    var mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, ah, 6), antM);
+    mast.position.set(antPos[bi][0], ah / 2, antPos[bi][1]); deco(mast);
+    var tip = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), tipM.clone());
+    tip.position.set(antPos[bi][0], ah + 0.1, antPos[bi][1]); deco(tip);
+    beacons.push(tip);
   }
-  // sandbag nest in Back Door (low cover between the two doorways)
-  addBox(10, 3.2, -13.5, 1.6, 0.45, 0.7, BAGS);
-  addBox(10, 3.62, -13.5, 1.2, 0.4, 0.55, BAGS);
-  addBox(9.2, 3.2, -13.5, 0.5, 0.45, 0.6, BAGS);
 
-  player.position.set(-6, PLAYER_HEIGHT, 18);
+  // =================== SKYLIGHTS (E side, glass cover) ===================
+  addBox(17.5, 0.35, 1.5, 2.6, 0.7, 1.8, GLASS);
+  addBox(17.5, 0.35, 4.2, 2.6, 0.7, 1.8, GLASS);
+  addBox(14.5, 0.35, 1.5, 2.6, 0.7, 1.8, GLASS);
+  addBox(14.5, 0.35, 4.2, 2.6, 0.7, 1.8, GLASS);
+
+  // =================== COVER: crates / sandbags / vents / pipes ===================
+  addBox(-6, 0.75, 5, 1.5, 1.5, 1.5, CRATE);
+  addBox(-7.6, 0.75, 5.2, 1.5, 1.5, 1.5, CRATE);
+  addBox(-6.8, 2.15, 5.1, 1.2, 1.2, 1.2, CRATE);
+  addBox(7, 0.75, 8, 1.5, 1.5, 1.5, CRATE);
+  addBox(8.4, 0.6, 8.2, 1.2, 1.2, 1.2, CRATE);
+  addBox(-18, 0.6, -1, 1.2, 1.2, 1.2, CRATE);
+  addBox(-18.2, 1.7, -0.8, 1, 1, 1, CRATE);
+  addBox(3, 0.75, 12.5, 1.5, 1.5, 1.5, CRATE);
+  addBox(4.4, 0.75, 12.7, 1.5, 1.5, 1.5, CRATE);
+  addBox(3.7, 2.15, 12.6, 1.2, 1.2, 1.2, CRATE);
+  // sandbag nests
+  addBox(5.5, 0.3, 3, 1.7, 0.6, 0.7, BAGS);
+  addBox(5.5, 0.85, 3, 1.2, 0.5, 0.55, BAGS);
+  addBox(-8, 0.3, -14, 1.7, 0.6, 0.7, BAGS);
+  addBox(-8.9, 0.3, -14.1, 0.7, 0.6, 0.6, BAGS);
+  // vents
+  addBox(-4, 0.35, -16, 0.9, 0.7, 0.9, METW);
+  addBox(12, 0.35, 6.5, 0.9, 0.7, 0.9, METW);
+  addBox(-10, 0.35, 16, 0.9, 0.7, 0.9, METW);
+  // pipe runs along the inner edges (step-over height)
+  addWall(-20.9, 0.25, -6, 0.3, 0.5, 12, PIPE);
+  addWall(20.9, 0.25, 6, 0.3, 0.5, 10, PIPE);
+  // AC drip stains (decals)
+  var stain = new THREE.Mesh(new THREE.CircleGeometry(0.8, 12), new THREE.MeshBasicMaterial({ color: 0x3a3d40, transparent: true, opacity: 0.35 }));
+  stain.rotation.x = -Math.PI / 2; stain.position.set(13.5, 0.015, -14.6); deco(stain);
+
+  // =================== WINDOW-WASHING JIB (S edge, hangs over the drop) ===================
+  addCyl(5.2, 1.1, 19, 0.09, 2.2, METW, 0.5);
+  addCyl(6.8, 1.1, 19, 0.09, 2.2, METW, 0.5);
+  var jibArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.22, 4.6), METW);
+  jibArm.position.set(6, 2.15, 21.4); deco(jibArm);      // reaches 2.3m past the parapet
+  var cableA = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3.4, 6), DARK);
+  cableA.position.set(6, 0.9, 22.6); deco(cableA);
+  var cradle = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.7), new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 }));
+  cradle.position.set(6, -0.9, 22.6); deco(cradle);      // platform hanging over the street
+
+  // =================== LIVING MAP HOOK ===================
+  var tickT = 0;
+  mapTickFn = function(dt) {
+    tickT += dt;
+    for (var i = 0; i < beacons.length; i++) {
+      beacons[i].material.emissiveIntensity = 0.55 + 1.15 * Math.max(0, Math.sin(tickT * 3.4 + i * 1.15));
+    }
+    for (var p = 0; p < padLights.length; p++) {
+      padLights[p].material.emissiveIntensity = 0.8 + 0.5 * Math.sin(tickT * 2.1 + p * 0.785);
+    }
+    for (var c = 0; c < clouds.length; c++) {
+      clouds[c].position.x += dt * (0.7 + c * 0.12);
+      if (clouds[c].position.x > 120) clouds[c].position.x = -120;
+    }
+  };
+
+  player.position.set(0, PLAYER_HEIGHT, 16.5);
 }
 
-// ----- SANDSTORM (desert classic) -----
+
+// ----- SANDSTORM (v1.21.0: caught in a real sandstorm) -----
 // T Spawn -> Long A / Mid / B Tunnels; A Site with long doors and crates,
-// B Site with car and platform - now with heavier dust haze + extra cover.
+// B Site with car and platform. The storm itself is the map now: a choking
+// orange haze cuts visibility to ~25m, drifting dust particles sweep across
+// the arena, sand drifts pile against walls and dead palms lean in the wind.
 function loadSandstormMap() {
-  scene.background = new THREE.Color(0xd2a878);
-  scene.fog = new THREE.Fog(0xd2a878, 28, 90);
+  ambLight.intensity = 0.5; dirLight.intensity = 0.8;
+  scene.background = new THREE.Color(0xc08450);
+  scene.fog = new THREE.Fog(0xc08450, 5, 30);
   setGround(tex.sandGround, 0x9e8060, 0xb09870);
   var SAND=tex.sand, DARK_SAND=tex.sand, BRICK=tex.brick, CRATE=tex.crate, STONE=tex.concrete, BARREL=0x555555;
 
@@ -3654,15 +3466,80 @@ function loadSandstormMap() {
   addCyl(6, 0.6, -1, 0.42, 1.2, 0x555555, 0.3);
   addCyl(6.9, 0.6, -2.2, 0.42, 1.2, 0x7a4b33, 0.6);
 
+  // ===== v1.21.0 SANDSTORM: the storm itself =====
+  // drifting dust particle field (swept by the wind every frame)
+  var dustGeo = new THREE.BufferGeometry();
+  var DUST_N = 340, dustPos = new Float32Array(DUST_N * 3);
+  for (var di = 0; di < DUST_N; di++) {
+    dustPos[di * 3] = (Math.random() - 0.5) * 70 + 6.5;
+    dustPos[di * 3 + 1] = Math.random() * 13;
+    dustPos[di * 3 + 2] = (Math.random() - 0.5) * 70 + 13;
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  var dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+    color: 0xe8c090, size: 0.16, transparent: true, opacity: 0.55, depthWrite: false
+  }));
+  mapGroup.add(dust); sceneObjects.push(dust);
+  // faint sun swallowed by the storm
+  var dune = new THREE.Mesh(new THREE.CircleGeometry(9, 24), new THREE.MeshBasicMaterial({ color: 0xffe2b0, fog: false, transparent: true, opacity: 0.75 }));
+  dune.position.set(-95, 34, -60); dune.lookAt(6, 2, 13); deco0(dune);
+  function deco0(m) { mapGroup.add(m); sceneObjects.push(m); }
+  // sand drifts piled against walls + dune mounds in the yards
+  var DRIFT = new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 1 });
+  addBox(-15, 0.25, 22, 1.6, 0.5, 7, DRIFT);
+  addBox(-5, 0.24, 20.4, 9, 0.48, 1.4, DRIFT);
+  addBox(13, 0.25, 29.2, 7, 0.5, 1.6, DRIFT);
+  addBox(27.4, 0.25, 10, 1.4, 0.5, 8, DRIFT);
+  addBox(8, 0.24, -3.4, 10, 0.48, 1.4, DRIFT);
+  addBox(-14.2, 0.25, 3, 1.4, 0.5, 9, DRIFT);
+  addBox(4, 0.24, 24, 5.5, 0.48, 3, DRIFT);       // low dune mound in T yard
+  addBox(22, 0.24, -1.5, 5, 0.48, 3, DRIFT);      // dune mound near CT
+  // dead palms leaning in the wind
+  var palmSpots = [[-12, 25.5], [25.5, -0.5], [2, 28.6]];
+  for (var pi2 = 0; pi2 < palmSpots.length; pi2++) {
+    var ps = palmSpots[pi2];
+    var trunk = addCyl(ps[0], 1.6, ps[1], 0.22, 3.4, 0x6d503a, 0.9);
+    trunk.rotation.z = 0.16;
+    for (var fr = 0; fr < 5; fr++) {
+      var frond = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.34), new THREE.MeshStandardMaterial({ color: 0x4d5a30, roughness: 1 }));
+      frond.position.set(ps[0] + 0.5, 3.35, ps[1]);
+      frond.rotation.y = fr * Math.PI * 2 / 5; frond.rotation.z = -0.45;
+      frond.translateX(0.9); mapGroup.add(frond); sceneObjects.push(frond);
+    }
+  }
+  // torn awnings over the long-A and mid doorways
+  var awn1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 1.5), new THREE.MeshStandardMaterial({ color: 0x8a4a3a, roughness: 0.9 }));
+  awn1.position.set(-3.5, 3.4, 8.9); awn1.rotation.x = 0.3; mapGroup.add(awn1); sceneObjects.push(awn1);
+  var awn2 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 1.3), new THREE.MeshStandardMaterial({ color: 0x7a6a4a, roughness: 0.9 }));
+  awn2.position.set(10, 3.4, 3.6); awn2.rotation.x = -0.26; awn2.rotation.z = 0.12; mapGroup.add(awn2); sceneObjects.push(awn2);
+  // living map: wind sweep for the dust field
+  var dustArr = dustGeo.attributes.position.array;
+  mapTickFn = function(dt) {
+    for (var k = 0; k < DUST_N; k++) {
+      dustArr[k * 3] += dt * (2.6 + (k % 7) * 0.35);
+      dustArr[k * 3 + 2] += dt * (1.1 + (k % 5) * 0.2);
+      dustArr[k * 3 + 1] += dt * Math.sin(k + tickT2 * 2) * 0.25;
+      if (dustArr[k * 3] > 42) dustArr[k * 3] = -28;
+      if (dustArr[k * 3 + 2] > 49) dustArr[k * 3 + 2] = -21;
+      if (dustArr[k * 3 + 1] > 13) dustArr[k * 3 + 1] = 0.2;
+      if (dustArr[k * 3 + 1] < 0) dustArr[k * 3 + 1] = 12.5;
+    }
+    dustGeo.attributes.position.needsUpdate = true;
+  };
+  var tickT2 = 0;
+  (function() { var old = mapTickFn; mapTickFn = function(dt) { tickT2 += dt; old(dt); }; })();
+
   player.position.set(0, PLAYER_HEIGHT, 24);
 }
 
-// ----- KILLHOUSE (CQB training) -----
-// Close quarters indoor facility with rooms, corridors, doorways,
-// target boards and ammo caches.
+// ----- KILLHOUSE (v1.21.0: the death house) -----
+// A sealed indoor CQB facility: real ceiling overhead, darkness beyond the
+// flashlight cones, humming striplights, red emergency accents, stenciled
+// DANGER signs and barbed wire. Zombie eyes glow in the dark corridors.
 function loadKillhouseMap() {
-  scene.background = new THREE.Color(0x8899aa);
-  scene.fog = new THREE.Fog(0x8899aa, 15, 60);
+  ambLight.intensity = 0.6; dirLight.intensity = 0.15;   // interior: lights do the work
+  scene.background = new THREE.Color(0x0b0d10);
+  scene.fog = new THREE.Fog(0x0b0d10, 6, 38);
   setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
   var WALL=tex.concrete, WALL2=tex.concrete, BRICK=tex.brick, CRATE=tex.crate, METAL=tex.metalWall, RUST=0x884422, WOOD=tex.crate, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
 
@@ -3774,6 +3651,73 @@ function loadKillhouseMap() {
   // green ammo caches in the back corridor
   addBox(-2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
   addBox(2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
+
+  // ===== v1.21.0 KILLHOUSE: inside the death house =====
+  // ceiling slab sealing the whole building (bottom flush with the wall tops)
+  addBox(0, 5.3, 0, 34, 0.6, 44, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x3a3d42, roughness: 0.95 }));
+  // support pillars under the ceiling
+  addBox(-8, 2.5, 0, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
+  addBox(8, 2.5, 0, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
+  addBox(0, 2.5, 10, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
+  // warm strip lights (point lights + emissive fixtures)
+  var warmSpots = [[0, 4.55, -16], [-9, 4.55, -8], [9, 4.55, -8], [0, 4.55, 3], [-9, 4.55, 14], [9, 4.55, 14]];
+  var warmLights = [];
+  var FIX = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d8, emissiveIntensity: 1.5 });
+  for (var wi = 0; wi < warmSpots.length; wi++) {
+    var ws = warmSpots[wi];
+    var pl = new THREE.PointLight(0xffe2b8, 0.95, 21, 1.6);
+    pl.position.set(ws[0], ws[1] - 0.3, ws[2]); mapGroup.add(pl);
+    var fx = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.09, 0.42), FIX.clone());
+    fx.position.set(ws[0], ws[1], ws[2]); mapGroup.add(fx); sceneObjects.push(fx);
+    warmLights.push(pl);
+  }
+  // red emergency accents in the arena (the "death" in death house)
+  var redSpots = [[-14.5, 3.7, 4], [14.5, 3.7, 4]];
+  for (var ri2 = 0; ri2 < redSpots.length; ri2++) {
+    var rs = redSpots[ri2];
+    var rl = new THREE.PointLight(0xff2222, 0.85, 13, 1.8);
+    rl.position.set(rs[0], rs[1], rs[2]); mapGroup.add(rl);
+    var dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff1810, emissiveIntensity: 1.6 }));
+    dome.position.set(rs[0], rs[1] + 0.25, rs[2]); mapGroup.add(dome); sceneObjects.push(dome);
+  }
+  // stenciled wall signs
+  var signTex = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#1a1c20'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#c23434'; c.lineWidth = 8; c.strokeRect(10, 10, w - 20, h - 20);
+    c.fillStyle = '#c23434'; c.textAlign = 'center';
+    c.font = 'bold 64px Arial'; c.fillText('DANGER', w / 2, 78);
+    c.font = 'bold 34px Arial'; c.fillText('KEEP OUT', w / 2, 128);
+    c.font = 'bold 24px Arial'; c.fillStyle = '#8a8f96'; c.fillText('AUTHORIZED PERSONNEL ONLY', w / 2, 168);
+  }, 256, 192);
+  var signMat = new THREE.MeshBasicMaterial({ map: signTex });
+  var sign1 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.55), signMat);
+  sign1.position.set(-5, 2.4, -20.65); mapGroup.add(sign1); sceneObjects.push(sign1);
+  var sign2 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.55), signMat);
+  sign2.position.set(6.5, 2.4, 20.65); sign2.rotation.y = Math.PI; mapGroup.add(sign2); sceneObjects.push(sign2);
+  // barbed wire coils on the floor by the arena mouth
+  var wireM = new THREE.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.5, metalness: 0.7 });
+  var wireSpots = [[-2.2, 1.9, 0.5], [0, 2.1, 0.5], [2.2, 1.9, 0.5]];
+  for (var bwi = 0; bwi < wireSpots.length; bwi++) {
+    var bw = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.045, 8, 18), wireM);
+    bw.position.set(wireSpots[bwi][0], 0.42, wireSpots[bwi][2]);
+    bw.rotation.x = Math.PI / 2; bw.rotation.z = wireSpots[bwi][1];
+    mapGroup.add(bw); sceneObjects.push(bw);
+  }
+  // hazard stripes at the arena entrance
+  var khHz = makeCanvasTex(function(c, w, h) {
+    c.fillStyle = '#d9a52e'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#26231d';
+    for (var i = -2; i < 10; i++) { c.save(); c.translate(i * 32, 0); c.rotate(Math.PI / 4); c.fillRect(0, -60, 16, 240); c.restore(); }
+  }, 128, 128);
+  var khHzM = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshBasicMaterial({ map: khHz, transparent: true, opacity: 0.85, depthWrite: false }));
+  khHzM.rotation.x = -Math.PI / 2; khHzM.position.set(0, 0.02, 0.9); mapGroup.add(khHzM);
+  // living map: a failing strip light + pulsing red beacons
+  var khT = 0;
+  mapTickFn = function(dt) {
+    khT += dt;
+    warmLights[2].intensity = 0.95 - (Math.sin(khT * 17) > 0.86 ? 0.55 * Math.random() : 0);
+    warmLights[2].intensity -= (Math.sin(khT * 4.3) > 0.97 ? 0.3 : 0);
+  };
 
   player.position.set(0, PLAYER_HEIGHT, -18);
 }
@@ -4323,6 +4267,7 @@ function isGamePaused() {
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  if (mapTickFn) mapTickFn(dt);   // v1.21.0 living-map hook
   const gamePaused = isGamePaused();
   if (!gamePaused && gameStarted && ++musicTick % 10 === 0) updateMusicIntensity();   // v1.19.4 zombie heat
   if (!gamePaused && ++crosshairTick % 7 === 0) updateCrosshairEnemy();
