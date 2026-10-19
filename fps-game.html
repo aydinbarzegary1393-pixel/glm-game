@@ -361,12 +361,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="map-card playable" onclick="selectMap(2)">
 <div class="map-icon">🏜️</div>
 <div class="map-name" data-en="Sandstorm" data-fa="توفان شن">Sandstorm</div>
-<div class="map-status" data-en="CAUGHT IN THE STORM" data-fa="گرفتار توفان شن">CAUGHT IN THE STORM</div>
+<div class="map-status" data-en="SAND-SWEPT DESERT" data-fa="کویر آفتاب‌سوخته">SAND-SWEPT DESERT</div>
 </div>
 <div class="map-card playable" onclick="selectMap(3)">
 <div class="map-icon">🎯</div>
 <div class="map-name" data-en="Killhouse" data-fa="خانه مرگ">Killhouse</div>
-<div class="map-status" data-en="THE DEATH HOUSE" data-fa="خانه‌ی مرگ">THE DEATH HOUSE</div>
+<div class="map-status" data-en="CQB DEATH MAZE" data-fa="هزارتوی مرگ">CQB DEATH MAZE</div>
 </div>
 </div>
 <button class="menu-btn back-btn" onclick="backFromMapMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
@@ -1097,9 +1097,10 @@ const MAP_RADAR = [
       {t:'HUT', x:-15, z:12.5}, {t:'BULK', x:0, z:-2}, {t:'ANT', x:17.5, z:-17}
     ]},
   { levelMode: false,
-    sites: [{t:'A', x:-5, z:3}, {t:'B', x:19.8, z:12.3}],
-    labels: [{t:'T', x:0, z:24}, {t:'CT', x:9, z:1}, {t:'LONG', x:-3, z:13}, {t:'TUN', x:13, z:21}]},
-  { levelMode: false, sites: [], labels: [] }
+    sites: [],
+    labels: [{t:'OUTPOST', x:0, z:0}, {t:'CONVOY', x:-13, z:-9}, {t:'OASIS', x:13.5, z:12}, {t:'ROCKS', x:15.5, z:-6}, {t:'START', x:0, z:16}]},
+  { levelMode: false, sites: [],
+    labels: [{t:'PIT', x:0, z:0}, {t:'RANGE', x:-15, z:-2.7}, {t:'ARMORY', x:-16.5, z:-12.5}, {t:'BUNKS', x:-5.5, z:-12.5}, {t:'CLASS', x:5.5, z:-12.5}, {t:'DEPOT', x:16.5, z:-12.5}] }
 ];
 
 var radarCache = { key: null };
@@ -2252,8 +2253,14 @@ const mapSpawnZones = [
   // v1.21.0 Skyscraper: true high-rise rooftop - zones spread across the roof
   // (helipad/AC farm, water tower quarter, west + east walk, center bulkhead)
   [{x1:-18,z1:-16,x2:-6,z2:-6},{x1:5,z1:-17,x2:18,z2:-4},{x1:-18,z1:-2,x2:-8,z2:9},{x1:7,z1:1,x2:18,z2:12},{x1:-5,z1:-12,x2:5,z2:-5}],
-  [{x1:-14,z1:-3,x2:3,z2:8},{x1:-9,z1:8,x2:0,z2:28},{x1:5,z1:1,x2:12,z2:16},{x1:10,z1:16,x2:26,z2:28},{x1:1,z1:-2,x2:14,z2:6}],
-  [{x1:-15,z1:-20,x2:15,z2:20}]
+  // v1.22.0 Sandstorm: open desert basin - convoy flats, NE rock flats,
+  // west/east flats and the north plain behind the ruined outpost
+  [{x1:-19,z1:-14,x2:-7,z2:-5},{x1:5,z1:-14,x2:19,z2:-5},{x1:-19,z1:-1,x2:-13.5,z2:9},{x1:13.5,z1:-1,x2:19,z2:8},{x1:-5,z1:-14,x2:4,z2:-9}],
+  // v1.22.0 Killhouse: one zone per room of the CQB maze (the entry hall
+  // stays zombie-free; zombies stream through the doorways to the player)
+  [{x1:-19,z1:-15,x2:-13.5,z2:-10},{x1:-9,z1:-15,x2:-3,z2:-10},{x1:3,z1:-15,x2:9,z2:-10},{x1:14,z1:-15,x2:19.5,z2:-10},
+   {x1:-20.5,z1:-4.6,x2:-10,z2:-1.6},{x1:-20.5,z1:1.6,x2:-10,z2:4.6},{x1:-6.5,z1:-4.4,x2:6.5,z2:4.4},{x1:10,z1:-4.6,x2:20.5,z2:-1.6},{x1:10,z1:1.6,x2:20.5,z2:4.6},
+   {x1:-20.5,z1:9.5,x2:-14.5,z2:15.5},{x1:-11.5,z1:9.5,x2:-6.5,z2:15.5},{x1:6.5,z1:9.5,x2:11.5,z2:15.5},{x1:14.5,z1:9.5,x2:20.5,z2:15.5}]
 ];
 
 function checkEnemyWall(px, pz) {
@@ -3335,145 +3342,145 @@ function loadSkyscraperMap() {
   player.position.set(0, PLAYER_HEIGHT, 16.5);
 }
 
-
-// ----- SANDSTORM (v1.21.0: caught in a real sandstorm) -----
-// T Spawn -> Long A / Mid / B Tunnels; A Site with long doors and crates,
-// B Site with car and platform. The storm itself is the map now: a choking
-// orange haze cuts visibility to ~25m, drifting dust particles sweep across
-// the arena, sand drifts pile against walls and dead palms lean in the wind.
+// ----- SANDSTORM (v1.22.0: a real desert caught in the storm) -----
+// No more CS lanes: an open dune basin ringed by sand ridges, a ruined
+// mud-brick outpost at its heart, a half-buried military convoy, a dead
+// oasis and scattered rock formations - all fighting ~30m of choking dust.
 function loadSandstormMap() {
-  ambLight.intensity = 0.5; dirLight.intensity = 0.8;
+  ambLight.intensity = 0.5; dirLight.intensity = 0.75;
+  mapTickFn = null;
   scene.background = new THREE.Color(0xc08450);
-  scene.fog = new THREE.Fog(0xc08450, 5, 30);
+  scene.fog = new THREE.Fog(0xc08450, 4, 30);
   setGround(tex.sandGround, 0x9e8060, 0xb09870);
-  var SAND=tex.sand, DARK_SAND=tex.sand, BRICK=tex.brick, CRATE=tex.crate, STONE=tex.concrete, BARREL=0x555555;
+  var SAND=tex.sand, CRATE=tex.crate, BRICK=tex.brick;
+  var MUD = new THREE.MeshStandardMaterial({ map: _loadTex('tex_sand.png'), color: 0xcbb287, roughness: 1 });
+  var ROCK = new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x8f7a5e, roughness: 1 });
+  var STONE = new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0xa39684, roughness: 0.95 });
+  var DRIFT = new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 1 });
+  function decoS(m) { mapGroup.add(m); sceneObjects.push(m); }
 
-  // ====== T SPAWN ======
-  addWall(0, 2, 28, 20, 4.5, 0.6, SAND);
-  addWall(-10.3, 2, 23, 0.6, 4.5, 12, SAND);
-  addWall(10.3, 2, 23, 0.6, 4.5, 12, SAND);
-  addWall(0, 0.02, 22, 6, 0.05, 3, 0xcc3333);
-  addBox(-7, 0.5, 26, 1.2, 1, 1.2, CRATE);
-  addBox(7, 0.5, 26, 1.2, 1, 1.2, CRATE);
+  // ====== DUNE RIDGE BOUNDARY (stacked organic ridges, not flat walls) ======
+  // south ridge
+  addWall(-18, 2.1, 20.2, 12, 4.2, 2.4, SAND);
+  addWall(-7, 2.6, 20.4, 10, 5.2, 2.6, SAND);
+  addWall(3, 2.2, 20.1, 11, 4.4, 2.4, SAND);
+  addWall(13.5, 2.8, 20.3, 10, 5.6, 2.6, SAND);
+  addWall(21.5, 2.3, 20.2, 8, 4.6, 2.4, SAND);
+  // north ridge
+  addWall(-17, 2.6, -16.4, 11, 5.2, 2.6, SAND);
+  addWall(-6, 2.1, -16.6, 10, 4.2, 2.4, SAND);
+  addWall(4, 2.7, -16.3, 10, 5.4, 2.6, SAND);
+  addWall(14, 2.2, -16.5, 11, 4.4, 2.4, SAND);
+  addWall(21.5, 2.6, -16.4, 8, 5.2, 2.6, SAND);
+  // west ridge
+  addWall(-21.5, 2.4, -13, 2.6, 4.8, 9, SAND);
+  addWall(-21.4, 2.9, -4.5, 2.4, 5.8, 10, SAND);
+  addWall(-21.5, 2.2, 4.5, 2.6, 4.4, 10, SAND);
+  addWall(-21.4, 2.7, 13.5, 2.4, 5.4, 9, SAND);
+  // east ridge
+  addWall(21.5, 2.5, -13, 2.6, 5, 9, SAND);
+  addWall(21.4, 2.1, -4.5, 2.4, 4.2, 10, SAND);
+  addWall(21.5, 2.8, 4.5, 2.6, 5.6, 10, SAND);
+  addWall(21.4, 2.3, 13.5, 2.4, 4.6, 9, SAND);
+  // sealed corners
+  addWall(-21.3, 2.5, 19, 3.4, 5, 3.4, SAND);
+  addWall(21.3, 2.5, 19, 3.4, 5, 3.4, SAND);
+  addWall(-21.3, 2.5, -15.4, 3.4, 5, 3.4, SAND);
+  addWall(21.3, 2.5, -15.4, 3.4, 5, 3.4, SAND);
 
-  // ====== LONG A (corridor from T to A site) ======
-  addWall(-5, 2, 13, 0.6, 4.5, 14, SAND);
-  addWall(-1, 2, 13, 0.6, 4.5, 14, SAND);
-  addWall(-3, -0.5, 10, 2, 1, 8, DARK_SAND);
-  addWall(-1.3, 0.5, 10, 0.6, 2.5, 8, SAND);
-  addArch(-3, 0, 16, 2.5, 3.5, 0.7, SAND);
-  addArch(-3, 0, 10, 2.5, 3.5, 0.7, SAND);
-  addBox(-4, 0.5, 15, 1, 1, 1, CRATE);
-  addBox(-2, 0.5, 12, 1.2, 1, 1.2, CRATE);
-  // Long A Doors
-  addWall(-5.5, 2, 8, 1, 4.5, 0.5, BRICK);
-  addWall(-1.5, 2, 8, 1, 4.5, 0.5, BRICK);
-  addWall(-3.5, 3.8, 8, 3, 0.6, 0.5, BRICK);
-  // Car near Long A doors
-  addBox(-2.5, 0.6, 8.5, 2.5, 1.2, 1.5, 0x666666);
-  addBox(-2.5, 1.5, 8.5, 2, 0.5, 1.3, 0x555555);
+  // ====== RUINED MUD-BRICK OUTPOST (center) ======
+  // north wall with a 2.4m gate
+  addWall(-6.1, 1.75, -6, 9.8, 3.5, 0.7, MUD);
+  addWall(6.1, 1.75, -6, 9.8, 3.5, 0.7, MUD);
+  addWall(0, 3.1, -6, 3, 0.8, 0.7, MUD);          // gate lintel
+  // south wall mostly collapsed to rubble stubs
+  addWall(-7.5, 0.9, 6, 7, 1.8, 0.7, MUD);
+  addWall(3, 0.65, 6, 4, 1.3, 0.7, MUD);
+  // west + east walls, each with a doorway
+  addWall(-11, 1.75, -3.65, 0.7, 3.5, 4.7, MUD);
+  addWall(-11, 1.75, 3.65, 0.7, 3.5, 4.7, MUD);
+  addWall(11, 1.75, -3.65, 0.7, 3.5, 4.7, MUD);
+  addWall(11, 1.75, 3.65, 0.7, 3.5, 4.7, MUD);
+  // broken watchtower in the NE corner of the compound
+  addCyl(8, 2, -3, 1.5, 4, MUD, 0.95);
+  var crown = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.65, 0.5, 14, 1, true), STONE);
+  crown.position.set(8, 4.2, -3); decoS(crown);
+  // fallen pillar lying in the courtyard (visual only)
+  var fp = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 4.2), STONE);
+  fp.position.set(-1.5, 0.4, 3.6); fp.rotation.y = 0.5; fp.rotation.z = 0.06; decoS(fp);
+  // courtyard cover: dry well, crates, barrel
+  addCyl(-3, 0.45, 2.5, 0.85, 0.9, STONE, 0.95);
+  addBox(4, 0.5, -2, 1.2, 1, 1.2, CRATE);
+  addBox(5.2, 0.5, -2.3, 1, 1, 1, CRATE);
+  addBox(-5, 0.75, -3.5, 1.5, 1.5, 1.5, CRATE);
+  addCyl(-6.5, 0.6, 0.5, 0.42, 1.2, 0x555555, 0.3);
+  // rubble skirts around the walls (low, walkable)
+  var RUB = new THREE.MeshStandardMaterial({ map: _loadTex('tex_sand.png'), color: 0xb89f78, roughness: 1 });
+  addBox(-2, 0.2, -7.4, 4.2, 0.4, 1.4, RUB);
+  addBox(8.6, 0.2, 1, 1.4, 0.4, 4, RUB);
+  addBox(-12.2, 0.2, -1, 1.4, 0.4, 4.4, RUB);
 
-  // ====== A SITE ======
-  addWall(-5, 2, 8.3, 16, 4.5, 0.6, SAND);
-  addWall(-13.3, 2, 3, 0.6, 4.5, 12, SAND);
-  addWall(3.3, 2, 3, 0.6, 4.5, 8, SAND);
-  addWall(-5, 2, -2.3, 16, 4.5, 0.6, SAND);
-  // Catwalk entrance
-  addWall(2, 2, -1, 1.3, 4.5, 3, SAND);
-  // A site boxes
-  addBox(-8, 0.75, 2, 1.5, 1.5, 1.5, CRATE);
-  addBox(-6.5, 0.75, 2, 1.5, 1.5, 1.5, CRATE);
-  addBox(-7.25, 2.15, 2, 1.2, 1, 1.2, CRATE);
-  addBox(-3, 0.5, 5, 1, 1, 2, CRATE);
-  addBox(-10, 0.5, 5, 2, 1, 1, CRATE);
-  addBox(-4, 0.5, 0, 1.2, 1, 1.2, CRATE);
-  addBox(-11, 0.75, -1, 1.5, 1.5, 1.5, CRATE);
-  addWall(-7, 0.02, 3, 4, 0.05, 3, 0xcc3333);
-  addCyl(-1, 0.6, 5, 0.4, 1.2, BARREL, 0.3);
-  addCyl(-1.9, 0.6, 5, 0.4, 1.2, BARREL, 0.3);
+  // ====== CRASHED CONVOY (north-west flats) ======
+  // truck 1: cab + canvas bed
+  addBox(-16.2, 1.05, -10.5, 2.2, 1.7, 2.3, 0x5a6b4a);
+  addBox(-12.9, 1.15, -10.5, 4.8, 1.9, 2.5, 0x66754e);
+  var cv1 = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.35, 2.3), new THREE.MeshStandardMaterial({ color: 0x8a8a6a, roughness: 0.95 }));
+  cv1.position.set(-12.9, 2.35, -10.5); decoS(cv1);
+  // truck 2: half-buried hull
+  addBox(-15.5, 0.75, -4.5, 5.6, 1.5, 2.3, 0x4d5844);
+  // loose container
+  addBox(-9, 1.3, -13, 6, 2.6, 2.4, 0x8a4a2e);
+  // jerry cans + barrels by the convoy
+  addCyl(-11.5, 0.6, -7.5, 0.42, 1.2, 0x555555, 0.3);
+  addCyl(-10.6, 0.6, -7.2, 0.42, 1.2, 0x6b3d2a, 0.5);
 
-  // ====== MID ======
-  addWall(8, 2, 8, 0.6, 4.5, 14, SAND);
-  addWall(12, 2, 8, 0.6, 4.5, 14, SAND);
-  addWall(8.3, 2, 3, 1.2, 4.5, 0.5, BRICK);
-  addWall(11.7, 2, 3, 1.2, 4.5, 0.5, BRICK);
-  addWall(10, 3.8, 3, 2.5, 0.6, 0.5, BRICK);
-  addArch(10, 0, 8, 3, 3.5, 0.7, SAND);
-  addArch(10, 0, 13, 3, 3.5, 0.7, SAND);
-  addBox(9, 0.5, 10, 1.2, 1, 1.2, CRATE);
-  addBox(11, 0.5, 6, 1.2, 1, 1.2, CRATE);
-  addBox(10, 1.3, 6, 0.8, 0.8, 0.8, CRATE);
+  // ====== ROCK FORMATIONS ======
+  addBox(15.5, 1.25, -6, 3, 2.5, 2.6, ROCK);
+  addBox(17.6, 0.9, -4.6, 2.2, 1.8, 2, ROCK);
+  addBox(10, 1.5, -13, 2.4, 3, 2.4, ROCK);
+  addBox(12.2, 1, -12, 1.8, 2, 1.8, ROCK);
+  addBox(-17, 1.4, 4, 2.6, 2.8, 2.4, ROCK);
+  addBox(-15.4, 0.8, 5.8, 1.6, 1.6, 1.6, ROCK);
+  addBox(-14, 1.1, 12, 2.2, 2.2, 2.2, ROCK);
 
-  // ====== CATWALK (mid to A site) ======
-  addWall(3.5, 0.1, 1, 2.5, 0.2, 4, STONE);
-  addWall(2.3, 2, 1, 0.5, 4, 4, SAND);
-  addWall(4.7, 2, 1, 0.5, 4, 4, SAND);
-  addWall(2.5, 1.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
-  addWall(2.5, 2.5, -0.5, 0.1, 0.1, 3, DARK_SAND);
+  // ====== DEAD OASIS (south-east) ======
+  var oasisSpots = [[13.5, 11.5], [15.5, 13.2], [11.8, 13.8], [-4, 16.8]];
+  for (var pi = 0; pi < oasisSpots.length; pi++) {
+    var ps = oasisSpots[pi];
+    var trunk = addCyl(ps[0], 1.6, ps[1], 0.22, 3.4, 0x6d503a, 0.9);
+    trunk.rotation.z = 0.16;
+    for (var fr = 0; fr < 5; fr++) {
+      var frond = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.34), new THREE.MeshStandardMaterial({ color: 0x4d5a30, roughness: 1 }));
+      frond.position.set(ps[0] + 0.5, 3.35, ps[1]);
+      frond.rotation.y = fr * Math.PI * 2 / 5; frond.rotation.z = -0.45;
+      frond.translateX(0.9); decoS(frond);
+    }
+  }
+  // dried pond bed (visual only) + stone water trough
+  var pond = new THREE.Mesh(new THREE.CircleGeometry(4, 22), new THREE.MeshStandardMaterial({ color: 0xb09468, roughness: 1 }));
+  pond.rotation.x = -Math.PI / 2; pond.position.set(13.5, 0.02, 12); decoS(pond);
+  addBox(10.8, 0.5, 9.6, 2.2, 1, 1.1, STONE);
 
-  // ====== B TUNNELS (brick corridor) ======
-  addWall(10, 2, 22, 0.6, 4.5, 14, BRICK);
-  addWall(16, 2, 22, 0.6, 4.5, 14, BRICK);
-  addWall(13, 4.5, 22, 6, 0.3, 14, BRICK);
-  addWall(13, 2, 15, 6, 4.5, 0.6, BRICK);
-  addWall(13, 1.1, 17, 1.2, 2.2, 0.5, BRICK);
-  addBox(12, 0.5, 18, 1, 1, 1, CRATE);
-  addBox(14, 0.5, 20, 1.2, 1, 1.2, CRATE);
-  addBox(13, 1.3, 20, 0.8, 0.8, 0.8, CRATE);
-  addArch(13, 0, 17, 4, 3.5, 0.7, SAND);
+  // ====== WALKABLE DUNE MOUNDS + DRIFTS ======
+  addBox(4, 0.22, 10, 5, 0.44, 3, DRIFT);
+  addBox(-6, 0.24, 14, 6, 0.48, 3.4, DRIFT);
+  addBox(-3, 0.24, -12.5, 5, 0.48, 3, DRIFT);
+  addBox(9, 0.22, 2, 4, 0.44, 2.6, DRIFT);
+  addBox(-18, 0.24, -2, 4, 0.48, 3, DRIFT);
+  addBox(-15.5, 0.25, -2.6, 4, 0.5, 1.6, DRIFT);   // drift over the buried truck
+  addBox(-9, 0.26, -11.4, 6, 0.52, 1.2, DRIFT);    // drift against the container
+  addBox(0.5, 0.25, -6.9, 5, 0.5, 1.3, DRIFT);     // drift piled on the outpost gate wall
+  addBox(16.6, 0.25, 13.4, 3.4, 0.5, 1.4, DRIFT);
+  addBox(-20, 0.25, 8.6, 1.4, 0.5, 4, DRIFT);
 
-  // ====== B SITE ======
-  addWall(20, 2, 8.3, 14, 4.5, 0.6, SAND);
-  addWall(13.3, 2, 12, 0.6, 4.5, 10, SAND);
-  addWall(26.3, 2, 12, 0.6, 4.5, 10, SAND);
-  addWall(20, 2, 16.3, 14, 4.5, 0.6, SAND);
-  // B plat (raised platform)
-  addWall(22, 0.25, 14, 4, 0.5, 3, STONE);
-  addWall(22, 2, 15.3, 4, 4, 0.4, SAND);
-  addBox(16, 0.75, 10, 1.5, 1.5, 1.5, CRATE);
-  addBox(17.5, 0.75, 10, 1.5, 1.5, 1.5, CRATE);
-  addBox(16.75, 2.15, 10, 1.2, 1, 1.2, CRATE);
-  addBox(24, 0.75, 12, 1.5, 1.5, 1.5, CRATE);
-  addBox(18, 0.5, 14, 1, 1, 2, CRATE);
-  addWall(19, 0.02, 12, 3, 0.05, 3, 0xcc3333);
-  addCyl(15, 0.6, 14, 0.4, 1.2, BARREL, 0.3);
-  addCyl(15.9, 0.6, 14, 0.4, 1.2, BARREL, 0.3);
-  addCyl(24, 0.6, 10, 0.4, 1.2, BARREL, 0.3);
-
-  // ====== CT SPAWN ======
-  addWall(9, 0.1, 1, 10, 0.2, 6, STONE);
-  addWall(4.3, 2, 1, 0.5, 4, 6, SAND);
-  addWall(13.7, 2, 1, 0.5, 4, 6, SAND);
-  addWall(4.3, 2, -1, 0.5, 4, 3, SAND);
-  addWall(1.5, 2, -2.5, 3, 4, 0.5, SAND);
-
-  // Boundary walls
-  addWall(6.5, 2.5, -4, 43, 5, 0.6, tex.sand); // north
-  addWall(6.5, 2.5, 30, 43, 5, 0.6, tex.sand); // south
-  addWall(-15, 2.5, 13, 0.6, 5, 34, tex.sand); // west
-  addWall(28, 2.5, 13, 0.6, 5, 34, tex.sand); // east
-
-  // ===== v1.20.0 SANDSTORM POLISH =====
-  // sandbag nest on A site (double-stacked cover)
-  addBox(1.5, 0.45, 5, 1.7, 0.45, 0.7, 0xcfc5a5);
-  addBox(1.5, 0.87, 5, 1.2, 0.4, 0.55, 0xcfc5a5);
-  // broken wall chunk in Mid (splits the sightline, 1m gaps each side)
-  addWall(10, 0.9, 11, 2, 1.8, 0.6, BRICK);
-  // wrecked car on B site
-  addBox(21, 0.55, 10, 2.6, 0.9, 1.5, 0x4a4a4a);
-  addBox(20.8, 1.25, 10, 1.4, 0.6, 1.35, 0x333333);
-  // extra barrels near CT spawn
-  addCyl(6, 0.6, -1, 0.42, 1.2, 0x555555, 0.3);
-  addCyl(6.9, 0.6, -2.2, 0.42, 1.2, 0x7a4b33, 0.6);
-
-  // ===== v1.21.0 SANDSTORM: the storm itself =====
-  // drifting dust particle field (swept by the wind every frame)
+  // ====== THE STORM ITSELF ======
+  // drifting dust particle field swept by the wind every frame
   var dustGeo = new THREE.BufferGeometry();
-  var DUST_N = 340, dustPos = new Float32Array(DUST_N * 3);
+  var DUST_N = 380, dustPos = new Float32Array(DUST_N * 3);
   for (var di = 0; di < DUST_N; di++) {
-    dustPos[di * 3] = (Math.random() - 0.5) * 70 + 6.5;
+    dustPos[di * 3] = (Math.random() - 0.5) * 52;
     dustPos[di * 3 + 1] = Math.random() * 13;
-    dustPos[di * 3 + 2] = (Math.random() - 0.5) * 70 + 13;
+    dustPos[di * 3 + 2] = (Math.random() - 0.5) * 44 + 2;
   }
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
   var dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
@@ -3481,159 +3488,129 @@ function loadSandstormMap() {
   }));
   mapGroup.add(dust); sceneObjects.push(dust);
   // faint sun swallowed by the storm
-  var dune = new THREE.Mesh(new THREE.CircleGeometry(9, 24), new THREE.MeshBasicMaterial({ color: 0xffe2b0, fog: false, transparent: true, opacity: 0.75 }));
-  dune.position.set(-95, 34, -60); dune.lookAt(6, 2, 13); deco0(dune);
-  function deco0(m) { mapGroup.add(m); sceneObjects.push(m); }
-  // sand drifts piled against walls + dune mounds in the yards
-  var DRIFT = new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 1 });
-  addBox(-15, 0.25, 22, 1.6, 0.5, 7, DRIFT);
-  addBox(-5, 0.24, 20.4, 9, 0.48, 1.4, DRIFT);
-  addBox(13, 0.25, 29.2, 7, 0.5, 1.6, DRIFT);
-  addBox(27.4, 0.25, 10, 1.4, 0.5, 8, DRIFT);
-  addBox(8, 0.24, -3.4, 10, 0.48, 1.4, DRIFT);
-  addBox(-14.2, 0.25, 3, 1.4, 0.5, 9, DRIFT);
-  addBox(4, 0.24, 24, 5.5, 0.48, 3, DRIFT);       // low dune mound in T yard
-  addBox(22, 0.24, -1.5, 5, 0.48, 3, DRIFT);      // dune mound near CT
-  // dead palms leaning in the wind
-  var palmSpots = [[-12, 25.5], [25.5, -0.5], [2, 28.6]];
-  for (var pi2 = 0; pi2 < palmSpots.length; pi2++) {
-    var ps = palmSpots[pi2];
-    var trunk = addCyl(ps[0], 1.6, ps[1], 0.22, 3.4, 0x6d503a, 0.9);
-    trunk.rotation.z = 0.16;
-    for (var fr = 0; fr < 5; fr++) {
-      var frond = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.34), new THREE.MeshStandardMaterial({ color: 0x4d5a30, roughness: 1 }));
-      frond.position.set(ps[0] + 0.5, 3.35, ps[1]);
-      frond.rotation.y = fr * Math.PI * 2 / 5; frond.rotation.z = -0.45;
-      frond.translateX(0.9); mapGroup.add(frond); sceneObjects.push(frond);
-    }
-  }
-  // torn awnings over the long-A and mid doorways
-  var awn1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 1.5), new THREE.MeshStandardMaterial({ color: 0x8a4a3a, roughness: 0.9 }));
-  awn1.position.set(-3.5, 3.4, 8.9); awn1.rotation.x = 0.3; mapGroup.add(awn1); sceneObjects.push(awn1);
-  var awn2 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 1.3), new THREE.MeshStandardMaterial({ color: 0x7a6a4a, roughness: 0.9 }));
-  awn2.position.set(10, 3.4, 3.6); awn2.rotation.x = -0.26; awn2.rotation.z = 0.12; mapGroup.add(awn2); sceneObjects.push(awn2);
+  var sun = new THREE.Mesh(new THREE.CircleGeometry(9, 24), new THREE.MeshBasicMaterial({ color: 0xffe2b0, fog: false, transparent: true, opacity: 0.75 }));
+  sun.position.set(-95, 34, -60); sun.lookAt(0, 2, 13); decoS(sun);
   // living map: wind sweep for the dust field
   var dustArr = dustGeo.attributes.position.array;
+  var tickT = 0;
   mapTickFn = function(dt) {
+    tickT += dt;
     for (var k = 0; k < DUST_N; k++) {
       dustArr[k * 3] += dt * (2.6 + (k % 7) * 0.35);
       dustArr[k * 3 + 2] += dt * (1.1 + (k % 5) * 0.2);
-      dustArr[k * 3 + 1] += dt * Math.sin(k + tickT2 * 2) * 0.25;
-      if (dustArr[k * 3] > 42) dustArr[k * 3] = -28;
-      if (dustArr[k * 3 + 2] > 49) dustArr[k * 3 + 2] = -21;
+      dustArr[k * 3 + 1] += dt * Math.sin(k + tickT * 2) * 0.25;
+      if (dustArr[k * 3] > 26) dustArr[k * 3] = -26;
+      if (dustArr[k * 3 + 2] > 24) dustArr[k * 3 + 2] = -20;
       if (dustArr[k * 3 + 1] > 13) dustArr[k * 3 + 1] = 0.2;
       if (dustArr[k * 3 + 1] < 0) dustArr[k * 3 + 1] = 12.5;
     }
     dustGeo.attributes.position.needsUpdate = true;
   };
-  var tickT2 = 0;
-  (function() { var old = mapTickFn; mapTickFn = function(dt) { tickT2 += dt; old(dt); }; })();
 
-  player.position.set(0, PLAYER_HEIGHT, 24);
+  player.position.set(0, PLAYER_HEIGHT, 16.5);
 }
 
-// ----- KILLHOUSE (v1.21.0: the death house) -----
-// A sealed indoor CQB facility: real ceiling overhead, darkness beyond the
-// flashlight cones, humming striplights, red emergency accents, stenciled
-// DANGER signs and barbed wire. Zombie eyes glow in the dark corridors.
+// ----- KILLHOUSE (v1.22.0: the real kill house) -----
+// A full CQB training compound rebuilt from the ground up: no open arena.
+// Four north rooms, a long north corridor, west/east wings, the central
+// PIT kill zone, a south corridor and an entry hall flanked by four more
+// rooms - every space connected by real doorways. Sealed roof, strip
+// lights, red emergency glow, stenciled signs and glowing zombie eyes.
 function loadKillhouseMap() {
   ambLight.intensity = 0.6; dirLight.intensity = 0.15;   // interior: lights do the work
+  mapTickFn = null;
   scene.background = new THREE.Color(0x0b0d10);
   scene.fog = new THREE.Fog(0x0b0d10, 6, 38);
   setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
-  var WALL=tex.concrete, WALL2=tex.concrete, BRICK=tex.brick, CRATE=tex.crate, METAL=tex.metalWall, RUST=0x884422, WOOD=tex.crate, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
+  var WALL=tex.concrete, BRICK=tex.brick, CRATE=tex.crate, METAL=tex.metalWall, DARKM=tex.darkMetal, FLOOR=tex.concreteFloor, BARREL_D=0x444444;
+  var WOODM = new THREE.MeshStandardMaterial({ map: _loadTex('tex_crate.png'), color: 0x9a8a72, roughness: 0.85 });
+  var BAGS = new THREE.MeshStandardMaterial({ color: 0xcfc5a5, roughness: 1 });
+  function decoK(m) { mapGroup.add(m); sceneObjects.push(m); }
 
-  // ====== OUTER BUILDING ======
-  addWall(0, -0.1, 0, 32, 0.25, 42, FLOOR);
-  addWall(0, 2.5, -21, 32, 5, 0.6, WALL);
-  addWall(0, 2.5, 21, 32, 5, 0.6, WALL);
-  addWall(-16.3, 2.5, 0, 0.6, 5, 42, WALL);
-  addWall(16.3, 2.5, 0, 0.6, 5, 42, WALL);
+  // ====== SHELL: floor + outer walls ======
+  addWall(0, -0.1, 0, 44, 0.25, 34, FLOOR);
+  addWall(0, 2.5, -17, 45.4, 5, 0.7, WALL);
+  addWall(0, 2.5, 17, 45.4, 5, 0.7, WALL);
+  addWall(-22, 2.5, 0, 0.7, 5, 34, WALL);
+  addWall(22, 2.5, 0, 0.7, 5, 34, WALL);
 
-  // ====== ENTRANCE HALL ======
-  addWall(-8, 2, -14, 0.4, 4.5, 8, WALL2);
-  addWall(-12, 2, -10, 8, 4.5, 0.4, BRICK);
-  addWall(-8, 2, -18, 0.4, 4.5, 4, WALL2);
-  addWall(8, 2, -14, 0.4, 4.5, 8, WALL2);
-  addWall(12, 2, -10, 8, 4.5, 0.4, BRICK);
-  addWall(8, 2, -18, 0.4, 4.5, 4, WALL2);
-  addBox(-4, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
-  addBox(-2.5, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
-  addBox(-3.25, 2.15, -17, 1.2, 1, 1.2, CRATE);
-  addBox(4, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
-  addBox(5.5, 0.75, -17, 1.5, 1.5, 1.5, CRATE);
-  addBox(4.75, 2.15, -17, 1.2, 1, 1.2, CRATE);
-  addBox(-10, 0.5, -13, 1, 1, 2, CRATE);
-  addBox(-11, 0.5, -16, 1.2, 1, 1.2, CRATE);
-  addBox(-13, 0.5, -12, 1, 1, 1, CRATE);
-  addBox(10, 0.5, -13, 1, 1, 2, CRATE);
-  addBox(11, 0.5, -16, 1.2, 1, 1.2, CRATE);
-  addBox(13, 0.5, -12, 1, 1, 1, CRATE);
+  // ====== NORTH ROOMS R1-R4 (z -17..-8, solid separators) ======
+  addWall(-11, 2.5, -12.5, 0.5, 5, 9, WALL);
+  addWall(0, 2.5, -12.5, 0.5, 5, 9, WALL);
+  addWall(11, 2.5, -12.5, 0.5, 5, 9, WALL);
+  // north corridor wall: one 2.4m door per room, staggered
+  addWall(-20.1, 2.5, -8, 4.8, 5, 0.5, WALL);
+  addWall(-11, 2.5, -8, 8.6, 5, 0.5, WALL);
+  addWall(0, 2.5, -8, 8.6, 5, 0.5, WALL);
+  addWall(11, 2.5, -8, 8.6, 5, 0.5, WALL);
+  addWall(20.1, 2.5, -8, 4.8, 5, 0.5, WALL);
 
-  // ====== CENTER CORRIDOR ======
-  addWall(-4, 2, -4, 6, 4.5, 0.4, WALL2);
-  addWall(4, 2, -4, 6, 4.5, 0.4, WALL2);
-  // Brick accents at corridor exit
-  addWall(-4.6, 2, -0.9, 0.5, 4.5, 0.5, BRICK);
-  addWall(4.6, 2, -0.9, 0.5, 4.5, 0.5, BRICK);
-  addBox(0, 0.5, -6, 2, 1, 1, CRATE);
-  addBox(-2, 0.5, -2, 1.2, 1, 1.2, CRATE);
-  addBox(2, 0.5, -2, 1.2, 1, 1.2, CRATE);
-  addCyl(-10, 0.6, -5, 0.4, 1.2, BARREL_D, 0.3);
-  addCyl(10, 0.6, -5, 0.4, 1.2, BARREL_D, 0.3);
+  // ====== NORTH CORRIDOR (z -8..-5.4): doors down to W1 / PIT / E1 ======
+  addWall(-19.4, 2.5, -5.4, 6.2, 5, 0.5, WALL);
+  addWall(-7.5, 2.5, -5.4, 12.4, 5, 0.5, WALL);
+  addWall(7.5, 2.5, -5.4, 12.4, 5, 0.5, WALL);
+  addWall(19.4, 2.5, -5.4, 6.2, 5, 0.5, WALL);
 
-  // ====== MAIN ARENA ======
-  addWall(-10, 2, 4, 0.4, 4.5, 10, WALL2);
-  addWall(-14, 2, 4, 8, 4.5, 0.4, WALL2);
-  addWall(-10, 2, 8, 8, 4.5, 0.4, WALL2);
-  addWall(-10, 2, 0, 4, 4.5, 0.4, WALL2);
-  addWall(10, 2, 4, 0.4, 4.5, 10, WALL2);
-  addWall(14, 2, 4, 8, 4.5, 0.4, WALL2);
-  addWall(10, 2, 8, 8, 4.5, 0.4, WALL2);
-  addWall(10, 2, 0, 4, 4.5, 0.4, WALL2);
-  addBox(-12, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
-  addBox(-13.5, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
-  addBox(-12.75, 2.15, 3, 1.2, 1, 1.2, CRATE);
-  addBox(-12, 0.5, 6, 1, 1, 2, CRATE);
-  addBox(-14, 0.5, 6, 1.2, 1, 1.2, CRATE);
-  addBox(12, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
-  addBox(13.5, 0.75, 3, 1.5, 1.5, 1.5, CRATE);
-  addBox(12.75, 2.15, 3, 1.2, 1, 1.2, CRATE);
-  addBox(12, 0.5, 6, 1, 1, 2, CRATE);
-  addBox(14, 0.5, 6, 1.2, 1, 1.2, CRATE);
-  addBox(0, 1, 6, 2, 2, 2, METAL);
-  addBox(0, 2.3, 6, 1.5, 0.3, 1.5, RUST);
-  addBox(-5, 0.5, 4, 1.2, 1, 1.2, CRATE);
-  addBox(5, 0.5, 4, 1.2, 1, 1.2, CRATE);
-  addBox(-3, 0.5, 9, 1, 1, 1, CRATE);
-  addBox(3, 0.5, 9, 1, 1, 1, CRATE);
+  // ====== MIDDLE BAND (z -5.4..5.4): west wing | PIT | east wing ======
+  // west wing W1/W2 split with an internal doorway at the far end
+  addWall(-21.1, 2.5, 0, 1.8, 5, 0.5, WALL);
+  addWall(-12.9, 2.5, 0, 9.8, 5, 0.5, WALL);
+  // east wing E1/E2 split (mirrored)
+  addWall(21.1, 2.5, 0, 1.8, 5, 0.5, WALL);
+  addWall(12.9, 2.5, 0, 9.8, 5, 0.5, WALL);
+  // wing/PIT separators with a wide 3.4m breach door each side
+  addWall(-8, 2.5, -3.55, 0.5, 5, 3.7, WALL);
+  addWall(-8, 2.5, 3.55, 0.5, 5, 3.7, WALL);
+  addWall(8, 2.5, -3.55, 0.5, 5, 3.7, WALL);
+  addWall(8, 2.5, 3.55, 0.5, 5, 3.7, WALL);
+  // south corridor wall: doors up from W2 / PIT / E2
+  addWall(-19.4, 2.5, 5.4, 6.2, 5, 0.5, WALL);
+  addWall(-7.5, 2.5, 5.4, 12.4, 5, 0.5, WALL);
+  addWall(7.5, 2.5, 5.4, 12.4, 5, 0.5, WALL);
+  addWall(19.4, 2.5, 5.4, 6.2, 5, 0.5, WALL);
 
-  // ====== BACK CORRIDORS ======
-  addWall(-6, 2, 16, 0.4, 4.5, 10, WALL2);
-  addWall(-10, 2, 12, 8, 4.5, 0.4, WALL2);
-  addWall(6, 2, 16, 0.4, 4.5, 10, WALL2);
-  addWall(10, 2, 12, 8, 4.5, 0.4, WALL2);
-  addWall(0, 2, 19, 14, 4.5, 0.4, WALL2);
-  addBox(-8, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
-  addBox(-6.5, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
-  addBox(-7.25, 2.15, 15, 1.2, 1, 1.2, CRATE);
-  addBox(8, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
-  addBox(6.5, 0.75, 15, 1.5, 1.5, 1.5, CRATE);
-  addBox(7.25, 2.15, 15, 1.2, 1, 1.2, CRATE);
-  addBox(-3, 0.5, 17, 1.2, 1, 1.2, CRATE);
-  addBox(3, 0.5, 17, 1.2, 1, 1.2, CRATE);
-  addBox(0, 0.5, 18, 2, 1, 1, CRATE);
-  addCyl(-12, 0.6, 10, 0.4, 1.2, RUST, 0.3);
-  addCyl(-12.9, 0.6, 10, 0.4, 1.2, RUST, 0.3);
-  addCyl(12, 0.6, 10, 0.4, 1.2, RUST, 0.3);
-  addCyl(12.9, 0.6, 10, 0.4, 1.2, RUST, 0.3);
-  addBox(-14, 0.15, 17, 2, 0.3, 2, WOOD);
-  addBox(14, 0.15, 17, 2, 0.3, 2, WOOD);
+  // ====== SOUTH CORRIDOR (z 5.4..8) + wall to entry rooms ======
+  addWall(-20.1, 2.5, 8, 4.8, 5, 0.5, WALL);
+  addWall(-8.3, 2.5, 8, 14, 5, 0.5, WALL);
+  addWall(8.3, 2.5, 8, 14, 5, 0.5, WALL);
+  addWall(20.1, 2.5, 8, 4.8, 5, 0.5, WALL);
 
-  // ===== v1.20.0 KILLHOUSE POLISH =====
-  // low metal barrier splitting the arena entrance (step-over cover)
-  addWall(0, 0.4, 1, 4, 0.8, 0.5, METAL);
-  // target boards on posts in the arena (procedural bullseye texture)
+  // ====== ENTRY HALL (player spawn) + four south rooms ======
+  addWall(-4, 2.5, 12.5, 0.5, 5, 9, WALL);
+  addWall(4, 2.5, 12.5, 0.5, 5, 9, WALL);
+  // SW1/SW2 and SE1/SE2 separators with internal doorways
+  addWall(-13, 2.5, 9.65, 0.5, 5, 3.3, WALL);
+  addWall(-13, 2.5, 15.35, 0.5, 5, 3.3, WALL);
+  addWall(13, 2.5, 9.65, 0.5, 5, 3.3, WALL);
+  addWall(13, 2.5, 15.35, 0.5, 5, 3.3, WALL);
+
+  // ====== SEALED ROOF + PIT PILLARS ======
+  addBox(0, 5.3, 0, 45.4, 0.6, 35.4, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x3a3d42, roughness: 0.95 }));
+  addWall(-4, 2.5, -3, 0.8, 5, 0.8, WALL);
+  addWall(4, 2.5, -3, 0.8, 5, 0.8, WALL);
+  addWall(-4, 2.5, 3, 0.8, 5, 0.8, WALL);
+  addWall(4, 2.5, 3, 0.8, 5, 0.8, WALL);
+
+  // ====== R1 ARMORY (x -22..-11) ======
+  addWall(-19.5, 0.5, -16.2, 4.6, 1, 0.9, METAL);
+  addWall(-12.6, 1.1, -15.1, 0.6, 2.2, 3, METAL);
+  addBox(-17, 0.75, -11, 1.5, 1.5, 1.5, CRATE);
+  addBox(-15.6, 0.75, -11.4, 1.4, 1.5, 1.4, CRATE);
+  addBox(-16.3, 2.1, -11.2, 1.2, 1, 1.2, CRATE);
+
+  // ====== R2 BUNKS (x -11..0) ======
+  addBox(-8.4, 0.3, -14.8, 3.2, 0.6, 1.5, METAL);
+  addBox(-8.4, 1.55, -14.8, 3.2, 0.25, 1.5, METAL);
+  addBox(-3.4, 0.3, -14.8, 3.2, 0.6, 1.5, METAL);
+  addBox(-3.4, 1.55, -14.8, 3.2, 0.25, 1.5, METAL);
+  addBox(-10.4, 1.1, -10.5, 0.6, 2.2, 2.4, METAL);
+  addBox(-6, 0.3, -12.5, 1.4, 0.6, 0.8, WOODM);
+  addBox(-4.2, 0.3, -12.5, 1.4, 0.6, 0.8, WOODM);
+
+  // ====== R3 CLASSROOM (x 0..11) ======
+  addBox(2.4, 0.45, -12.6, 2.2, 0.9, 1, WOODM);
+  addBox(5.4, 0.45, -12.6, 2.2, 0.9, 1, WOODM);
+  addBox(3.9, 0.45, -10.6, 2.2, 0.9, 1, WOODM);
   var tgTex = makeCanvasTex(function(c, w, h) {
     c.fillStyle = '#e8e4d8'; c.fillRect(0, 0, w, h);
     c.strokeStyle = '#b03030'; c.lineWidth = 6;
@@ -3641,26 +3618,105 @@ function loadKillhouseMap() {
     c.fillStyle = '#b03030'; c.beginPath(); c.arc(w/2, h/2, 8, 0, Math.PI*2); c.fill();
   }, 128, 128);
   var tgMat = new THREE.MeshBasicMaterial({ map: tgTex });
-  var tgP = [[-6, 8.5], [6, 8.5]];
-  for (var ti = 0; ti < 2; ti++) {
-    addBox(tgP[ti][0], 0.75, tgP[ti][1], 0.12, 1.5, 0.12, 0x333333);
-    var bd = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), tgMat);
-    bd.position.set(tgP[ti][0], 1.6, tgP[ti][1]); bd.rotation.y = Math.PI;
-    mapGroup.add(bd); sceneObjects.push(bd);
-  }
-  // green ammo caches in the back corridor
-  addBox(-2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
-  addBox(2.5, 0.35, 18.5, 1.2, 0.7, 0.8, 0x3e5a34);
+  var b3 = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), tgMat);
+  b3.position.set(10.72, 1.7, -12.5); b3.rotation.y = -Math.PI / 2; decoK(b3);
 
-  // ===== v1.21.0 KILLHOUSE: inside the death house =====
-  // ceiling slab sealing the whole building (bottom flush with the wall tops)
-  addBox(0, 5.3, 0, 34, 0.6, 44, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x3a3d42, roughness: 0.95 }));
-  // support pillars under the ceiling
-  addBox(-8, 2.5, 0, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
-  addBox(8, 2.5, 0, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
-  addBox(0, 2.5, 10, 0.7, 5, 0.7, new THREE.MeshStandardMaterial({ map: _loadTex('tex_concrete.png'), color: 0x555a60, roughness: 0.9 }));
-  // warm strip lights (point lights + emissive fixtures)
-  var warmSpots = [[0, 4.55, -16], [-9, 4.55, -8], [9, 4.55, -8], [0, 4.55, 3], [-9, 4.55, 14], [9, 4.55, 14]];
+  // ====== R4 SUPPLY (x 11..22) ======
+  addCyl(17, 0.6, -15, 0.42, 1.2, BARREL_D, 0.3);
+  addCyl(16.2, 0.6, -15.2, 0.42, 1.2, 0x6b3d2a, 0.5);
+  addCyl(17.8, 0.6, -14.6, 0.42, 1.2, BARREL_D, 0.3);
+  addBox(14, 0.75, -12, 1.5, 1.5, 1.5, CRATE);
+  addBox(15.5, 0.75, -11.6, 1.4, 1.5, 1.4, CRATE);
+  addBox(14.7, 2.1, -11.8, 1.2, 1, 1.2, CRATE);
+  addBox(19.5, 0.5, -10, 1.2, 1, 1.2, CRATE);
+
+  // ====== W1 SHOOTING RANGE (x -22..-8, z -5.4..0) ======
+  var tgX = [-19, -15, -11];
+  for (var ti = 0; ti < 3; ti++) {
+    var bd = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), tgMat);
+    bd.position.set(tgX[ti], 1.6, -0.28); bd.rotation.y = Math.PI; decoK(bd);
+  }
+  addBox(-15, 0.45, -3, 1.7, 0.9, 0.7, BAGS);
+  addBox(-11, 0.45, -2.2, 1.7, 0.9, 0.7, BAGS);
+  addBox(-19, 0.4, -4.4, 2, 0.8, 1, WOODM);
+
+  // ====== W2 OBSTACLE ROOM (x -22..-8, z 0..5.4) ======
+  addBox(-14, 0.4, 2.7, 2.4, 0.8, 0.4, METAL);
+  addBox(-18.5, 0.4, 2.7, 2.4, 0.8, 0.4, METAL);
+  addBox(-11, 0.4, 4.2, 2.4, 0.8, 0.4, METAL);
+  addBox(-16.5, 0.15, 1.4, 3, 0.3, 2, new THREE.MeshStandardMaterial({ color: 0x3a4a5a, roughness: 1 }));
+  addBox(-20, 0.15, 4, 2.6, 0.3, 1.8, new THREE.MeshStandardMaterial({ color: 0x3a4a5a, roughness: 1 }));
+
+  // ====== THE PIT (x -8..8): central kill zone ======
+  addBox(0, 1, 0, 2.4, 2, 2.4, METAL);
+  addBox(0, 2.12, 0, 2, 0.25, 2, 0x884422);
+  addBox(-5.5, 0.5, 4.2, 1.2, 1, 1.2, CRATE);
+  addBox(5.5, 0.5, -4.2, 1.2, 1, 1.2, CRATE);
+  addBox(-3, 0.75, -4.3, 1.5, 1.5, 1.5, CRATE);
+  // red emergency dome glowing over the PIT (emissive only)
+  var dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff1810, emissiveIntensity: 1.6 }));
+  dome.position.set(0, 4.6, 0); decoK(dome);
+  // barbed wire coils by the wing doors
+  var wireM = new THREE.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.5, metalness: 0.7 });
+  var wireSpots = [[-6.8, 1.9, -2.2], [6.8, 2.1, 2.2], [0, 1.4, 4.4]];
+  for (var bwi = 0; bwi < wireSpots.length; bwi++) {
+    var bw = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.045, 8, 18), wireM);
+    bw.position.set(wireSpots[bwi][0], 0.42, wireSpots[bwi][2]);
+    bw.rotation.x = Math.PI / 2; bw.rotation.z = wireSpots[bwi][1];
+    decoK(bw);
+  }
+
+  // ====== E1 GENERATOR (x 8..22, z -5.4..0) ======
+  addBox(15, 1, -2.6, 2.6, 2, 1.8, DARKM);
+  addCyl(19.5, 0.6, -4.3, 0.42, 1.2, BARREL_D, 0.3);
+  addCyl(18.7, 0.6, -3.6, 0.42, 1.2, BARREL_D, 0.3);
+  addBox(11.5, 0.5, -1.2, 1.2, 1, 1.2, CRATE);
+
+  // ====== E2 STORAGE (x 8..22, z 0..5.4) ======
+  addBox(13, 0.75, 2.5, 1.5, 1.5, 1.5, CRATE);
+  addBox(13, 2.1, 2.5, 1.2, 1, 1.2, CRATE);
+  addBox(17.5, 0.75, 4, 1.5, 1.5, 1.5, CRATE);
+  addBox(21.3, 1, 2.6, 0.8, 2, 4, METAL);
+
+  // ====== SW1 BREACH PRACTICE (x -22..-13, z 8..17) ======
+  addWall(-18.9, 1.5, 10, 0.3, 3, 0.3, WOODM);
+  addWall(-17.1, 1.5, 10, 0.3, 3, 0.3, WOODM);
+  addWall(-18, 3.15, 10, 2.2, 0.3, 0.3, WOODM);
+  addWall(-18.9, 1.5, 14, 0.3, 3, 0.3, WOODM);
+  addWall(-17.1, 1.5, 14, 0.3, 3, 0.3, WOODM);
+  addWall(-18, 3.15, 14, 2.2, 0.3, 0.3, WOODM);
+  var ram = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.2, 10), DARKM);
+  ram.position.set(-20.5, 1.1, 12.2); ram.rotation.z = 0.5; decoK(ram);
+  addBox(-15.5, 0.45, 15.5, 1.7, 0.9, 0.7, BAGS);
+
+  // ====== SW2 MEDIC (x -13..-4, z 8..17) ======
+  addBox(-9, 0.45, 10.5, 2.4, 0.9, 1.1, WOODM);
+  addBox(-6.5, 0.45, 14.5, 2.4, 0.9, 1.1, WOODM);
+  addBox(-11.5, 0.4, 15.8, 1, 0.8, 1, new THREE.MeshStandardMaterial({ color: 0xbfc5c9, roughness: 0.6 }));
+  addBox(-10.4, 0.4, 15.8, 0.9, 0.8, 0.9, new THREE.MeshStandardMaterial({ color: 0xbfc5c9, roughness: 0.6 }));
+
+  // ====== ENTRY HALL (spawn) ======
+  addBox(-2.5, 0.35, 12.5, 1.2, 0.7, 0.8, 0x3e5a34);
+  addBox(2.5, 0.35, 12.5, 1.2, 0.7, 0.8, 0x3e5a34);
+  addBox(0, 0.45, 10.4, 3, 0.9, 0.7, BAGS);
+
+  // ====== SE1 JUNK ROOM (x 13..22, z 8..17) ======
+  addCyl(18, 0.6, 15, 0.42, 1.2, 0x6b3d2a, 0.5);
+  addCyl(19, 0.6, 15.9, 0.42, 1.2, BARREL_D, 0.3);
+  addCyl(17.2, 0.6, 15.6, 0.42, 1.2, BARREL_D, 0.3);
+  addBox(15, 0.75, 10, 1.5, 1.5, 1.5, CRATE);
+  addBox(16.5, 0.75, 10.4, 1.4, 1.5, 1.4, CRATE);
+  addCyl(20.5, 0.22, 9.5, 0.55, 0.44, 0x1a1a1a, 0.95);
+  addCyl(20.5, 0.66, 9.5, 0.55, 0.44, 0x1a1a1a, 0.95);
+
+  // ====== SE2 RADIO ROOM (x 4..13, z 8..17) ======
+  addBox(8.5, 0.45, 12, 2.4, 0.9, 1.1, WOODM);
+  addBox(8.5, 1.35, 12, 0.8, 0.7, 0.5, DARKM);
+  addBox(11, 0.5, 15.5, 1.2, 1, 1.2, CRATE);
+
+  // ====== LIGHTING: strip lights + red emergency glow ======
+  var warmSpots = [[0, 4.55, -6.7], [0, 4.55, 6.7], [-16.5, 4.55, -12.5], [-5.5, 4.55, -12.5],
+                   [5.5, 4.55, -12.5], [16.5, 4.55, -12.5], [0, 4.55, 0], [0, 4.55, 12.5]];
   var warmLights = [];
   var FIX = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d8, emissiveIntensity: 1.5 });
   for (var wi = 0; wi < warmSpots.length; wi++) {
@@ -3668,19 +3724,19 @@ function loadKillhouseMap() {
     var pl = new THREE.PointLight(0xffe2b8, 0.95, 21, 1.6);
     pl.position.set(ws[0], ws[1] - 0.3, ws[2]); mapGroup.add(pl);
     var fx = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.09, 0.42), FIX.clone());
-    fx.position.set(ws[0], ws[1], ws[2]); mapGroup.add(fx); sceneObjects.push(fx);
+    fx.position.set(ws[0], ws[1], ws[2]); decoK(fx);
     warmLights.push(pl);
   }
-  // red emergency accents in the arena (the "death" in death house)
-  var redSpots = [[-14.5, 3.7, 4], [14.5, 3.7, 4]];
-  for (var ri2 = 0; ri2 < redSpots.length; ri2++) {
-    var rs = redSpots[ri2];
+  var redSpots = [[-15, 3.7, -2.7], [15, 3.7, 2.7]];
+  for (var ri = 0; ri < redSpots.length; ri++) {
+    var rs = redSpots[ri];
     var rl = new THREE.PointLight(0xff2222, 0.85, 13, 1.8);
     rl.position.set(rs[0], rs[1], rs[2]); mapGroup.add(rl);
-    var dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff1810, emissiveIntensity: 1.6 }));
-    dome.position.set(rs[0], rs[1] + 0.25, rs[2]); mapGroup.add(dome); sceneObjects.push(dome);
+    var rdome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff1810, emissiveIntensity: 1.6 }));
+    rdome.position.set(rs[0], rs[1] + 0.25, rs[2]); decoK(rdome);
   }
-  // stenciled wall signs
+
+  // ====== STENCILS: DANGER signs + hazard stripes ======
   var signTex = makeCanvasTex(function(c, w, h) {
     c.fillStyle = '#1a1c20'; c.fillRect(0, 0, w, h);
     c.strokeStyle = '#c23434'; c.lineWidth = 8; c.strokeRect(10, 10, w - 20, h - 20);
@@ -3690,42 +3746,36 @@ function loadKillhouseMap() {
     c.font = 'bold 24px Arial'; c.fillStyle = '#8a8f96'; c.fillText('AUTHORIZED PERSONNEL ONLY', w / 2, 168);
   }, 256, 192);
   var signMat = new THREE.MeshBasicMaterial({ map: signTex });
-  var sign1 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.55), signMat);
-  sign1.position.set(-5, 2.4, -20.65); mapGroup.add(sign1); sceneObjects.push(sign1);
-  var sign2 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.55), signMat);
-  sign2.position.set(6.5, 2.4, 20.65); sign2.rotation.y = Math.PI; mapGroup.add(sign2); sceneObjects.push(sign2);
-  // barbed wire coils on the floor by the arena mouth
-  var wireM = new THREE.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.5, metalness: 0.7 });
-  var wireSpots = [[-2.2, 1.9, 0.5], [0, 2.1, 0.5], [2.2, 1.9, 0.5]];
-  for (var bwi = 0; bwi < wireSpots.length; bwi++) {
-    var bw = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.045, 8, 18), wireM);
-    bw.position.set(wireSpots[bwi][0], 0.42, wireSpots[bwi][2]);
-    bw.rotation.x = Math.PI / 2; bw.rotation.z = wireSpots[bwi][1];
-    mapGroup.add(bw); sceneObjects.push(bw);
-  }
-  // hazard stripes at the arena entrance
+  var sign1 = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.95), signMat);
+  sign1.position.set(-2.7, 2.4, 8.28); decoK(sign1);
+  var sign2 = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.95), signMat);
+  sign2.position.set(2.7, 2.4, 8.28); decoK(sign2);
   var khHz = makeCanvasTex(function(c, w, h) {
     c.fillStyle = '#d9a52e'; c.fillRect(0, 0, w, h);
     c.fillStyle = '#26231d';
     for (var i = -2; i < 10; i++) { c.save(); c.translate(i * 32, 0); c.rotate(Math.PI / 4); c.fillRect(0, -60, 16, 240); c.restore(); }
   }, 128, 128);
-  var khHzM = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshBasicMaterial({ map: khHz, transparent: true, opacity: 0.85, depthWrite: false }));
-  khHzM.rotation.x = -Math.PI / 2; khHzM.position.set(0, 0.02, 0.9); mapGroup.add(khHzM);
-  // living map: a failing strip light + pulsing red beacons
+  var khHzM = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.2), new THREE.MeshBasicMaterial({ map: khHz, transparent: true, opacity: 0.85, depthWrite: false }));
+  khHzM.rotation.x = -Math.PI / 2; khHzM.position.set(0, 0.02, 8.9); decoK(khHzM);
+  var khHzM2 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.2), new THREE.MeshBasicMaterial({ map: khHz, transparent: true, opacity: 0.85, depthWrite: false }));
+  khHzM2.rotation.x = -Math.PI / 2; khHzM2.position.set(0, 0.02, -5.9); decoK(khHzM2);
+
+  // living map: the PIT strip light fails and stutters
   var khT = 0;
   mapTickFn = function(dt) {
     khT += dt;
-    warmLights[2].intensity = 0.95 - (Math.sin(khT * 17) > 0.86 ? 0.55 * Math.random() : 0);
-    warmLights[2].intensity -= (Math.sin(khT * 4.3) > 0.97 ? 0.3 : 0);
+    warmLights[6].intensity = 0.95 - (Math.sin(khT * 17) > 0.86 ? 0.55 * Math.random() : 0);
+    warmLights[6].intensity -= (Math.sin(khT * 4.3) > 0.97 ? 0.3 : 0);
   };
 
-  player.position.set(0, PLAYER_HEIGHT, -18);
+  player.position.set(0, PLAYER_HEIGHT, 15.5);
 }
 
 const mapLoaders = [loadScrapyardMap, loadSkyscraperMap, loadSandstormMap, loadKillhouseMap];
-// v1.20.0: spawn facing per map (yaw applied by startGame) - Killhouse spawns
-// 3m from the north boundary, so it must face the hall (+Z), not the wall
-const mapSpawnYaw = [0, 0, 0, Math.PI];
+// spawn facing per map (yaw applied by startGame) - v1.22.0: Killhouse now
+// spawns in the south entry hall facing north into the maze (-Z), like the
+// desert spawn facing the outpost
+const mapSpawnYaw = [0, 0, 0, 0];
 loadScrapyardMap(); // Load default map behind menu
 
 // ===== FPS GUN MODEL (v1.17.0: one 3D model per shop weapon) =====
@@ -3964,7 +4014,9 @@ function shoot() {
 
   // Raycast
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  var allTargets = sceneObjects.slice();
+  // v1.22.0: only meshes are shootable - Points (Sandstorm dust) would be hit
+  // first everywhere in the storm and crashed shoot() with a null face
+  var allTargets = sceneObjects.filter(function(o) { return o.isMesh; });
   for (var ei = 0; ei < enemies.length; ei++) {
     enemies[ei].group.traverse(function(ch) { if (ch.isMesh) allTargets.push(ch); });
   }
@@ -3999,7 +4051,7 @@ function shoot() {
           playerWin();
         }
       }
-    } else {
+    } else if (hit.face) {
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
       const holeGroup = new THREE.Group();
       const coreGeo = new THREE.CircleGeometry(0.06, 8);
