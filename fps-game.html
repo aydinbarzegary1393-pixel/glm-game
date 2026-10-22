@@ -512,6 +512,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div style="position:relative;z-index:1;text-align:center">
 <h2 data-en="YOU DIED" data-fa="تو مردی">YOU DIED</h2>
 <p class="death-sub" data-en="GAME OVER" data-fa="بازی تمام شد">GAME OVER</p>
+<p id="death-reason" class="death-sub" style="display:none;margin-top:-25px;color:#ffb060"></p>
 <button class="pause-btn" onclick="restartGame()" data-en="PLAY AGAIN" data-fa="بازی دوباره">PLAY AGAIN</button>
 <button class="pause-btn exit-btn" onclick="backToMenuFromDeath()" data-en="MAIN MENU" data-fa="منوی اصلی">MAIN MENU</button>
 </div>
@@ -594,6 +595,7 @@ let isLocked = false;
 let gameStarted = false;
 let yaw = 0, pitch = 0;
 let velocityY = 0;
+let voidFalling = false;   // v1.23.0: true once the player drops off the Skyscraper roof into the void
 const keys = {w:false,a:false,s:false,d:false,space:false};
 let isMoving = false;
 let footstepTimer = 0;
@@ -2627,6 +2629,16 @@ function playerDie() {
   recordDeathStats();
   gameStarted = false;
   playDeathSting(); duckMusic(0.2); setMusicIntensity(0);   // v1.19.4 death sting
+  var dr = document.getElementById('death-reason');   // v1.23.0: fall / out-of-bounds reason
+  if (deathReason === 'fall') {
+    dr.textContent = (currentLang === 'fa') ? 'از آسمان‌خراش سقوط کردی!' : 'YOU FELL OFF THE SKYSCRAPER!';
+    dr.style.display = 'block';
+  } else if (deathReason === 'oob') {
+    dr.textContent = (currentLang === 'fa') ? 'از محدوده‌ی نقشه خارج شدی!' : 'YOU LEFT THE COMBAT ZONE!';
+    dr.style.display = 'block';
+  } else {
+    dr.style.display = 'none';
+  }
   document.getElementById('death-screen').classList.remove('hidden');
   document.getElementById('level-hud').style.display = 'none';
   document.getElementById('crosshair').style.display = 'none';
@@ -3776,6 +3788,28 @@ const mapLoaders = [loadScrapyardMap, loadSkyscraperMap, loadSandstormMap, loadK
 // spawns in the south entry hall facing north into the maze (-Z), like the
 // desert spawn facing the outpost
 const mapSpawnYaw = [0, 0, 0, 0];
+
+// v1.23.0: leaving the play area is lethal. Skyscraper is the only void map:
+// jump the parapet and you fall past the whole city - death comes at the END
+// of the fall (street depth). On every other map there is no fall physics;
+// stepping outside the boundary instead kills instantly. Rects sit a couple
+// of meters beyond the outer wall faces so wall-hugging play stays safe.
+const MAP_BOUNDS = [
+  { x1: -22.5, z1: -22.5, x2: 22.5, z2: 22.5 },        // scrapyard  (steel walls at 20.4)
+  { x1: -60, z1: -60, x2: 60, z2: 60, voidY: -36 },    // skyscraper (street haze plane at -40)
+  { x1: -24, z1: -19, x2: 24, z2: 23 },                // sandstorm  (ridges out to 22.8 / 21.5)
+  { x1: -24, z1: -19, x2: 24, z2: 19 }                 // killhouse  (outer walls 22.35 / 17.35)
+];
+let deathReason = '';
+// v1.23.0: out-of-play deaths bypass damagePlayer - they set the reason shown
+// on the death screen and go through the normal playerDie() flow once.
+function killOutOfBounds(reason) {
+  if (!gameStarted) return;
+  deathReason = reason;
+  playerHealth = 0;
+  updateHealthBar();
+  playerDie();
+}
 loadScrapyardMap(); // Load default map behind menu
 
 // ===== FPS GUN MODEL (v1.17.0: one 3D model per shop weapon) =====
@@ -4109,6 +4143,7 @@ function startGame(mode) {
   ammo = maxAmmo; isReloading = false; canShoot = true;
   resetGunAnim();
   playerHealth = MAX_HEALTH; killCount = 0;
+  deathReason = ''; voidFalling = false;   // v1.23.0: fresh run - no stale fall state
   levelTarget = (gameMode === 'levels') ? levelCurrent : 0;
   updateHealthBar();
   document.getElementById('reload-hud').style.display = 'none';
@@ -4366,8 +4401,12 @@ function animate() {
     const moving = mv.lengthSq() > 0;
 
     // Jump (only if standing on ground or a surface)
+    // v1.23.0: on void maps (Skyscraper) no ground off the roof means a real
+    // fall - the old flat-0 fallback only applies to grounded maps
+    var mb = MAP_BOUNDS[currentMap] || MAP_BOUNDS[0];
+    var hasVoid = (mb.voidY !== undefined);
     var rawGround = getGroundY(player.position.x, player.position.y, player.position.z);
-    var groundLevel = rawGround > -998 ? rawGround : 0;
+    var groundLevel = rawGround > -998 ? rawGround : (hasVoid ? -1000 : 0);
     var onGround = (player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05 && velocityY <= 0.1);
     if (keys.space && onGround) {
       velocityY = JUMP_FORCE;
@@ -4377,8 +4416,12 @@ function animate() {
     player.position.y += velocityY * dt;
     // Ground collision: stand on boxes/floors
     rawGround = getGroundY(player.position.x, player.position.y, player.position.z);
-    groundLevel = rawGround > -998 ? rawGround : 0;
-    if (player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05) {
+    groundLevel = rawGround > -998 ? rawGround : (hasVoid ? -1000 : 0);
+    // v1.23.0: once into the void, never let the roof edge-pad catch the player
+    // back up (getGroundY still senses the slab 0.35m past its edge)
+    if (hasVoid && rawGround <= -998 && player.position.y - PLAYER_HEIGHT < -0.2) voidFalling = true;
+    if (voidFalling) groundLevel = -1000;
+    if (!voidFalling && player.position.y - PLAYER_HEIGHT <= groundLevel + 0.05) {
       if (velocityY < 0) velocityY = 0;
       // Smooth height correction instead of instant snap:
       // walking near low props / across surface seams no longer jolts the camera
@@ -4391,6 +4434,15 @@ function animate() {
       } else {
         player.position.y = targetY;
       }
+    }
+
+    // v1.23.0: leaving the play area is lethal - fall death at street depth on
+    // the Skyscraper void, instant death when stepping out of the other maps
+    if (hasVoid && player.position.y - PLAYER_HEIGHT < mb.voidY) {
+      killOutOfBounds('fall');
+    } else if (player.position.x < mb.x1 || player.position.x > mb.x2 ||
+               player.position.z < mb.z1 || player.position.z > mb.z2) {
+      killOutOfBounds('oob');
     }
 
     // Footstep sounds
