@@ -100,6 +100,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .gift-row{display:flex;gap:8px;align-items:center;margin-top:4px}
 .gift-input{flex:1;background:rgba(0,0,0,0.55);border:1px solid rgba(79,195,247,0.45);color:#e8f7ff;font-family:inherit;font-size:14px;letter-spacing:1px;padding:10px 12px;border-radius:8px;outline:none;text-align:center}
 .gift-input:focus{border-color:#4fc3f7;box-shadow:0 0 8px rgba(79,195,247,0.25)}
+/* v1.25.0 LAN co-op UI */
+.mp-code{display:block;width:min(560px,84vw);height:74px;margin:10px auto;background:rgba(0,0,0,0.55);border:1px solid rgba(79,195,247,0.35);color:#bfe9ff;font-family:monospace;font-size:10px;line-height:1.3;padding:8px;border-radius:8px;outline:none;resize:none;text-align:left;direction:ltr;word-break:break-all}
+.mp-code:focus{border-color:#4fc3f7}
+#net-chip{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:60;background:rgba(0,40,20,0.72);border:1px solid rgba(46,204,113,0.55);color:#7dffb0;font-size:12px;font-weight:700;letter-spacing:1px;padding:5px 10px;border-radius:20px;pointer-events:none}
+#net-chip.warn{background:rgba(60,30,0,0.72);border-color:rgba(230,126,34,0.6);color:#ffb46b}
+#net-chip.gone{display:none !important}
+#net-toast{position:fixed;top:14%;left:50%;transform:translateX(-50%);z-index:70;background:rgba(0,0,0,0.72);border:1px solid rgba(79,195,247,0.5);color:#bfe9ff;font-size:14px;font-weight:700;padding:8px 18px;border-radius:20px;opacity:0;transition:opacity 0.25s;pointer-events:none}
+#net-toast.show{opacity:1}
 #gift-btn{flex-shrink:0;width:110px;padding:10px 0;font-size:13px}
 #gift-msg{min-height:15px;margin-top:6px;opacity:0;transition:opacity 0.25s;font-weight:700}
 #gift-msg.show{opacity:1}
@@ -340,8 +348,72 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <p class="subtitle" data-en="HOW DO YOU WANT TO PLAY?" data-fa="چطور می‌خوای بازی کنی؟">HOW DO YOU WANT TO PLAY?</p>
 <button class="menu-btn" id="btn-mode-normal" onclick="pickMode('normal')" data-en="NORMAL GAME" data-fa="بازی معمولی">NORMAL GAME</button>
 <button class="menu-btn" id="btn-mode-levels" onclick="pickMode('levels')">LEVEL GAME</button>
+<button class="menu-btn" id="btn-mode-coop" onclick="netOpenMenu()" data-en="2-PLAYER CO-OP (LAN)" data-fa="بازی دونفره (LAN)">2-PLAYER CO-OP (LAN)</button>
 <button class="menu-btn back-btn" onclick="backFromModeMenu()" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
+</div>
+
+<!-- ===== v1.25.0 LAN CO-OP (manual-signaling WebRTC - works fully offline) ===== -->
+<div id="mp-menu" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="2-PLAYER CO-OP" data-fa="بازی دونفره">2-PLAYER CO-OP</h2>
+<p class="subtitle" data-en="PLAY ON THE SAME Wi-Fi / LAN - NO INTERNET NEEDED" data-fa="روی یک وای‌فای یا شبکه محلی — بدون نیاز به اینترنت">SAME Wi-Fi / LAN</p>
+<button class="menu-btn" onclick="netStartHost()" data-en="CREATE GAME (HOST)" data-fa="ساخت بازی (میزبان)">CREATE GAME (HOST)</button>
+<button class="menu-btn" onclick="showMenu('mp-join')" data-en="JOIN GAME" data-fa="پیوستن به بازی">JOIN GAME</button>
+<p class="subtitle" id="mp-hint" data-en="The connection codes are exchanged once (e.g. via Telegram); after that the game runs directly over your LAN." data-fa="کدهای اتصال یک بار رد و بدل می‌شوند (مثلاً با تلگرام)؛ بعدش بازی مستقیم روی شبکه محلی اجرا می‌شود.">codes are exchanged once</p>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('mode-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
+</div>
+</div>
+
+<div id="mp-host" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="HOST - STEP 1" data-fa="میزبان - مرحله ۱"></h2>
+<p class="subtitle" data-en="Send this code to your friend:" data-fa="این کد را برای دوستت بفرست:">Send this code:</p>
+<textarea id="mp-offer-out" class="mp-code" readonly></textarea>
+<button class="menu-btn" onclick="netCopyCode('mp-offer-out')" data-en="COPY CODE" data-fa="کپی کد">COPY CODE</button>
+<p class="subtitle" data-en="STEP 2: paste your friend's reply code below:" data-fa="مرحله ۲: کد پاسخ دوستت را پایین بچسبان:"></p>
+<textarea id="mp-answer-in" class="mp-code" placeholder="PASTE ANSWER CODE HERE"></textarea>
+<button class="menu-btn" id="mp-accept-btn" onclick="netAcceptAnswer()" data-en="CONNECT" data-fa="اتصال">CONNECT</button>
+<p class="subtitle" id="mp-host-status"></p>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('mp-menu')" data-en="CANCEL" data-fa="لغو">CANCEL</button>
+</div>
+</div>
+
+<div id="mp-join" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="JOIN - STEP 1" data-fa="پیوستن - مرحله ۱"></h2>
+<p class="subtitle" data-en="Paste the host's code here:" data-fa="کد میزبان را اینجا بچسبان:"></p>
+<textarea id="mp-offer-in" class="mp-code" placeholder="PASTE HOST CODE HERE"></textarea>
+<button class="menu-btn" id="mp-make-answer-btn" onclick="netMakeAnswer()" data-en="GENERATE REPLY CODE" data-fa="ساخت کد پاسخ">GENERATE REPLY CODE</button>
+<p class="subtitle" data-en="STEP 2: send this reply code back to the host:" data-fa="مرحله ۲: این کد پاسخ را برای میزبان بفرست:"></p>
+<textarea id="mp-answer-out" class="mp-code" readonly></textarea>
+<button class="menu-btn" onclick="netCopyCode('mp-answer-out')" data-en="COPY CODE" data-fa="کپی کد">COPY CODE</button>
+<p class="subtitle" id="mp-join-status"></p>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('mp-menu')" data-en="CANCEL" data-fa="لغو">CANCEL</button>
+</div>
+</div>
+
+<div id="mp-lobby" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="CONNECTED!" data-fa="اتصال برقرار شد!">CONNECTED!</h2>
+<p class="subtitle" id="mp-lobby-sub" data-en="PLAYER 2 IS READY" data-fa="بازیکن ۲ آماده است">READY</p>
+<button class="menu-btn" id="mp-start-btn" onclick="netLobbyStart()" data-en="START CO-OP GAME" data-fa="شروع بازی دونفره">START CO-OP GAME</button>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('main-menu')" data-en="LEAVE" data-fa="ترک">LEAVE</button>
+</div>
+</div>
+
+<!-- v1.25.0 co-op respawn overlay (shown instead of the death screen in co-op) -->
+<div id="respawn-screen" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 id="respawn-title" data-en="YOU DIED" data-fa="مردی!">YOU DIED</h2>
+<p class="subtitle" id="respawn-sub" data-en="Respawning..." data-fa="در حال بازگشت...">Respawning...</p>
+<button class="menu-btn" id="respawn-btn" onclick="netDoRespawn()" data-en="RESPAWN" data-fa="بازگشت به بازی" style="display:none">RESPAWN</button>
+</div>
+</div>
+
+<!-- v1.25.0 co-op status chip + toast -->
+<div id="net-chip" style="display:none">● <span id="net-chip-txt">P2</span></div>
+<div id="net-toast"></div>
 </div>
 
 <!-- MAP SELECT -->
@@ -854,7 +926,8 @@ var GIFT_CODES = [
   { b64: 'YWlkaW5iLno=', reward: 5000000, flag: 'giftRedeemed'  },
   { b64: 'c2hhaHlhZA==', reward: 10000000, flag: 'giftRedeemed2' },
   { b64: 'a2lhbjkz', reward: 2000000, flag: 'giftRedeemed3' },
-  { b64: 'Z2xtZnBzZ2lmdA==', reward: 300000, flag: 'giftRedeemed4' }  // public code (announced to everyone)
+  { b64: 'Z2xtZnBzZ2lmdA==', reward: 300000, flag: 'giftRedeemed4' },  // public code (announced to everyone)
+  { b64: 'YWJvbGZhemw=', reward: 1000000, flag: 'giftRedeemed5' }  // v1.25.0 (never announce, never log)
 ];
 var giftMsgTimer = null;
 function giftMsgShow(txt, ok) {
@@ -1042,6 +1115,10 @@ function resetAllSavedData(btn) {
   try { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem('hudLayoutV1'); } catch(e) {}
   savedSettings = null;
   bestKills = 0;
+  // v1.25.0: the wipe must reset EVERYTHING - the run stats and the money live
+  // in these in-memory vars, and the saveSettings() calls below would write the
+  // old values straight back into storage if they were not zeroed here
+  statsKills = 0; statsDeaths = 0; statsWins = 0; statsScore = 0; statsMoney = 0;
   levelCurrent = 1; gameMode = 'normal';
   musicOn = true; updateMusicButtons(); updateMusicVolume();   // v1.19.4 music back to default
   setLang('en');
@@ -2308,6 +2385,7 @@ function isInsideMapZone(x, z) {
 function createEnemy(x, z) {
   const enemy = {
     group: new THREE.Group(),
+    netId: ++netIdSeq,   // v1.25.0 co-op: stable wire id (host authority)
     health: ENEMY_MAX_HP,
     attackTimer: ENEMY_ATK_CD,
     animTime: Math.random() * Math.PI * 2,
@@ -2466,6 +2544,8 @@ function updateMedkits() {
     var dx = px - mk.group.position.x;
     var dz = pz - mk.group.position.z;
     var dy = Math.abs((player.position.y - PLAYER_HEIGHT) - mk.group.position.y);
+    // v1.25.0: in co-op the guest never picks up locally - the HOST sends 'heal'
+    if (netIsGuest()) continue;
     // Only pick up the medkit when health is below max (at 100% the medkit stays on ground)
     if (Math.sqrt(dx*dx + dz*dz) < 1.2 && dy < 2 && playerHealth < MAX_HEALTH) {
       playerHealth = Math.min(MAX_HEALTH, playerHealth + MEDKIT_HEAL);
@@ -2479,6 +2559,21 @@ function updateMedkits() {
         if (ch.material) ch.material.dispose();
       });
       medkits.splice(i, 1);
+      continue;
+    }
+    // v1.25.0: the host also checks whether the GUEST touched the medkit
+    if (netIsHost() && NET.peer.alive && (Date.now() - NET.peer.lastInput < 3000)) {
+      var gdx = NET.peer.x - mk.group.position.x, gdz = NET.peer.z - mk.group.position.z;
+      var gdy = Math.abs((NET.peer.y - PLAYER_HEIGHT) - mk.group.position.y);
+      if (Math.sqrt(gdx*gdx + gdz*gdz) < 1.2 && gdy < 2) {
+        scene.remove(mk.group);
+        mk.group.traverse(function(ch) {
+          if (ch.geometry) ch.geometry.dispose();
+          if (ch.material) ch.material.dispose();
+        });
+        medkits.splice(i, 1);
+        netHealGuest();
+      }
     }
   }
 }
@@ -2489,9 +2584,12 @@ function updateEnemies(dt) {
   if (pg < -998) pg = 0;
   for (var i = enemies.length - 1; i >= 0; i--) {
     var e = enemies[i];
+    if (e.ghost) continue;   // v1.25.0: guest ghosts are not AI-simulated
     var ex = e.group.position.x, ez = e.group.position.z;
-    var dx = pPos.x - ex;
-    var dz = pPos.z - ez;
+    // v1.25.0 co-op: each zombie hunts the NEAREST ALIVE player (host or guest)
+    var tgt = netCoopTarget(e, pPos, pg);
+    var dx = tgt.x - ex;
+    var dz = tgt.z - ez;
     var dist = Math.sqrt(dx*dx + dz*dz);
     if (dist < 0.1) dist = 0.1;
     e.group.rotation.y = Math.atan2(dx, dz);
@@ -2514,7 +2612,7 @@ function updateEnemies(dt) {
         sepZ += (oz/od) * push;
       }
       if (od > 0.001 && od < 1.5) {
-        var oDx = pPos.x - o.x, oDz = pPos.z - o.z;
+        var oDx = tgt.x - o.x, oDz = tgt.z - o.z;
         var oDist = Math.sqrt(oDx*oDx + oDz*oDz);
         // Another zombie ahead of me (closer to player) and in my path -> queue behind it
         if (oDist < dist && ((dx/dist)*(-ox/od) + (dz/dist)*(-oz/od)) > 0.45) yielding = true;
@@ -2524,10 +2622,10 @@ function updateEnemies(dt) {
     // Damage rules: melee range only, never beyond 10 units, never through walls,
     // and never when the zombie is clearly BELOW the player's feet (vertical gap).
     // A zombie that climbed stairs up to the player's level CAN hit.
-    var playerElevated = (velocityY === 0 && (pg - e.group.position.y) > 0.6);
+    var playerElevated = (tgt.gy - e.group.position.y) > 0.6 && !tgt.isGuest;
     var canHit = dist <= ENEMY_ATK_RANGE && dist <= ZOMBIE_MAX_HIT_DIST &&
                  !playerElevated &&
-                 hasLineOfSight(ex, ez, pPos.x, pPos.z, e.group.position.y, pg);
+                 hasLineOfSight(ex, ez, tgt.x, tgt.z, e.group.position.y, tgt.gy);
 
     if (!canHit) {
       var speed = ENEMY_SPEED * dt * (yielding ? 0.3 : 1);
@@ -2607,7 +2705,8 @@ function updateEnemies(dt) {
       if (!checkEnemyWall(ex + spx, ez, e.group.position.y)) e.group.position.x = ex + spx;
       if (!checkEnemyWall(e.group.position.x, ez + spz, e.group.position.y)) e.group.position.z = ez + spz;
       e.attackTimer -= dt;
-      if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; damagePlayer(DIFFICULTY_DMG[difficulty]); }
+      // v1.25.0 co-op: the zombie damages whoever it is hunting (host or guest)
+      if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; if (tgt.isGuest) netDamageGuest(DIFFICULTY_DMG[difficulty]); else damagePlayer(DIFFICULTY_DMG[difficulty]); }
       if (e.mixer) {
         e.mixer.update(dt);
         setZombieAction(e, 'attack');
@@ -2652,6 +2751,8 @@ function updateHealthBar() {
 }
 
 function playerDie() {
+  // v1.25.0: co-op death is a respawn countdown, not a game over
+  if (netActive()) { netOnLocalDeath(); return; }
   recordBestKills();
   recordDeathStats();
   gameStarted = false;
@@ -2678,6 +2779,7 @@ function playerDie() {
 }
 
 function playerWin() {
+  if (netIsHost()) netSend({ t: 'win' });   // v1.25.0: the guest celebrates too
   recordBestKills();
   recordWinStats();
   gameStarted = false;
@@ -2727,6 +2829,8 @@ function levelComplete() {
   }
   levelCurrent++;
   saveSettings({statsMoney: statsMoney, levelCurrent: levelCurrent});
+  // v1.25.0: in co-op the guest mirrors this level screen from the message
+  if (netIsHost()) netSend({ t: 'lvlup', lvl: levelCurrent, target: levelTarget });
   document.getElementById('level-hud').style.display = 'none';
   document.getElementById('level-done-title').textContent = (currentLang === 'fa')
     ? ('مرحله ' + levelTarget + ' کامل شد!')
@@ -2740,6 +2844,8 @@ function levelComplete() {
 }
 function nextLevel() {
   document.getElementById('level-screen').classList.add('hidden');
+  // v1.25.0: in co-op only the HOST starts the next level - the guest asks for it
+  if (netIsGuest()) { netSend({ t: 'next' }); return; }
   startGame('levels');   // fresh health/ammo + spawns levelCurrent zombies
 }
 function backToMenuFromLevel() {
@@ -3009,7 +3115,7 @@ function startZombieDeath(enemy) {
     deathAct.setLoop(THREE.LoopOnce, 1);
     deathAct.clampWhenFinished = true;
     deathAct.play();
-    dyingEnemies.push({ group: enemy.group, mixer: enemy.mixer, t: 0 });
+    dyingEnemies.push({ group: enemy.group, mixer: enemy.mixer, t: 0, netId: enemy.netId });
   } else {
     scene.remove(enemy.group);
     enemy.group.traverse(function(ch) {
@@ -4207,6 +4313,12 @@ function shoot() {
     const hit = hits[0];
     if (hit.object.userData.enemyRef) {
       const enemy = hit.object.userData.enemyRef;
+      // v1.25.0: in co-op the guest's damage is applied by the HOST (authority)
+      if (netIsGuest()) {
+        netSend({ t: 'shot', id: enemy.netId, dmg: g.dmg });
+        enemy.bodyMat.emissive.setHex(0x660000);
+        setTimeout(function() { if (enemy.bodyMat) enemy.bodyMat.emissive.setHex(0x000000); }, 100);
+      } else {
       enemy.health -= g.dmg;
       enemy.bodyMat.emissive.setHex(0x660000);
       setTimeout(function() { if (enemy.bodyMat) enemy.bodyMat.emissive.setHex(0x000000); }, 100);
@@ -4229,6 +4341,7 @@ function shoot() {
         } else if (enemies.length === 0) {
           playerWin();
         }
+      }
       }
     } else if (hit.face) {
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
@@ -4304,7 +4417,10 @@ function startGame(mode) {
   } else {
     renderer.domElement.requestPointerLock();
   }
-  spawnEnemies();
+  // v1.25.0: co-op - the host spawns and broadcasts; the guest mirrors snapshots
+  if (netIsGuest()) netSyncClearGhosts();
+  else spawnEnemies();
+  if (netActive()) netOnGameStart();
   // v1.19.0: level HUD only in level mode
   var lh = document.getElementById('level-hud');
   lh.style.display = (gameMode === 'levels') ? 'block' : 'none';
@@ -4395,6 +4511,8 @@ function backFromSettings() {
 
 function exitToMenu() {
   gameStarted = false;
+  // v1.25.0: leaving to the menu ends the co-op session for both players
+  if (netActive()) { netSend({ t: 'bye' }); netAbort(); }
   setMusicTrack('menu'); duckMusic(1); setMusicIntensity(0);   // v1.19.4 back to ambient
   pauseOvl.classList.add('hidden');
   document.getElementById('crosshair').style.display = 'none';
@@ -4499,6 +4617,7 @@ function isGamePaused() {
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  if (netActive()) netTick(dt);   // v1.25.0 co-op: snapshots / input / respawn timer
   // v1.24.0: dying zombie corpses - Death clip, sink, despawn (runs even when
   // the game is paused/locked so corpses always clean up)
   for (var di = dyingEnemies.length - 1; di >= 0; di--) {
@@ -4615,7 +4734,8 @@ function animate() {
     }
 
     // Update enemies
-    updateEnemies(dt);
+    if (netIsGuest()) { /* v1.25.0: ghosts are driven by netGuestTick */ }
+    else updateEnemies(dt);
     // Update medkits
     updateMedkits();
 
@@ -4697,6 +4817,631 @@ function animate() {
 // Restore the player's saved settings (device, language, sensitivity, volume,
 // difficulty, auto reload/fire, last map, best score) - a refresh never
 // forces re-entry. Must run after all definitions, right before the loop.
+// ===== v1.25.0 LAN CO-OP (manual-signaling WebRTC, fully offline after setup) =====
+// Host simulates the world (zombie AI, medkits, level flow) and broadcasts
+// snapshots over an RTCDataChannel; the guest mirrors them with ghost zombies
+// and sends its own input + shot events back. Codes are exchanged once
+// (offer -> answer, e.g. via Telegram); gameplay itself runs direct on the LAN.
+var NET = {
+  role: 'off',            // 'off' | 'host' | 'guest'
+  pc: null, dc: null,
+  connected: false,
+  peer: { x:0, y:1.7, z:0, yaw:0, gun:0, hp:100, alive:false, lastInput:0 },
+  guestHp: 100,           // host-side authority over the guest's health
+  lastSnap: null, snapT: 0, sendT: 0,
+  ghosts: {},             // netId -> ghost enemy (guest side)
+  respawnT: -1            // >= 0 -> countdown running
+};
+var netIdSeq = 0;
+
+function netActive() { return NET.role !== 'off' && NET.connected; }
+function netIsHost() { return NET.role === 'host' && NET.connected; }
+function netIsGuest() { return NET.role === 'guest' && NET.connected; }
+
+// ---- code encode/decode (deflate + base64, fflate is already bundled) ----
+function _u8ToB64(u8) {
+  var s = '';
+  for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function _b64ToU8(b64) {
+  var s = atob(b64), u8 = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+  return u8;
+}
+function netEncode(obj) { return 'GLM1' + _u8ToB64(fflate.deflateSync(fflate.strToU8(JSON.stringify(obj)))); }
+function netDecode(str) {
+  str = (str || '').trim();
+  if (str.indexOf('GLM1') !== 0) throw new Error('bad prefix');
+  return JSON.parse(fflate.strFromU8(fflate.inflateSync(_b64ToU8(str.slice(4)))));
+}
+function netWaitIce(pc, cb) {
+  if (pc.iceGatheringState === 'complete') { cb(); return; }
+  var done = false;
+  var fire = function() { if (!done) { done = true; cb(); } };
+  var to = setTimeout(fire, 3500);   // no STUN on purpose: LAN host candidates gather fast
+  pc.addEventListener('icegatheringstatechange', function() {
+    if (pc.iceGatheringState === 'complete') { clearTimeout(to); fire(); }
+  });
+}
+function netStatus(elId, txt) { var el = document.getElementById(elId); if (el) el.textContent = txt; }
+
+// ---- menu wiring ----
+function netOpenMenu() { showMenu('mp-menu'); }
+function netCopyCode(id) {
+  var el = document.getElementById(id);
+  if (!el || !el.value) return;
+  el.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  if (navigator.clipboard && navigator.clipboard.writeText) { try { navigator.clipboard.writeText(el.value); } catch (e) {} }
+  netStatus('mp-host-status', currentLang === 'fa' ? 'کپی شد!' : 'Copied!');
+  netStatus('mp-join-status', currentLang === 'fa' ? 'کپی شد!' : 'Copied!');
+}
+function netWireDC(dc) {
+  NET.dc = dc;
+  dc.onopen = function() { netConnected(); };
+  dc.onclose = function() { netDisconnected(); };
+  dc.onmessage = function(ev) {
+    var m = null;
+    try { m = JSON.parse(ev.data); } catch (e) { return; }
+    netOnMsg(m);
+  };
+}
+function netStartHost() {
+  netAbort();
+  NET.role = 'host';
+  try {
+    NET.pc = new RTCPeerConnection({ iceServers: [] });
+    netWireDC(NET.pc.createDataChannel('glmfps'));
+    NET.pc.createOffer().then(function(offer) { return NET.pc.setLocalDescription(offer); }).then(function() {
+      netWaitIce(NET.pc, function() {
+        document.getElementById('mp-offer-out').value = netEncode({ sdp: NET.pc.localDescription.sdp, type: NET.pc.localDescription.type });
+        showMenu('mp-host');
+      });
+    }).catch(function(e) { console.warn('net host offer failed', e); });
+  } catch (e) { console.warn('net host failed', e); }
+}
+function netMakeAnswer() {
+  var offer = null;
+  try { offer = netDecode(document.getElementById('mp-offer-in').value); } catch (e) {
+    netStatus('mp-join-status', currentLang === 'fa' ? 'کد میزبان نامعتبر است!' : 'INVALID HOST CODE!');
+    return;
+  }
+  netAbort();
+  NET.role = 'guest';
+  try {
+    NET.pc = new RTCPeerConnection({ iceServers: [] });
+    NET.pc.ondatachannel = function(ev) { netWireDC(ev.channel); };
+    NET.pc.setRemoteDescription(offer).then(function() {
+      return NET.pc.createAnswer();
+    }).then(function(ans) { return NET.pc.setLocalDescription(ans); }).then(function() {
+      netWaitIce(NET.pc, function() {
+        document.getElementById('mp-answer-out').value = netEncode({ sdp: NET.pc.localDescription.sdp, type: NET.pc.localDescription.type });
+        netStatus('mp-join-status', currentLang === 'fa' ? 'کد پاسخ را برای میزبان بفرست...' : 'Send the reply code back to the host...');
+      });
+    }).catch(function(e) { console.warn('net answer failed', e); });
+  } catch (e) { console.warn('net join failed', e); }
+}
+function netAcceptAnswer() {
+  if (NET.role !== 'host') return;
+  var ans = null;
+  try { ans = netDecode(document.getElementById('mp-answer-in').value); } catch (e) {
+    netStatus('mp-host-status', currentLang === 'fa' ? 'کد پاسخ نامعتبر است!' : 'INVALID ANSWER CODE!');
+    return;
+  }
+  NET.pc.setRemoteDescription(ans).then(function() {
+    netStatus('mp-host-status', currentLang === 'fa' ? 'در حال اتصال...' : 'Connecting...');
+  }).catch(function(e) { console.warn('net accept failed', e); });
+}
+function netConnected() {
+  NET.connected = true;
+  showMenu('mp-lobby');
+  var host = (NET.role === 'host');
+  var sub = document.getElementById('mp-lobby-sub');
+  var btn = document.getElementById('mp-start-btn');
+  if (sub) sub.textContent = host
+    ? (currentLang === 'fa' ? 'بازیکن ۲ وصل شد — نقشه و سختی از تنظیمات خودت استفاده می‌شود' : 'PLAYER 2 CONNECTED - uses YOUR map & difficulty')
+    : (currentLang === 'fa' ? 'وصل شدی — منتظر میزبان بمون...' : 'CONNECTED - waiting for the host to start...');
+  if (btn) btn.style.display = host ? 'block' : 'none';
+  netChip(false);
+}
+function netDisconnected() {
+  var wasActive = netActive();
+  netChip(true);
+  if (NET.pc) { try { NET.pc.close(); } catch (e) {} }
+  NET.pc = null; NET.dc = null; NET.connected = false; NET.role = 'off';
+  NET.ghosts = {}; NET.lastSnap = null;
+  netRemovePeerModel();
+  if (wasActive && gameStarted) {
+    // mid-round drop: end the session for both sides cleanly
+    document.getElementById('respawn-screen').classList.add('hidden');
+    document.getElementById('death-screen').classList.remove('hidden');
+    gameStarted = false;
+  }
+}
+function netAbort() {
+  if (NET.dc) { try { NET.dc.close(); } catch (e) {} }
+  if (NET.pc) { try { NET.pc.close(); } catch (e) {} }
+  NET.pc = null; NET.dc = null; NET.connected = false; NET.role = 'off';
+  NET.ghosts = {}; NET.lastSnap = null;
+  netRemovePeerModel();
+}
+function netChip(gone) {
+  var chip = document.getElementById('net-chip');
+  if (!chip) return;
+  if (gone || !netActive()) { chip.classList.add('gone'); return; }
+  chip.classList.remove('gone');
+  document.getElementById('net-chip-txt').textContent =
+    (NET.role === 'host' ? 'P2' : 'P1') + (currentLang === 'fa' ? ' وصل است' : ' ONLINE');
+}
+var netToastTimer = null;
+function netToast(txt) {
+  var el = document.getElementById('net-toast');
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.add('show');
+  clearTimeout(netToastTimer);
+  netToastTimer = setTimeout(function() { el.classList.remove('show'); }, 1800);
+}
+function netSend(obj) {
+  if (NET.dc && NET.dc.readyState === 'open') { try { NET.dc.send(JSON.stringify(obj)); } catch (e) {} }
+}
+
+// ---- remote player model (normal human + the gun they picked) ----
+var netPeerModel = null, netPeerGunIdx = -1, netPeerWalkPhase = 0;
+function netBuildGunModel(idx) {
+  var colors = { 0: 0x2c2c31, 1: 0xd4af37, 2: 0x6e2222, 3: 0x3f5f3f, 4: 0x6b6f76 };
+  var body = colors[idx] || colors[0];
+  var g = new THREE.Group();
+  var dark = new THREE.MeshStandardMaterial({ color: body, roughness: 0.5, metalness: 0.6 });
+  var grip = new THREE.MeshStandardMaterial({ color: 0x1d1d20, roughness: 0.7, metalness: 0.3 });
+  var main = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.13, 0.55), dark); main.position.set(0, 0, 0.1); g.add(main);
+  var barrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.42), grip); barrel.position.set(0, 0.045, 0.5); g.add(barrel);
+  var mag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.12), grip); mag.position.set(0, -0.14, 0.12); g.add(mag);
+  var stock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.22), grip); stock.position.set(0, -0.03, -0.24); g.add(stock);
+  return g;
+}
+function netBuildHumanModel(idx, shirtColor) {
+  var g = new THREE.Group();
+  var skin = new THREE.MeshStandardMaterial({ color: 0xe0ac69, roughness: 0.8 });
+  var shirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.85 });
+  var pants = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.85 });
+  var hair = new THREE.MeshStandardMaterial({ color: 0x3b2a1a, roughness: 0.9 });
+  var shoe = new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.9 });
+  var torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), shirt); torso.position.y = 1.18; g.add(torso);
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.34), skin); head.position.y = 1.68; g.add(head);
+  var hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.36), hair); hairTop.position.y = 1.89; g.add(hairTop);
+  var eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+  var eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeL.position.set(-0.08, 1.72, 0.18); g.add(eyeL);
+  var eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeR.position.set(0.08, 1.72, 0.18); g.add(eyeR);
+  // left arm swings while walking; right arm holds the gun forward
+  var la = new THREE.Group(); la.position.set(-0.34, 1.44, 0);
+  var laM = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.52, 0.13), shirt); laM.position.y = -0.26; la.add(laM);
+  var laH = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.1, 0.11), skin); laH.position.y = -0.56; la.add(laH);
+  g.add(la);
+  var ra = new THREE.Group(); ra.position.set(0.34, 1.44, 0);
+  var raM = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.5, 0.13), shirt); raM.position.y = -0.25; ra.add(raM);
+  ra.rotation.x = -1.25;   // arm raised aiming forward
+  g.add(ra);
+  var gun = netBuildGunModel(idx); gun.position.set(0, -0.52, 0.1); ra.add(gun);
+  var ll = new THREE.Group(); ll.position.set(-0.14, 0.86, 0);
+  var llM = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.6, 0.17), pants); llM.position.y = -0.34; ll.add(llM);
+  var llF = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.24), shoe); llF.position.set(0, -0.68, 0.04); ll.add(llF);
+  g.add(ll);
+  var rl = new THREE.Group(); rl.position.set(0.14, 0.86, 0);
+  var rlM = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.6, 0.17), pants); rlM.position.y = -0.34; rl.add(rlM);
+  var rlF = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.24), shoe); rlF.position.set(0, -0.68, 0.04); rl.add(rlF);
+  g.add(rl);
+  // floating health bar (billboarded every frame)
+  var bar = new THREE.Group(); bar.position.y = 2.12;
+  var bg = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.11), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthTest: false }));
+  bg.renderOrder = 998; bar.add(bg);
+  var fill = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.07), new THREE.MeshBasicMaterial({ color: 0x2ecc71, depthTest: false }));
+  fill.renderOrder = 999; fill.position.z = 0.001; bar.add(fill);
+  g.add(bar);
+  g.traverse(function(ch) { if (ch.isMesh) { ch.userData.peerModel = true; ch.frustumCulled = false; } });
+  g.userData = { leftArm: la, rightArm: ra, leftLeg: ll, rightLeg: rl, bar: bar, fill: fill, gunHolder: ra };
+  return g;
+}
+function netSetPeerGun(idx) {
+  if (!netPeerModel || idx === netPeerGunIdx) return;
+  netPeerGunIdx = idx;
+  var holder = netPeerModel.userData.gunHolder;
+  for (var i = holder.children.length - 1; i >= 0; i--) {
+    holder.children[i].traverse(function(ch) { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
+    holder.remove(holder.children[i]);
+  }
+  var gun = netBuildGunModel(idx);
+  gun.position.set(0, -0.52, 0.1);
+  holder.add(gun);
+}
+function netEnsurePeerModel() {
+  if (netPeerModel) return;
+  netPeerGunIdx = -1;
+  netPeerModel = netBuildHumanModel(0, NET.role === 'host' ? 0xe67e22 : 0x2980b9);  // P2 orange / P1 blue
+  scene.add(netPeerModel);
+}
+function netRemovePeerModel() {
+  if (!netPeerModel) return;
+  scene.remove(netPeerModel);
+  netPeerModel.traverse(function(ch) { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
+  netPeerModel = null; netPeerGunIdx = -1;
+}
+var _netBarColor = new THREE.Color();
+function netUpdatePeerModel(dt, px, py, pz, yaw, hp, alive) {
+  netEnsurePeerModel();
+  netPeerModel.visible = !!alive;
+  if (!alive) return;
+  var k = 1 - Math.exp(-14 * dt);
+  var prev = netPeerModel.position.x + netPeerModel.position.z;
+  netPeerModel.position.x += (px - netPeerModel.position.x) * k;
+  netPeerModel.position.y += (py - netPeerModel.position.y) * k;
+  netPeerModel.position.z += (pz - netPeerModel.position.z) * k;
+  netPeerModel.rotation.y = yaw + Math.PI;   // model faces +Z, camera forward is -Z
+  var moved = Math.abs((netPeerModel.position.x + netPeerModel.position.z) - prev) > 0.001;
+  if (moved) netPeerWalkPhase += dt * 9;
+  var sw = moved ? Math.sin(netPeerWalkPhase) * 0.55 : 0;
+  netPeerModel.userData.leftLeg.rotation.x = sw;
+  netPeerModel.userData.rightLeg.rotation.x = -sw;
+  netPeerModel.userData.leftArm.rotation.x = -sw * 0.7;
+  var fill = netPeerModel.userData.fill;
+  var pct = Math.max(0, Math.min(100, hp)) / 100;
+  fill.scale.x = Math.max(0.001, pct);
+  _netBarColor.setHSL(pct * 0.33, 0.75, 0.5);
+  fill.material.color.copy(_netBarColor);
+  netPeerModel.userData.bar.lookAt(camera.getWorldPosition(new THREE.Vector3()));
+}
+
+// ---- co-op zombie target selection (host) ----
+function netCoopTarget(e, pPos, pg) {
+  if (!netIsHost()) return { x: pPos.x, z: pPos.z, y: pPos.y, gy: pg, isGuest: false };
+  var fresh = NET.peer.alive && (Date.now() - NET.peer.lastInput < 3000);
+  if (!fresh) return { x: pPos.x, z: pPos.z, y: pPos.y, gy: pg, isGuest: false };
+  var dhx = pPos.x - e.group.position.x, dhz = pPos.z - e.group.position.z;
+  var dgx = NET.peer.x - e.group.position.x, dgz = NET.peer.z - e.group.position.z;
+  var toGuest = (dgx * dgx + dgz * dgz) < (dhx * dhx + dhz * dhz);
+  if (!toGuest) return { x: pPos.x, z: pPos.z, y: pPos.y, gy: pg, isGuest: false };
+  return { x: NET.peer.x, z: NET.peer.z, y: NET.peer.y, gy: NET.peer.y - PLAYER_HEIGHT, isGuest: true };
+}
+function netDamageGuest(amount) {
+  if (!netIsHost()) return;
+  NET.guestHp = Math.max(0, NET.guestHp - amount);
+  NET.peer.hp = NET.guestHp;
+  netSend({ t: 'ghp', hp: NET.guestHp });
+}
+function netHealGuest() {
+  if (!netIsHost()) return;
+  NET.guestHp = Math.min(MAX_HEALTH, NET.guestHp + MEDKIT_HEAL);
+  NET.peer.hp = NET.guestHp;
+  netSend({ t: 'heal', hp: NET.guestHp });
+}
+function netOnShot(id, dmg) {
+  // host applies the guest's shot (host is the damage authority in co-op)
+  if (!netIsHost()) return;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (e.netId !== id) continue;
+    e.health -= dmg;
+    if (e.bodyMat) {
+      e.bodyMat.emissive.setHex(0x660000);
+      (function(en) { setTimeout(function() { if (en.bodyMat) en.bodyMat.emissive.setHex(0x000000); }, 100); })(e);
+    }
+    if (e.health <= 0) {
+      var dropX = e.group.position.x, dropZ = e.group.position.z, dropY = e.group.position.y;
+      startZombieDeath(e);
+      var idx = enemies.indexOf(e);
+      if (idx > -1) enemies.splice(idx, 1);
+      killCount++;
+      netSend({ t: 'kill' });   // the guest credits its own money/stats
+      if (killCount % 2 === 0) dropMedkit(dropX, dropZ, dropY);
+      if (gameMode === 'levels') {
+        updateLevelHud();
+        if (killCount < levelTarget && levelQueue > 0 && enemies.length < LEVEL_ALIVE_CAP) {
+          if (spawnQueuedEnemy()) levelQueue--;
+        }
+        if (killCount >= levelTarget) levelComplete();
+      } else if (enemies.length === 0) {
+        playerWin();
+      }
+    }
+    return;
+  }
+}
+
+// ---- round start / death / respawn ----
+function netOnGameStart() {
+  if (netIsHost()) {
+    NET.guestHp = MAX_HEALTH;
+    NET.peer.alive = true;
+    netSend({ t: 'start', map: currentMap, mode: gameMode, diff: difficulty });
+    netEnsurePeerModel();
+  }
+  netChip(false);
+  if (playerHealth > 0) NET.respawnT = -1;
+  document.getElementById('respawn-screen').classList.add('hidden');
+}
+function netGuestStart(cfg) {
+  currentMap = cfg.map;
+  difficulty = cfg.diff;
+  NET.guestHp = MAX_HEALTH;
+  NET.respawnT = -1;
+  NET.ghosts = {};
+  startGame(cfg.mode);
+  // slight offset so the two players do not spawn inside each other
+  player.position.x += 1.5; player.position.z += 1.5;
+  netChip(false);
+  netToast(currentLang === 'fa' ? 'بازی دونفره شروع شد!' : 'CO-OP GAME STARTED!');
+}
+function netOnLocalDeath() {
+  recordDeathStats();
+  gameStarted = false;
+  playDeathSting(); duckMusic(0.2); setMusicIntensity(0);
+  NET.respawnT = 5;
+  document.getElementById('respawn-screen').classList.remove('hidden');
+  document.getElementById('respawn-btn').style.display = 'none';
+  document.getElementById('crosshair').style.display = 'none';
+  document.getElementById('minimap-container').style.display = 'none';
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+  if (document.pointerLockElement) document.exitPointerLock();
+  if (netIsGuest()) netSend({ t: 'die' }); else NET.peer.alive = false;
+}
+function netDoRespawn() {
+  if (!netActive() || NET.respawnT > 0) return;
+  NET.respawnT = -1;
+  document.getElementById('respawn-screen').classList.add('hidden');
+  playerHealth = MAX_HEALTH; updateHealthBar();
+  ammo = maxAmmo; isReloading = false;
+  deathReason = ''; voidFalling = false; velocityY = 0;
+  var zn = (mapSpawnZones[currentMap] || mapSpawnZones[0])[0];
+  var sx = (zn.x1 + zn.x2) / 2 + (netIsGuest() ? 1.5 : 0);
+  var sz = (zn.z1 + zn.z2) / 2 + (netIsGuest() ? 1.5 : 0);
+  player.position.set(sx, floorTopAt(sx, sz) + PLAYER_HEIGHT, sz);
+  gameStarted = true;
+  document.getElementById('crosshair').style.display = 'block';
+  document.getElementById('minimap-container').style.display = 'block';
+  document.getElementById('health-bar-container').style.display = 'flex';
+  if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'block';
+  else renderer.domElement.requestPointerLock();
+  duckMusic(1);
+  netToast(currentLang === 'fa' ? 'برگشتی به بازی!' : 'BACK IN THE FIGHT!');
+}
+function netRespawnReady() {
+  document.getElementById('respawn-sub').textContent =
+    (currentLang === 'fa') ? 'برای برگشتن کلیک کن' : 'TAP TO RESPAWN';
+  document.getElementById('respawn-btn').style.display = 'block';
+}
+
+// ---- message dispatch ----
+function netOnMsg(m) {
+  if (!m || !m.t) return;
+  if (m.t === 'start') { netGuestStart(m); return; }
+  if (m.t === 'snap') { NET.lastSnap = m; NET.snapT = 0; return; }
+  if (m.t === 'input') {
+    NET.peer.x = m.x; NET.peer.y = m.y; NET.peer.z = m.z;
+    NET.peer.yaw = m.yaw; NET.peer.gun = m.gun; NET.peer.alive = m.alive;
+    NET.peer.lastInput = Date.now();
+    return;
+  }
+  if (m.t === 'shot') { netOnShot(m.id, m.dmg); return; }
+  if (m.t === 'kill') {
+    recordKillStats();   // guest credits its own kill (money + score)
+    netToast('+' + fmtMoney(MONEY_PER_KILL));
+    return;
+  }
+  if (m.t === 'ghp') {
+    NET.guestHp = m.hp;
+    if (m.hp > 0 && playerHealth > 0) {
+      playerHealth = m.hp; updateHealthBar();
+      var df = document.getElementById('damage-flash');
+      df.classList.add('show');
+      setTimeout(function() { df.classList.remove('show'); }, 200);
+    }
+    if (m.hp <= 0 && playerHealth > 0) { playerHealth = 0; updateHealthBar(); netOnLocalDeath(); }
+    return;
+  }
+  if (m.t === 'heal') {
+    NET.guestHp = m.hp; playerHealth = m.hp; updateHealthBar();
+    var notify = document.getElementById('medkit-notify');
+    notify.classList.add('show');
+    setTimeout(function() { notify.classList.remove('show'); }, 1200);
+    return;
+  }
+  if (m.t === 'die') { if (netIsHost()) { NET.peer.alive = false; netToast(currentLang === 'fa' ? 'بازیکن ۲ مرد!' : 'P2 DIED!'); } return; }
+  if (m.t === 'lvlup') {
+    levelCurrent = m.lvl; levelTarget = m.target;
+    document.getElementById('level-hud').style.display = 'none';
+    document.getElementById('level-done-title').textContent = (currentLang === 'fa')
+      ? ('مرحله ' + m.target + ' کامل شد!') : ('LEVEL ' + m.target + ' COMPLETE!');
+    document.getElementById('level-done-sub').textContent = (currentLang === 'fa')
+      ? ('آماده مرحله ' + m.lvl + ' با ' + m.lvl + ' زامبی') : ('GET READY FOR LEVEL ' + m.lvl + ' WITH ' + m.lvl + ' ZOMBIES');
+    document.getElementById('level-screen').classList.remove('hidden');
+    if (document.pointerLockElement) document.exitPointerLock();
+    if (isMobileDevice) document.getElementById('mobile-controls').style.display = 'none';
+    gameStarted = false;
+    return;
+  }
+  if (m.t === 'win') {
+    gameStarted = false;
+    playVictoryJingle(); duckMusic(0.2); setMusicIntensity(0);
+    var vs = document.getElementById('victory-sub');
+    if (vs) vs.textContent = (currentLang === 'fa') ? 'همه دشمنان نابود شدند' : 'ALL ENEMIES ELIMINATED';
+    document.getElementById('victory-screen').classList.remove('hidden');
+    document.getElementById('level-hud').style.display = 'none';
+    document.getElementById('crosshair').style.display = 'none';
+    document.getElementById('minimap-container').style.display = 'none';
+    if (document.pointerLockElement) document.exitPointerLock();
+    return;
+  }
+  if (m.t === 'next') {
+    if (netIsHost() && !gameStarted) {
+      document.getElementById('level-screen').classList.add('hidden');
+      startGame('levels');
+    }
+    return;
+  }
+  if (m.t === 'bye') { netDisconnected(); return; }
+}
+
+// ---- guest ghost zombies ----
+function netSpawnGhost(id, x, y, z, ry) {
+  var ghost = {
+    group: new THREE.Group(), netId: id, ghost: true, health: ENEMY_MAX_HP,
+    attackTimer: 99, animTime: 0, leftArm: null, rightArm: null, leftLeg: null, rightLeg: null,
+    bodyMat: null, stuckT: 0, avoidT: 0, avoidDir: 0, avoidAng: 0.9, climbing: false, climbTop: 0, stepOverT: 0,
+    tx: x, ty: y, tz: z, try_: ry, st: 0, dying: false
+  };
+  if (zombieFBXLoaded && zombieProto) buildFbxZombie(ghost);
+  else {
+    // legacy box fallback for ghosts (rarely needed - same shape as createEnemy)
+    var bMat = new THREE.MeshStandardMaterial({ map: tex.zombieSkin, roughness: 0.9, metalness: 0.05 });
+    ghost.bodyMat = bMat;
+    var dMat = new THREE.MeshStandardMaterial({ map: tex.zombieDark, roughness: 0.9, metalness: 0.05 });
+    var body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.35), bMat); body.position.set(0, 1.1, 0); ghost.group.add(body);
+    var head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), bMat); head.position.set(0, 1.85, 0); ghost.group.add(head);
+    var la = new THREE.Group(); la.position.set(-0.45, 1.5, 0);
+    var laM = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.55, 0.14), dMat); laM.position.y = -0.275; la.add(laM); ghost.group.add(la); ghost.leftArm = la;
+    var ra = new THREE.Group(); ra.position.set(0.45, 1.5, 0);
+    var raM = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.55, 0.14), dMat); raM.position.y = -0.275; ra.add(raM); ghost.group.add(ra); ghost.rightArm = ra;
+    var ll = new THREE.Group(); ll.position.set(-0.15, 0.55, 0);
+    var llM = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), dMat); llM.position.y = -0.275; ll.add(llM); ghost.group.add(ll); ghost.leftLeg = ll;
+    var rl = new THREE.Group(); rl.position.set(0.15, 0.55, 0);
+    var rlM = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), dMat); rlM.position.y = -0.275; rl.add(rlM); ghost.group.add(rl); ghost.rightLeg = rl;
+    ghost.group.traverse(function(ch) { if (ch.isMesh) { ch.userData.enemyRef = ghost; ch.userData.fbxClone = true; } });
+  }
+  ghost.group.position.set(x, y, z);
+  ghost.group.rotation.y = ry;
+  scene.add(ghost.group);
+  enemies.push(ghost);
+  NET.ghosts[id] = ghost;
+  return ghost;
+}
+function netSyncClearGhosts() {
+  for (var id in NET.ghosts) {
+    var g = NET.ghosts[id];
+    var idx = enemies.indexOf(g);
+    if (idx > -1) enemies.splice(idx, 1);
+    scene.remove(g.group);
+  }
+  NET.ghosts = {};
+}
+function netApplySnap(s) {
+  if (!netIsGuest()) return;
+  killCount = s.kc; levelCurrent = s.lvl; levelTarget = s.lt;
+  if (gameMode === 'levels') updateLevelHud();
+  var seen = {};
+  for (var i = 0; i < s.z.length; i++) {
+    var z = s.z[i];
+    var id = z[0];
+    seen[id] = true;
+    var g = NET.ghosts[id] || netSpawnGhost(id, z[1], z[2], z[3], z[4]);
+    g.tx = z[1]; g.ty = z[2]; g.tz = z[3]; g.try_ = z[4];
+    var st = z[5];
+    if (st === 3 && !g.dying) { g.dying = true; startZombieDeath(g); }
+    else if (st !== 3 && !g.dying) {
+      if (g.mixer) setZombieAction(g, st === 1 ? 'attack' : 'walk');
+    }
+  }
+  for (var gid in NET.ghosts) {
+    if (!seen[gid]) {
+      var gone = NET.ghosts[gid];
+      var ix = enemies.indexOf(gone);
+      if (ix > -1) { enemies.splice(ix, 1); scene.remove(gone.group); }
+      delete NET.ghosts[gid];
+    }
+  }
+  // medkits: mirror the host's set (guest never picks up locally - host sends 'heal')
+  var mkSeen = {};
+  for (var k = 0; k < s.mk.length; k++) mkSeen[s.mk[k][0] + ',' + s.mk[k][2]] = true;
+  for (var mi = medkits.length - 1; mi >= 0; mi--) {
+    var m = medkits[mi];
+    if (!mkSeen[m.group.position.x.toFixed(1) + ',' + m.group.position.z.toFixed(1)]) {
+      scene.remove(m.group); medkits.splice(mi, 1);
+    }
+  }
+  for (var nj = 0; nj < s.mk.length; nj++) {
+    var mm = s.mk[nj];
+    var found = false;
+    for (var oi = 0; oi < medkits.length; oi++) {
+      if (medkits[oi].group.position.x.toFixed(1) === mm[0].toFixed(1) &&
+          medkits[oi].group.position.z.toFixed(1) === mm[2].toFixed(1)) { found = true; break; }
+    }
+    if (!found) dropMedkit(mm[0], mm[2], mm[1]);
+  }
+  // the other player (host model)
+  netUpdatePeerModel(0.016, s.pg[0], s.pg[1], s.pg[2], s.pg[3], s.pg[5], s.pg[6]);
+  netSetPeerGun(s.pg[4]);
+}
+function netGuestTick(dt) {
+  NET.snapT += dt;
+  if (NET.lastSnap) netApplySnap(NET.lastSnap);   // hold last state if the stream stalls
+  // animate ghosts toward their snapshot targets
+  var k = 1 - Math.exp(-10 * dt);
+  for (var id in NET.ghosts) {
+    var g = NET.ghosts[id];
+    if (g.dying) { if (g.mixer) g.mixer.update(dt); continue; }
+    g.group.position.x += (g.tx - g.group.position.x) * k;
+    g.group.position.y += (g.ty - g.group.position.y) * k;
+    g.group.position.z += (g.tz - g.group.position.z) * k;
+    var dr = g.try_ - g.group.rotation.y;
+    while (dr > Math.PI) dr -= 2 * Math.PI;
+    while (dr < -Math.PI) dr += 2 * Math.PI;
+    g.group.rotation.y += dr * k;
+    if (g.mixer) g.mixer.update(dt);
+  }
+  // send input @ ~12Hz
+  NET.sendT += dt;
+  if (NET.sendT > 0.08) {
+    NET.sendT = 0;
+    netSend({ t: 'input', x: +player.position.x.toFixed(2), y: +player.position.y.toFixed(2),
+               z: +player.position.z.toFixed(2), yaw: +yaw.toFixed(2), gun: currentGun,
+               alive: playerHealth > 0 && gameStarted });
+  }
+}
+function netHostTick(dt) {
+  // broadcast snapshots @ ~12Hz
+  NET.sendT += dt;
+  if (NET.sendT > 0.08) {
+    NET.sendT = 0;
+    var zs = [];
+    for (var i = 0; i < enemies.length; i++) {
+      var e = enemies[i];
+      var st = e.climbing ? 2 : (e.currentAction === 'attack' ? 1 : 0);
+      zs.push([e.netId, +e.group.position.x.toFixed(2), +e.group.position.y.toFixed(2), +e.group.position.z.toFixed(2), +e.group.rotation.y.toFixed(2), st]);
+    }
+    for (var d = 0; d < dyingEnemies.length; d++) {
+      var de = dyingEnemies[d];
+      zs.push([de.netId || -1, +de.group.position.x.toFixed(2), +de.group.position.y.toFixed(2), +de.group.position.z.toFixed(2), +de.group.rotation.y.toFixed(2), 3]);
+    }
+    var mks = [];
+    for (var m = 0; m < medkits.length; m++) {
+      mks.push([+medkits[m].group.position.x.toFixed(1), +medkits[m].group.position.y.toFixed(1), +medkits[m].group.position.z.toFixed(1)]);
+    }
+    netSend({ t: 'snap', z: zs, mk: mks, kc: killCount, lvl: levelCurrent, lt: levelTarget,
+               pg: [+player.position.x.toFixed(2), +player.position.y.toFixed(2), +player.position.z.toFixed(2),
+                    +yaw.toFixed(2), currentGun, playerHealth, playerHealth > 0 && gameStarted] });
+  }
+  // drive the guest's human model from its latest input
+  var fresh = (Date.now() - NET.peer.lastInput < 3000);
+  netUpdatePeerModel(dt, NET.peer.x, NET.peer.y, NET.peer.z, NET.peer.yaw, NET.guestHp, NET.peer.alive && fresh);
+  netSetPeerGun(NET.peer.gun);
+}
+function netTick(dt) {
+  if (!netActive()) return;
+  if (NET.respawnT > 0) {
+    NET.respawnT -= dt;
+    document.getElementById('respawn-sub').textContent =
+      (currentLang === 'fa') ? ('بازگشت تا ' + Math.ceil(NET.respawnT) + ' ثانیه...') : ('Respawning in ' + Math.ceil(NET.respawnT) + '...');
+    if (NET.respawnT <= 0) netRespawnReady();
+  }
+  if (NET.role === 'host' && gameStarted) netHostTick(dt);
+  if (NET.role === 'guest') netGuestTick(dt);
+}
+function netLobbyStart() {
+  if (NET.role !== 'host') return;
+  document.querySelectorAll('.menu-overlay').forEach(function(m) { m.classList.add('hidden'); });
+  startGame('normal');
+}
+
 applySavedSettings();
 animate();
 </script>
