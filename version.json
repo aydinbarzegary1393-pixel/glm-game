@@ -1,12 +1,22 @@
 {
-  "version": "v1.23.0",
-  "generated": "2026-10-22T05:43:20Z",
+  "version": "v1.24.0",
+  "generated": "2026-10-29T06:24:52Z",
   "entry": "fps-game.html",
   "files": [
     {
       "path": "fps-game.html",
-      "sha256": "6ac6ac19694f4d749791b84c4b6aa1825446a2f3e9a39cefb59981051f50f6b1",
-      "size": 220155
+      "sha256": "2bce9aa204eeac0adfde1a9409c191c6a729749752de9f5af4e85a45d414c9cb",
+      "size": 226652
+    },
+    {
+      "path": "fps-game-assets/FBXLoader.js",
+      "sha256": "a5732b0dcdf530ecfd5ff21eb96e9343fc8e40dd75e548730352e6cfb79342b1",
+      "size": 100686
+    },
+    {
+      "path": "fps-game-assets/SkeletonUtils.js",
+      "sha256": "cc2e2e1a3183ab55169d185565f86f43f80c6dfafe73610d991e741ea990ac1a",
+      "size": 11872
     },
     {
       "path": "fps-game-assets/bg_menu.png",
@@ -17,6 +27,16 @@
       "path": "fps-game-assets/bg_menu_small.jpg",
       "sha256": "6c6c7442b44bf8790b73b4fd1038d6b650e6cba19c2a1e1373c7229fdafac8f4",
       "size": 61829
+    },
+    {
+      "path": "fps-game-assets/cube_zombie.fbx",
+      "sha256": "687f852caf192acf4e9cee82fc05bfdf1e7a84282ef118255f9661b373ea2aee",
+      "size": 604156
+    },
+    {
+      "path": "fps-game-assets/fflate.min.js",
+      "sha256": "798b397d482f2ff743452362e880f1be4b683c43d7b2db3e8751f7412e7d5f4b",
+      "size": 30081
     },
     {
       "path": "fps-game-assets/tex_brick.png",

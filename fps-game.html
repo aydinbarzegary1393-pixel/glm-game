@@ -582,6 +582,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 
 <script src="fps-game-assets/three.min.js"></script>
+<!-- v1.24.0: Quaternius Cube Zombie - FBX loading (fflate = FBX decompressor,
+     SkeletonUtils = safe skinned-mesh cloning for per-zombie instances) -->
+<script src="fps-game-assets/fflate.min.js"></script>
+<script src="fps-game-assets/FBXLoader.js"></script>
+<script src="fps-game-assets/SkeletonUtils.js"></script>
 <script>
 // ===== CONFIG =====
 let MOUSE_SENS = 0.004;
@@ -2313,6 +2318,15 @@ function createEnemy(x, z) {
     stuckT: 0, avoidT: 0, avoidDir: 0, avoidAng: 0.9,
     climbing: false, climbTop: 0, stepOverT: 0
   };
+  // v1.24.0: Quaternius model zombie (when the FBX pack has finished loading)
+  if (zombieFBXLoaded && zombieProto) {
+    buildFbxZombie(enemy);
+    enemy.group.position.set(x, floorTopAt(x, z), z);
+    scene.add(enemy.group);
+    enemies.push(enemy);
+    return enemy;
+  }
+  // legacy procedural box zombie (fallback if the FBX pack is missing)
   const bMat = new THREE.MeshStandardMaterial({map:tex.zombieSkin, roughness:0.9, metalness:0.05});
   enemy.bodyMat = bMat;
   const dMat = new THREE.MeshStandardMaterial({map:tex.zombieDark, roughness:0.9, metalness:0.05});
@@ -2359,10 +2373,11 @@ function createEnemy(x, z) {
 }
 
 function clearEnemies() {
+  clearDyingEnemies();   // v1.24.0: corpses must not outlive the map
   for (var i = enemies.length - 1; i >= 0; i--) {
     scene.remove(enemies[i].group);
     enemies[i].group.traverse(function(ch) {
-      if (ch.geometry) ch.geometry.dispose();
+      if (ch.geometry && !ch.userData.fbxClone) ch.geometry.dispose();  // FBX geometry is shared with the proto
       if (ch.material) ch.material.dispose();
     });
   }
@@ -2520,11 +2535,14 @@ function updateEnemies(dt) {
       if (e.climbing) {
         // v1.18.2: vertical climb at the obstacle face - no horizontal chase
         e.group.position.y += ZOMBIE_CLIMB_SPEED * dt;
-        e.animTime += dt * 4;
-        e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
-        e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
-        e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
-        e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+        if (e.mixer) { e.mixer.update(dt); setZombieAction(e, 'walk'); }
+        else {
+          e.animTime += dt * 4;
+          e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
+          e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
+          e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
+          e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+        }
         if (e.group.position.y >= e.climbTop - 0.02) {
           e.group.position.y = e.climbTop;
           e.climbing = false;
@@ -2574,11 +2592,14 @@ function updateEnemies(dt) {
           e.avoidT = 0.9 + (i % 3) * 0.25;
           e.stuckT = 0;
         }
-        e.animTime += dt * 6;
-        e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
-        e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
-        e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
-        e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+        if (e.mixer) { e.mixer.update(dt); setZombieAction(e, 'walk'); }
+        else {
+          e.animTime += dt * 6;
+          e.leftArm.rotation.x = Math.sin(e.animTime) * 0.6;
+          e.rightArm.rotation.x = -Math.sin(e.animTime) * 0.6;
+          e.leftLeg.rotation.x = -Math.sin(e.animTime) * 0.5;
+          e.rightLeg.rotation.x = Math.sin(e.animTime) * 0.5;
+        }
       }
     } else {
       // Attacking: still push apart so zombies never stack inside each other
@@ -2587,11 +2608,17 @@ function updateEnemies(dt) {
       if (!checkEnemyWall(e.group.position.x, ez + spz, e.group.position.y)) e.group.position.z = ez + spz;
       e.attackTimer -= dt;
       if (e.attackTimer <= 0) { e.attackTimer = ENEMY_ATK_CD; damagePlayer(DIFFICULTY_DMG[difficulty]); }
-      e.animTime += dt * 8;
-      e.leftArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
-      e.rightArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
-      e.leftLeg.rotation.x = 0;
-      e.rightLeg.rotation.x = 0;
+      if (e.mixer) {
+        e.mixer.update(dt);
+        setZombieAction(e, 'attack');
+        if (e.actions.attack) e.actions.attack.timeScale = 1.6;   // keep the swing snappy
+      } else {
+        e.animTime += dt * 8;
+        e.leftArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
+        e.rightArm.rotation.x = -Math.abs(Math.sin(e.animTime)) * 1.3;
+        e.leftLeg.rotation.x = 0;
+        e.rightLeg.rotation.x = 0;
+      }
     }
     // Multi-level support: zombies smoothly follow stairs/ramps height.
     // v1.18.2: while climbing (or just stepping over), the climb target wins so
@@ -2874,10 +2901,131 @@ tex.concreteFloor = new THREE.MeshStandardMaterial({map:_loadTex('tex_concrete_f
 // Hedge texture (loaded from PNG)
 tex.hedge = new THREE.MeshStandardMaterial({map:_loadTex('tex_hedge.png'), roughness:0.95, metalness:0.0});
 
-// Zombie skin texture (loaded from PNG 512x512)
+// Zombie skin texture (loaded from PNG 512x512) - still used by the legacy
+// box-zombie fallback and the shop/UI tint references
 tex.zombieSkin = _loadTex('tex_zombie_skin.png');
 // Zombie dark skin (loaded from PNG 512x512)
 tex.zombieDark = _loadTex('tex_zombie_dark.png');
+
+// ===== v1.24.0: QUATERNIUS CUBE ZOMBIE (skinned FBX + 7 clips) =====
+// The uploaded "Zombie by Quaternius" pack replaces the procedural box zombie:
+// one skinned mesh with a 32x32 atlas texture and walk/run/idle/attack/death/
+// hit/jump clips. Loaded async at boot; if the FBX or its loader is missing
+// the game silently falls back to the legacy procedural box zombie.
+var zombieProto = null, zombieClips = [];
+var zombieFBXScale = 1, zombieFBXOffsetY = 0, zombieFBXLoaded = false;
+try {
+  if (THREE.FBXLoader) {
+    var _zFbxLoader = new THREE.FBXLoader();
+    _zFbxLoader.load('fps-game-assets/cube_zombie.fbx', function(obj) {
+      zombieProto = obj;
+      zombieClips = obj.animations || [];
+      // normalize: stand 1.95m tall (head top), feet exactly at group y=0
+      var zb = new THREE.Box3().setFromObject(obj);
+      var zh = Math.max(0.001, zb.max.y - zb.min.y);
+      zombieFBXScale = 1.95 / zh;
+      zombieFBXOffsetY = -zb.min.y * zombieFBXScale;
+      // crisp flat-color atlas on the cube character
+      obj.traverse(function(ch) {
+        if (ch.isMesh && ch.material && ch.material.map) {
+          ch.material.map.magFilter = THREE.NearestFilter;
+          ch.material.map.generateMipmaps = false;
+          ch.material.map.minFilter = THREE.LinearFilter;
+        }
+      });
+      zombieFBXLoaded = true;
+      console.log('Quaternius zombie loaded: ' + zombieClips.length + ' clips');
+    }, undefined, function() {
+      console.warn('cube_zombie.fbx failed - using legacy box zombies');
+    });
+  }
+} catch(e) { console.warn('FBX init failed - using legacy box zombies'); }
+
+// Pick a clip action by fuzzy name (FBX take names are long armature paths)
+function zombieClipKey(name) {
+  var nm = (name || '').toLowerCase();
+  if (/walk/.test(nm)) return 'walk';
+  if (/run/.test(nm)) return 'run';
+  if (/attack/.test(nm)) return 'attack';
+  if (/death|die/.test(nm)) return 'death';
+  if (/hit/.test(nm)) return 'hit';
+  if (/idle/.test(nm)) return 'idle';
+  return null;
+}
+
+// v1.24.0: crossfade the zombie between its animation clips
+function setZombieAction(e, name) {
+  if (!e.actions || !e.actions[name] || e.currentAction === name) return;
+  var next = e.actions[name];
+  next.reset();
+  next.setLoop(THREE.LoopRepeat, Infinity);
+  next.crossFadeFrom(e.actions[e.currentAction] || next, 0.22, false);
+  next.play();
+  e.currentAction = name;
+}
+
+// Build the Quaternius model inside a freshly created enemy object
+function buildFbxZombie(enemy) {
+  var model = THREE.SkeletonUtils.clone(zombieProto);
+  model.scale.setScalar(zombieFBXScale);
+  model.position.y = zombieFBXOffsetY;
+  enemy.model = model;
+  enemy.group.add(model);
+  // one cloned material per zombie -> per-zombie hit flash (emissive) works
+  var mat = null;
+  model.traverse(function(ch) {
+    if (ch.isMesh) {
+      ch.userData.enemyRef = enemy;   // shoot()/crosshair hit detection
+      ch.userData.fbxClone = true;    // geometry is shared with the proto - never dispose it
+      ch.frustumCulled = false;       // skinned bbox lags - never cull
+      if (!mat && ch.material) mat = ch.material.clone();
+      if (mat) ch.material = mat;
+    }
+  });
+  enemy.bodyMat = mat;
+  enemy.mixer = new THREE.AnimationMixer(model);
+  enemy.actions = {};
+  for (var ci = 0; ci < zombieClips.length; ci++) {
+    var key = zombieClipKey(zombieClips[ci].name);
+    if (key && !enemy.actions[key]) enemy.actions[key] = enemy.mixer.clipAction(zombieClips[ci]);
+  }
+  enemy.currentAction = null;
+  var first = enemy.actions.walk || enemy.actions.idle;
+  if (first) {
+    first.play();
+    enemy.currentAction = enemy.actions.walk ? 'walk' : 'idle';
+  }
+}
+
+// v1.24.0: corpses - zombie plays its Death clip, then sinks, then despawns
+var dyingEnemies = [];
+function startZombieDeath(enemy) {
+  // corpse must never block bullets or the crosshair highlight
+  enemy.group.traverse(function(ch) { if (ch.isMesh) ch.userData.enemyRef = null; });
+  var deathAct = enemy.actions && enemy.actions.death;
+  if (enemy.mixer && deathAct) {
+    enemy.mixer.stopAllAction();
+    deathAct.reset();
+    deathAct.setLoop(THREE.LoopOnce, 1);
+    deathAct.clampWhenFinished = true;
+    deathAct.play();
+    dyingEnemies.push({ group: enemy.group, mixer: enemy.mixer, t: 0 });
+  } else {
+    scene.remove(enemy.group);
+    enemy.group.traverse(function(ch) {
+      if (ch.geometry && !ch.userData.fbxClone) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    });
+  }
+}
+
+function clearDyingEnemies() {
+  for (var d = dyingEnemies.length - 1; d >= 0; d--) {
+    scene.remove(dyingEnemies[d].group);
+    dyingEnemies[d].group.traverse(function(ch) { if (ch.material) ch.material.dispose(); });
+  }
+  dyingEnemies.length = 0;
+}
 
 // ===== COLLISION DETECTION =====
 function checkCollision(px, py, pz) {
@@ -4064,11 +4212,8 @@ function shoot() {
       setTimeout(function() { if (enemy.bodyMat) enemy.bodyMat.emissive.setHex(0x000000); }, 100);
       if (enemy.health <= 0) {
         var dropX = enemy.group.position.x, dropZ = enemy.group.position.z, dropY = enemy.group.position.y;
-        scene.remove(enemy.group);
-        enemy.group.traverse(function(ch) {
-          if (ch.geometry) ch.geometry.dispose();
-          if (ch.material) ch.material.dispose();
-        });
+        // v1.24.0: the corpse keeps playing its Death clip - kill flow unchanged
+        startZombieDeath(enemy);
         var idx = enemies.indexOf(enemy);
         if (idx > -1) enemies.splice(idx, 1);
         killCount++;
@@ -4354,6 +4499,19 @@ function isGamePaused() {
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  // v1.24.0: dying zombie corpses - Death clip, sink, despawn (runs even when
+  // the game is paused/locked so corpses always clean up)
+  for (var di = dyingEnemies.length - 1; di >= 0; di--) {
+    var dce = dyingEnemies[di];
+    dce.mixer.update(dt);
+    dce.t += dt;
+    if (dce.t > 1.6) dce.group.position.y -= dt * 0.9;   // sink after the clip settles
+    if (dce.t > 2.6) {
+      scene.remove(dce.group);
+      dce.group.traverse(function(ch) { if (ch.material) ch.material.dispose(); });
+      dyingEnemies.splice(di, 1);
+    }
+  }
   if (mapTickFn) mapTickFn(dt);   // v1.21.0 living-map hook
   const gamePaused = isGamePaused();
   if (!gamePaused && gameStarted && ++musicTick % 10 === 0) updateMusicIntensity();   // v1.19.4 zombie heat
