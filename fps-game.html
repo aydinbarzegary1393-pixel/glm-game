@@ -103,6 +103,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 /* v1.25.0 LAN co-op UI */
 .mp-code{display:block;width:min(560px,84vw);height:74px;margin:10px auto;background:rgba(0,0,0,0.55);border:1px solid rgba(79,195,247,0.35);color:#bfe9ff;font-family:monospace;font-size:10px;line-height:1.3;padding:8px;border-radius:8px;outline:none;resize:none;text-align:left;direction:ltr;word-break:break-all}
 .mp-code:focus{border-color:#4fc3f7}
+.mp-bigcode{font-size:46px;letter-spacing:12px;font-weight:bold;color:#ffd54a;text-align:center;margin:12px auto;font-family:monospace;direction:ltr;text-shadow:0 0 18px rgba(255,213,74,0.45);user-select:all}
+.mp-code-input{display:block;width:220px;margin:12px auto;font-size:30px;letter-spacing:10px;text-align:center;text-transform:uppercase;background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(79,195,247,0.35);border-radius:8px;padding:10px;outline:none;font-family:monospace;direction:ltr}
+.mp-code-input:focus{border-color:#4fc3f7}
 #net-chip{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:60;background:rgba(0,40,20,0.72);border:1px solid rgba(46,204,113,0.55);color:#7dffb0;font-size:12px;font-weight:700;letter-spacing:1px;padding:5px 10px;border-radius:20px;pointer-events:none}
 #net-chip.warn{background:rgba(60,30,0,0.72);border-color:rgba(230,126,34,0.6);color:#ffb46b}
 #net-chip.gone{display:none !important}
@@ -358,9 +361,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div class="menu-content">
 <h2 data-en="2-PLAYER CO-OP" data-fa="بازی دونفره">2-PLAYER CO-OP</h2>
 <p class="subtitle" data-en="PLAY ON THE SAME Wi-Fi / LAN - NO INTERNET NEEDED" data-fa="روی یک وای‌فای یا شبکه محلی — بدون نیاز به اینترنت">SAME Wi-Fi / LAN</p>
-<button class="menu-btn" onclick="netStartHost()" data-en="CREATE GAME (HOST)" data-fa="ساخت بازی (میزبان)">CREATE GAME (HOST)</button>
-<button class="menu-btn" onclick="showMenu('mp-join')" data-en="JOIN GAME" data-fa="پیوستن به بازی">JOIN GAME</button>
-<p class="subtitle" id="mp-hint" data-en="The connection codes are exchanged once (e.g. via Telegram); after that the game runs directly over your LAN." data-fa="کدهای اتصال یک بار رد و بدل می‌شوند (مثلاً با تلگرام)؛ بعدش بازی مستقیم روی شبکه محلی اجرا می‌شود.">codes are exchanged once</p>
+<button class="menu-btn" onclick="netQuickHost()" data-en="CREATE GAME" data-fa="ساخت بازی">CREATE GAME</button>
+<button class="menu-btn" onclick="showMenu('mp-quick-join')" data-en="FIND GAME" data-fa="پیدا کردن بازی">FIND GAME</button>
+<p class="subtitle" id="mp-hint" data-en="CREATE gives you a 4-letter code - your friend taps it in FIND GAME and you are connected. Handshake needs a moment of internet; the game itself runs direct over your LAN." data-fa="«ساخت بازی» یه کد ۴ حرفی بهت می‌ده؛ دوستت تو «پیدا کردن بازی» کد رو وارد می‌کنه و وصل می‌شید. فقط دست دادن یه لحظه اینترنت می‌خواد؛ خود بازی مستقیم روی شبکه محلی اجرا می‌شه.">quick 4-letter code</p>
+<button class="menu-btn" onclick="showMenu('mp-manual')" data-en="MANUAL MODE (NO INTERNET)" data-fa="روش دستی (بدون اینترنت)">MANUAL MODE (NO INTERNET)</button>
 <button class="menu-btn back-btn" onclick="netAbort();showMenu('mode-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
@@ -390,6 +394,39 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <button class="menu-btn" onclick="netCopyCode('mp-answer-out')" data-en="COPY CODE" data-fa="کپی کد">COPY CODE</button>
 <p class="subtitle" id="mp-join-status"></p>
 <button class="menu-btn back-btn" onclick="netAbort();showMenu('mp-menu')" data-en="CANCEL" data-fa="لغو">CANCEL</button>
+</div>
+</div>
+
+<!-- v1.26.0 quick connect: 4-letter code, SFG2-style create/find -->
+<div id="mp-quick-host" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="CREATE GAME" data-fa="ساخت بازی">CREATE GAME</h2>
+<p class="subtitle" data-en="YOUR GAME CODE - send it to your friend:" data-fa="کد بازی تو — بفرستش برای دوستت:">code:</p>
+<div id="mp-quick-code" class="mp-bigcode">....</div>
+<button class="menu-btn" onclick="netCopyCode('mp-quick-code')" data-en="COPY CODE" data-fa="کپی کد">COPY CODE</button>
+<p class="subtitle" id="mp-quick-host-status"></p>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('mp-menu')" data-en="CANCEL" data-fa="لغو">CANCEL</button>
+</div>
+</div>
+
+<div id="mp-quick-join" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="FIND GAME" data-fa="پیدا کردن بازی">FIND GAME</h2>
+<p class="subtitle" data-en="Enter the host's 4-letter code:" data-fa="کد ۴ حرفی میزبان رو وارد کن:">code:</p>
+<input id="mp-quick-in" class="mp-code-input" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="----" onkeydown="if(event.key==='Enter')netQuickJoin()">
+<button class="menu-btn" id="mp-quick-go-btn" onclick="netQuickJoin()" data-en="JOIN" data-fa="اتصال">JOIN</button>
+<p class="subtitle" id="mp-quick-join-status"></p>
+<button class="menu-btn back-btn" onclick="netAbort();showMenu('mp-menu')" data-en="CANCEL" data-fa="لغو">CANCEL</button>
+</div>
+</div>
+
+<div id="mp-manual" class="menu-overlay hidden">
+<div class="menu-content">
+<h2 data-en="MANUAL MODE" data-fa="روش دستی">MANUAL MODE</h2>
+<p class="subtitle" data-en="For LANs with no internet at all: exchange the long connection codes once (e.g. via any messenger) - after that the game runs fully offline." data-fa="برای شبکه‌هایی که اینترنت ندارن: کدهای بلند اتصال رو یک بار رد و بدل کنید (مثلاً با هر پیام‌رسانی) — بعدش بازی کاملاً آفلاین اجرا می‌شه.">manual</p>
+<button class="menu-btn" onclick="netStartHost()" data-en="HOST - LONG CODE" data-fa="میزبان - کد بلند">HOST - LONG CODE</button>
+<button class="menu-btn" onclick="showMenu('mp-join')" data-en="JOIN - LONG CODE" data-fa="پیوستن - کد بلند">JOIN - LONG CODE</button>
+<button class="menu-btn back-btn" onclick="showMenu('mp-menu')" data-en="BACK" data-fa="بازگشت">BACK</button>
 </div>
 </div>
 
@@ -659,6 +696,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <script src="fps-game-assets/fflate.min.js"></script>
 <script src="fps-game-assets/FBXLoader.js"></script>
 <script src="fps-game-assets/SkeletonUtils.js"></script>
+<script src="fps-game-assets/peerjs.min.js"></script>
 <script>
 // ===== CONFIG =====
 let MOUSE_SENS = 0.004;
@@ -4870,12 +4908,15 @@ function netStatus(elId, txt) { var el = document.getElementById(elId); if (el) 
 function netOpenMenu() { showMenu('mp-menu'); }
 function netCopyCode(id) {
   var el = document.getElementById(id);
-  if (!el || !el.value) return;
-  el.select();
+  if (!el) return;
+  var txt = el.value || el.textContent || '';
+  if (!txt || txt === '....') return;
+  if (el.select) el.select();
   try { document.execCommand('copy'); } catch (e) {}
-  if (navigator.clipboard && navigator.clipboard.writeText) { try { navigator.clipboard.writeText(el.value); } catch (e) {} }
+  if (navigator.clipboard && navigator.clipboard.writeText) { try { navigator.clipboard.writeText(txt); } catch (e) {} }
   netStatus('mp-host-status', currentLang === 'fa' ? 'کپی شد!' : 'Copied!');
   netStatus('mp-join-status', currentLang === 'fa' ? 'کپی شد!' : 'Copied!');
+  netToast(currentLang === 'fa' ? 'کپی شد!' : 'COPIED!');
 }
 function netWireDC(dc) {
   NET.dc = dc;
@@ -4933,6 +4974,121 @@ function netAcceptAnswer() {
     netStatus('mp-host-status', currentLang === 'fa' ? 'در حال اتصال...' : 'Connecting...');
   }).catch(function(e) { console.warn('net accept failed', e); });
 }
+
+// ---- v1.26.0 QUICK CONNECT: SFG2-style 4-letter code (CREATE GAME / FIND GAME) ----
+// A tiny signaling broker (PeerJS public cloud by default) introduces the two
+// devices with a 4-letter code; the game data itself always flows directly
+// between them (WebRTC host candidates = your LAN). Self-host with ?mpserver=host:port/path
+var NETBROKER = null;                      // signaling peer only - never carries game data
+var NET_QUICK_PREFIX = 'glmfps-q';
+var NET_QUICK_ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';   // no 0/O/1/I/L lookalikes
+function netQuickCode() {
+  var c = '';
+  for (var i = 0; i < 4; i++) c += NET_QUICK_ALPHA[Math.floor(Math.random() * NET_QUICK_ALPHA.length)];
+  return c;
+}
+function netBrokerOpts() {
+  try {
+    var srv = new URLSearchParams(location.search).get('mpserver');
+    if (srv) {
+      var parts = srv.split('/');
+      var hp = parts[0].split(':');
+      return { host: hp[0], port: +(hp[1] || 9000), path: '/' + (parts[1] || ''),
+               secure: location.protocol === 'https:' && !/^(localhost|127\.)/.test(hp[0]) };
+    }
+  } catch (e) {}
+  return {};   // default: PeerJS public cloud broker (0.peerjs.com)
+}
+function netAdaptConn(conn) {
+  // wrap a PeerJS DataConnection so it behaves like the RTCDataChannel netWireDC expects
+  var a = {
+    readyState: 'connecting',
+    send: function(s) { try { conn.send(s); } catch (e) {} },
+    close: function() { try { conn.close(); } catch (e) {} },
+    onopen: null, onclose: null, onmessage: null
+  };
+  conn.on('open', function() { a.readyState = 'open'; if (a.onopen) a.onopen(); });
+  conn.on('close', function() { if (a.readyState !== 'closed') { a.readyState = 'closed'; if (a.onclose) a.onclose(); } });
+  conn.on('error', function() { if (a.readyState !== 'closed') { a.readyState = 'closed'; if (a.onclose) a.onclose(); } });
+  conn.on('data', function(d) { if (a.onmessage) a.onmessage({ data: (typeof d === 'string') ? d : JSON.stringify(d) }); });
+  return a;
+}
+function netBrokerDestroy() {
+  if (NETBROKER) { try { NETBROKER.destroy(); } catch (e) {} NETBROKER = null; }
+}
+function netQuickNoInternet() {
+  netToast(currentLang === 'fa' ? 'اتصال سریع اینترنت می‌خواد — از روش دستی استفاده کن' : 'QUICK CONNECT NEEDS INTERNET - USE MANUAL MODE');
+}
+function netQuickHost(retry) {
+  if (typeof Peer === 'undefined') { netQuickNoInternet(); return; }
+  netAbort();
+  NET.role = 'host';
+  var code = netQuickCode();
+  var el = document.getElementById('mp-quick-code');
+  el.textContent = '....';
+  netStatus('mp-quick-host-status', currentLang === 'fa' ? 'در حال آماده‌سازی...' : 'Preparing...');
+  showMenu('mp-quick-host');
+  netBrokerDestroy();
+  var tries = retry || 0;
+  NETBROKER = new Peer(NET_QUICK_PREFIX + code, netBrokerOpts());
+  NETBROKER.on('open', function() {
+    el.textContent = code;
+    netStatus('mp-quick-host-status', currentLang === 'fa'
+      ? 'منتظر بازیکن ۲ بمون — کد رو براش بفرست' : 'WAITING FOR PLAYER 2 - send them the code');
+  });
+  NETBROKER.on('connection', function(conn) {
+    if (NET.connected || (NET.dc && NET.dc.readyState === 'open')) { try { conn.close(); } catch (e) {} return; }
+    NET.role = 'host';
+    netWireDC(netAdaptConn(conn));
+  });
+  NETBROKER.on('disconnected', function() { try { NETBROKER.reconnect(); } catch (e) {} });
+  NETBROKER.on('error', function(err) {
+    if (err && err.type === 'unavailable-id' && tries < 3) { netQuickHost(tries + 1); return; }
+    netStatus('mp-quick-host-status', currentLang === 'fa'
+      ? 'خطا در اتصال! از «روش دستی» استفاده کن.' : 'CONNECTION ERROR! Use MANUAL MODE.');
+  });
+}
+function netQuickJoin() {
+  if (typeof Peer === 'undefined') { netQuickNoInternet(); return; }
+  var inp = document.getElementById('mp-quick-in');
+  var code = (inp.value || '').trim().toUpperCase();
+  if (!new RegExp('^[' + NET_QUICK_ALPHA + ']{4}$').test(code)) {
+    netStatus('mp-quick-join-status', currentLang === 'fa' ? 'کد باید ۴ حرف باشد!' : 'ENTER THE 4-LETTER CODE!');
+    return;
+  }
+  netAbort();
+  NET.role = 'guest';
+  netStatus('mp-quick-join-status', currentLang === 'fa' ? 'در حال اتصال...' : 'Connecting...');
+  netBrokerDestroy();
+  var watchdog = setTimeout(function() {
+    if (!NET.connected) netStatus('mp-quick-join-status', currentLang === 'fa'
+      ? 'اتصال ناموفق بود! کد را چک کن یا از روش دستی استفاده کن.' : 'CONNECTION FAILED! Check the code or use MANUAL MODE.');
+  }, 15000);
+  NETBROKER = new Peer(netBrokerOpts());
+  NETBROKER.on('open', function() {
+    var conn = NETBROKER.connect(NET_QUICK_PREFIX + code, { reliable: true });
+    var adc = netAdaptConn(conn);
+    netWireDC(adc);
+    var prevOpen = adc.onopen;
+    adc.onopen = function() { clearTimeout(watchdog); if (prevOpen) prevOpen(); };
+    conn.on('error', function(err) {
+      clearTimeout(watchdog);
+      if (err && err.type === 'peer-unavailable') {
+        netStatus('mp-quick-join-status', currentLang === 'fa' ? 'بازی با این کد پیدا نشد!' : 'NO GAME FOUND WITH THIS CODE!');
+      } else {
+        netStatus('mp-quick-join-status', currentLang === 'fa' ? 'خطا در اتصال!' : 'CONNECTION ERROR!');
+      }
+    });
+  });
+  NETBROKER.on('error', function(err) {
+    clearTimeout(watchdog);
+    if (err && err.type === 'peer-unavailable') {
+      netStatus('mp-quick-join-status', currentLang === 'fa' ? 'بازی با این کد پیدا نشد!' : 'NO GAME FOUND WITH THIS CODE!');
+    } else {
+      netStatus('mp-quick-join-status', currentLang === 'fa' ? 'خطا در اتصال به سرور! اینترنت را چک کن.' : 'BROKER ERROR! Check your internet.');
+    }
+  });
+}
 function netConnected() {
   NET.connected = true;
   showMenu('mp-lobby');
@@ -4949,6 +5105,7 @@ function netDisconnected() {
   var wasActive = netActive();
   netChip(true);
   if (NET.pc) { try { NET.pc.close(); } catch (e) {} }
+  netBrokerDestroy();
   NET.pc = null; NET.dc = null; NET.connected = false; NET.role = 'off';
   NET.ghosts = {}; NET.lastSnap = null;
   netRemovePeerModel();
@@ -4962,6 +5119,7 @@ function netDisconnected() {
 function netAbort() {
   if (NET.dc) { try { NET.dc.close(); } catch (e) {} }
   if (NET.pc) { try { NET.pc.close(); } catch (e) {} }
+  netBrokerDestroy();
   NET.pc = null; NET.dc = null; NET.connected = false; NET.role = 'off';
   NET.ghosts = {}; NET.lastSnap = null;
   netRemovePeerModel();
