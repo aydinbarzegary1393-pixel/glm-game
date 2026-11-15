@@ -104,3 +104,28 @@ Work Log:
 Stage Summary:
 - fps-game.html single-file build kept; released to GitHub Pages
 - Vertigo now mirrors the CS2 radar layout with working 2-level zombie AI
+
+---
+Task ID: 50
+Agent: main (Super Z)
+Task: v1.27.0 - root-cause fix for floating player 2 in co-op + full graphics upgrade (desktop/mobile first)
+
+Work Log:
+- Diagnosed the co-op floating bug at the protocol/render boundary: both peers broadcast player.position.y (camera-EYE y = feet + PLAYER_HEIGHT 1.7) in 'input'/'snap'.pg, but netUpdatePeerModel applied that raw eye-y to the human model whose group origin is its FEET -> the peer hovered exactly 1.7m above the ground on BOTH screens (host saw P2 float, guest saw P1 float)
+- Fix 1 (protocol boundary): netUpdatePeerModel now converts eye-y -> feet-y (py - PLAYER_HEIGHT) in one place; wire format unchanged so v1.26.0 peers stay compatible
+- Fix 2 (model): netBuildHumanModel now hangs all parts off a body group at y=-0.13 so the group origin is EXACTLY the feet (shoe bottoms used to sit 0.13 above the old origin)
+- Fix 3 (guest spawn): netGuestStart re-grounds P2 after the +1.5/+1.5 anti-overlap offset (eye = floorTopAt + PLAYER_HEIGHT, velocityY = 0) so the second player spawns ON the surface at its own spot on any floor height
+- Graphics upgrade (architecture-compatible, single file, offline): renderer.outputEncoding=sRGB + ACESFilmicToneMapping + per-map exposure; sRGB flags + 8x anisotropic filtering on all bundled textures and the FBX atlas; new HemisphereLight (sky/ground bounce) retuned per map; shadow bias -0.0004 + normalBias 0.02
+- Procedural normal maps: Sobel operator over 128px downsamples of 9 bundled albedo textures, generated at runtime on desktop only, attached to scene materials by file basename with per-material normalScale (mobile skips them)
+- Gradient skies: canvas 16x256 vertical gradient per map (Scrapyard dusk, Skyscraper day, Sandstorm storm) with horizon matched to fog color; Killhouse keeps its sealed interior backdrop
+- Pooled combat VFX: 128-slot THREE.Points particle system (impact sparks, blood puffs with per-particle color) + 10-slot additive tracer box pool from muzzle world position to impact point; zero allocations per shot; updateCombatVfx(dt) step in animate()
+- Muzzle world flash intensity 3 -> 5 under the filmic curve
+- Platform quality (desktop first): desktop = 2048 shadows + normal maps + pixelRatio cap 2; mobile = 1024 shadows + flat lighting + cap 1.75; dynamic resolution governor in animate() scales the drawing buffer 0.85x/1.12x with 4s cooldown (floor 0.55) to hold the FPS target; applyGfxTier() wired to changeDevice/startGame/boot
+- Light levels A/B-tuned against the pristine v1.26.0 baseline screenshots (first pass was washed-out; retuned amb/dir/hemi/exposure per map to restore contrast and saturation while keeping skies/shadows)
+- Tested: new v1.27 suite 23/23 (pipeline, normal maps x13, gradient sky, VFX, mobile/desktop tiers, governor, loopback co-op, P2 re-ground, peer feet at y~0 on both screens, model origin=feet, ghosts intact, gift code) + full regressions: quick-connect 17/17, coop 23/23, zombie 21/21, fall 27/27, maps 64/64 - zero console errors everywhere
+- Release: manifest regenerated (v1.27.0), pushed, verified live; news #23 sent
+
+Stage Summary:
+- Player 2 in co-op now stands exactly on the ground like player 1 (root cause fixed, not a coordinate patch)
+- Desktop-first graphics: filmic color grade, gradient skies, normal-mapped surfaces, 3-layer lighting, combat VFX; mobile auto-scales to keep FPS
+- Apps (Android APK / Windows) pick it up via the sha256-verified auto-update manifest
