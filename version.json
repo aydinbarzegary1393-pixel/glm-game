@@ -1,12 +1,12 @@
 {
-  "version": "v1.26.0",
-  "generated": "2026-10-29T22:26:45Z",
+  "version": "v1.27.0",
+  "generated": "2026-11-15T17:02:54Z",
   "entry": "fps-game.html",
   "files": [
     {
       "path": "fps-game.html",
-      "sha256": "cecb52bac7ab5408d4f7e694808cb6df68a8a4b181d5408ce71f2a3a9eeba573",
-      "size": 274612
+      "sha256": "b7b41dcaf521ef79fd82d5698b26c1c5f6332758617d0b59b61a6285ff9b9854",
+      "size": 288421
     },
     {
       "path": "fps-game-assets/FBXLoader.js",

@@ -1906,6 +1906,7 @@ function changeDevice(dev) {
   deviceChosen = true;
   saveSettings({device: dev});
   updateDeviceButtons();
+  applyGfxTier();   // v1.27.0: shadows/normal-maps/pixel-ratio follow the device
   if (isMobileDevice) {
     goFullscreenSafe();
     // Show the rotate tutorial when switching to mobile before a game starts
@@ -2319,6 +2320,31 @@ const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// v1.27.0: filmic color pipeline (the CoD/CS2-style grade) - sRGB output + ACES
+// tone mapping. Every color texture is flagged sRGB in _loadTex and the FBX
+// atlas in its loader; per-map light levels below were retuned for the darker
+// ACES curve so the old scenes keep their mood but gain real contrast.
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+const GL_MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+// v1.27.0: platform-aware quality. Desktop-first tiers: full 2048 shadows +
+// procedural normal maps on PC, 1024 shadows + flat lighting on phones, and a
+// dynamic resolution governor (see animate) trims the drawing buffer on any
+// device that still drops under the FPS target instead of cutting features.
+var gfxPrCap = Math.min(window.devicePixelRatio || 1, 2);
+var gfxPrScale = 1;
+var gfxFpsAcc = 0, gfxFpsN = 0, gfxFpsCool = 0;
+function gfxApplyRatio() { renderer.setPixelRatio(Math.max(0.55, gfxPrCap * gfxPrScale)); }
+function applyGfxTier() {
+  gfxPrCap = isMobileDevice ? Math.min(window.devicePixelRatio || 1, 1.75)
+                            : Math.min(window.devicePixelRatio || 1, 2);
+  dirLight.shadow.mapSize.set(isMobileDevice ? 1024 : 2048, isMobileDevice ? 1024 : 2048);
+  if (dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map = null; }
+  gfxApplyRatio();
+  if (!isMobileDevice) { gfxBuildNormalMaps(); gfxEnhanceAllMaterials(); }
+  else gfxStripNormalMaps();
+}
 renderer.domElement.style.position = 'fixed';
 renderer.domElement.style.top = '0';
 renderer.domElement.style.left = '0';
@@ -2337,12 +2363,20 @@ camera.position.set(0,0,0);
 // Lights (v1.21.0: named so map loaders can retune them per environment)
 const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambLight);
+// v1.27.0: hemisphere sky/ground bounce light - replaces the old flat ambient
+// wash with directional color (sky tint above, warm ground bounce below),
+// retuned per map by each loader.
+const hemiLight = new THREE.HemisphereLight(0xbfd6e8, 0x3a3a30, 0.4);
+scene.add(hemiLight);
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(10, 20, 10);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(2048,2048);
 const sc = dirLight.shadow.camera;
 sc.near=0.5;sc.far=80;sc.left=-40;sc.right=40;sc.top=40;sc.bottom=-40;
+// v1.27.0: shadow acne guards for the tighter, softer shadow look
+dirLight.shadow.bias = -0.0004;
+dirLight.shadow.normalBias = 0.02;
 scene.add(dirLight);
 
 // ===== MAP SYSTEM =====
@@ -3022,6 +3056,9 @@ function _loadTex(name, rx, ry) {
   var t = _texLoader.load('fps-game-assets/' + name);
   t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.RepeatWrapping;
   if (rx) t.repeat.set(rx, ry || rx);
+  // v1.27.0: sRGB color + anisotropic filtering (crisp floors at grazing angles)
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = Math.min(8, GL_MAX_ANISO);
   return t;
 }
 // Brick texture (loaded from PNG)
@@ -3051,6 +3088,184 @@ tex.zombieSkin = _loadTex('tex_zombie_skin.png');
 // Zombie dark skin (loaded from PNG 512x512)
 tex.zombieDark = _loadTex('tex_zombie_dark.png');
 
+// ===== v1.27.0: VISUAL UPGRADE SYSTEM =====
+// Runtime-generated normal maps from the bundled albedo textures (Sobel over a
+// 128px downsample - zero downloads, works offline in the Android/Windows
+// apps), per-map gradient skies, and a pooled combat-VFX system (tracers,
+// impact sparks, blood puffs) with no per-shot allocations. Desktop runs the
+// full tier; mobile skips normal maps and keeps 1024 shadows so phone GPUs
+// hold the FPS target, while the dynamic resolution governor in animate()
+// scales the drawing buffer on any device that still struggles.
+var _normalCache = {};          // texture src URL -> base CanvasTexture normal map
+var gfxNormalsBuilt = false;
+function gfxMakeNormalMap(img, strength) {
+  var w = 128, h = 128;
+  var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  var cx = cv.getContext('2d');
+  cx.drawImage(img, 0, 0, w, h);
+  var d = cx.getImageData(0, 0, w, h).data;
+  var out = cx.createImageData(w, h), o = out.data;
+  var lum = new Float32Array(w * h);
+  for (var i = 0, p = 0; i < lum.length; i++, p += 4) {
+    lum[i] = (d[p] * 0.299 + d[p + 1] * 0.587 + d[p + 2] * 0.114) / 255;
+  }
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var xm = (x - 1 + w) % w, xp = (x + 1) % w;
+      var ym = (y - 1 + h) % h, yp = (y + 1) % h;
+      var dx = (lum[y * w + xp] - lum[y * w + xm]) * strength;
+      var dy = (lum[yp * w + x] - lum[ym * w + x]) * strength;
+      var nz = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+      var q = (y * w + x) * 4;
+      o[q]     = (-dx * nz * 0.5 + 0.5) * 255;
+      o[q + 1] = (-dy * nz * 0.5 + 0.5) * 255;   // +Y up (OpenGL convention)
+      o[q + 2] = nz * 255;
+      o[q + 3] = 255;
+    }
+  }
+  cx.putImageData(out, 0, 0);
+  var t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+function gfxBuildNormalMaps() {
+  if (gfxNormalsBuilt) return;
+  gfxNormalsBuilt = true;
+  var jobs = [   // [file, sobel strength]
+    ['tex_brick.png', 2.2], ['tex_sand.png', 1.1], ['tex_sand_ground.png', 1.6],
+    ['tex_concrete.png', 1.8], ['tex_metal_floor.png', 1.2], ['tex_metal_wall.png', 1.4],
+    ['tex_crate.png', 2.0], ['tex_dark_metal.png', 1.0], ['tex_concrete_floor.png', 1.4]
+  ];
+  var pending = jobs.length;
+  jobs.forEach(function(j) {
+    var img = new Image();
+    img.onload = function() {
+      _normalCache[j[0]] = gfxMakeNormalMap(img, j[1]);   // keyed by FILE name
+      if (--pending === 0) gfxEnhanceAllMaterials();
+    };
+    img.onerror = function() { if (--pending === 0) gfxEnhanceAllMaterials(); };
+    img.src = 'fps-game-assets/' + j[0];
+  });
+}
+function gfxAttachNormal(mat) {
+  if (!mat || !mat.map || mat.normalMap || mat.isMeshBasicMaterial) return;
+  var img = mat.map.image;
+  var src = img && (img.src || img.currentSrc || '');
+  // TextureLoader images carry ABSOLUTE urls - match by the file basename
+  var base = src ? src.substring(src.lastIndexOf('/') + 1) : '';
+  if (!base || !_normalCache[base]) return;
+  // clone per material - each surface repeats its texture differently
+  var nm = _normalCache[base].clone(); nm.needsUpdate = true;
+  mat.normalMap = nm;
+  if (mat.map.repeat) nm.repeat.copy(mat.map.repeat);
+  var s = mat.roughness > 0.6 ? 0.9 : 0.55;   // gritty surfaces groove deeper
+  mat.normalScale.set(s, s);
+  mat.needsUpdate = true;
+}
+function gfxEnhanceAllMaterials() {
+  scene.traverse(function(ch) {
+    if (ch.isMesh && ch.material && !Array.isArray(ch.material)) gfxAttachNormal(ch.material);
+  });
+}
+function gfxStripNormalMaps() {
+  scene.traverse(function(ch) {
+    if (ch.isMesh && ch.material && !Array.isArray(ch.material) && ch.material.normalMap) {
+      ch.material.normalMap = null; ch.material.needsUpdate = true;
+    }
+  });
+}
+
+// ---- v1.27.0: per-map gradient skies (fullscreen backdrop, horizon matches fog) ----
+var _skyCanvas = document.createElement('canvas');
+var _skyTex = null;
+function setMapSky(topCss, midCss, botCss) {
+  _skyCanvas.width = 16; _skyCanvas.height = 256;
+  var cx = _skyCanvas.getContext('2d');
+  var gr = cx.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, topCss); gr.addColorStop(0.55, midCss); gr.addColorStop(1, botCss);
+  cx.fillStyle = gr; cx.fillRect(0, 0, 16, 256);
+  if (!_skyTex) {
+    _skyTex = new THREE.CanvasTexture(_skyCanvas);
+    _skyTex.encoding = THREE.sRGBEncoding;
+    scene.background = _skyTex;
+  } else {
+    _skyTex.needsUpdate = true;
+    if (scene.background !== _skyTex) scene.background = _skyTex;
+  }
+}
+
+// ---- v1.27.0: pooled combat VFX (tracers / impact sparks / blood puffs) ----
+// One shared THREE.Points with 128 recycled slots + a small pool of additive
+// tracer boxes. spawn only fills slots; updateCombatVfx advances them per frame.
+var VFX_N = 128;
+var vfxPos = new Float32Array(VFX_N * 3), vfxCol = new Float32Array(VFX_N * 3);
+var vfxVel = new Float32Array(VFX_N * 3), vfxLife = new Float32Array(VFX_N);
+var vfxHead = 0;
+var vfxGeo = new THREE.BufferGeometry();
+vfxGeo.setAttribute('position', new THREE.BufferAttribute(vfxPos, 3));
+vfxGeo.setAttribute('color', new THREE.BufferAttribute(vfxCol, 3));
+var vfxMat = new THREE.PointsMaterial({ size: 0.055, vertexColors: true, transparent: true,
+  opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+var vfxPoints = new THREE.Points(vfxGeo, vfxMat);
+vfxPoints.frustumCulled = false;
+scene.add(vfxPoints);
+for (var _vi = 0; _vi < VFX_N; _vi++) { vfxPos[_vi * 3 + 1] = -999; vfxLife[_vi] = 0; }
+function vfxBurst(x, y, z, nx, ny, nz, count, colR, colG, colB, spread, speed) {
+  for (var i = 0; i < count; i++) {
+    var s = vfxHead; vfxHead = (vfxHead + 1) % VFX_N;
+    var q = s * 3;
+    vfxPos[q] = x; vfxPos[q + 1] = y; vfxPos[q + 2] = z;
+    vfxVel[q]     = (nx + (Math.random() - 0.5) * spread) * speed * (0.4 + Math.random() * 0.6);
+    vfxVel[q + 1] = (ny + (Math.random() - 0.5) * spread) * speed * (0.4 + Math.random() * 0.6) + 0.6;
+    vfxVel[q + 2] = (nz + (Math.random() - 0.5) * spread) * speed * (0.4 + Math.random() * 0.6);
+    var br = 0.7 + Math.random() * 0.3;
+    vfxCol[q] = colR * br; vfxCol[q + 1] = colG * br; vfxCol[q + 2] = colB * br;
+    vfxLife[s] = 0.28 + Math.random() * 0.17;
+  }
+  vfxGeo.attributes.color.needsUpdate = true;
+}
+var tracerPool = [], tracerHead = 0;
+function vfxTracer(from, to) {
+  var t = tracerPool[tracerHead];
+  if (!t) {
+    t = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 1),
+      new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.85,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+    t.frustumCulled = false;
+    tracerPool[tracerHead] = t;
+    scene.add(t);
+  }
+  tracerHead = (tracerHead + 1) % 10;
+  t.scale.set(1, 1, Math.max(0.1, from.distanceTo(to)));
+  t.position.copy(from).add(to).multiplyScalar(0.5);
+  t.lookAt(to);
+  t.material.opacity = 0.85;
+  t.visible = true;
+  t.userData.ttl = 0.06;
+}
+function updateCombatVfx(dt) {
+  var any = false;
+  for (var i = 0; i < VFX_N; i++) {
+    if (vfxLife[i] <= 0) continue;
+    any = true;
+    vfxLife[i] -= dt;
+    var q = i * 3;
+    vfxVel[q + 1] -= 9.5 * dt;   // gravity
+    vfxPos[q] += vfxVel[q] * dt;
+    vfxPos[q + 1] += vfxVel[q + 1] * dt;
+    vfxPos[q + 2] += vfxVel[q + 2] * dt;
+    if (vfxLife[i] <= 0) vfxPos[q + 1] = -999;
+  }
+  if (any) vfxGeo.attributes.position.needsUpdate = true;
+  for (var ti = 0; ti < tracerPool.length; ti++) {
+    var tr = tracerPool[ti];
+    if (!tr || !tr.visible) continue;
+    tr.userData.ttl -= dt;
+    tr.material.opacity = Math.max(0, tr.material.opacity - dt * 14);
+    if (tr.userData.ttl <= 0) tr.visible = false;
+  }
+}
+
 // ===== v1.24.0: QUATERNIUS CUBE ZOMBIE (skinned FBX + 7 clips) =====
 // The uploaded "Zombie by Quaternius" pack replaces the procedural box zombie:
 // one skinned mesh with a 32x32 atlas texture and walk/run/idle/attack/death/
@@ -3075,6 +3290,7 @@ try {
           ch.material.map.magFilter = THREE.NearestFilter;
           ch.material.map.generateMipmaps = false;
           ch.material.map.minFilter = THREE.LinearFilter;
+          ch.material.map.encoding = THREE.sRGBEncoding;   // v1.27.0: correct colors under ACES
         }
       });
       zombieFBXLoaded = true;
@@ -3306,9 +3522,11 @@ function getGroundY(px, py, pz) {
 // crane tower with a hanging hook, tire stacks, barrel clusters and
 // floodlight poles. Replaces the old flat test-grid map as the default map.
 function loadScrapyardMap() {
-  ambLight.intensity = 0.5; dirLight.intensity = 0.8;   // restore defaults (v1.21.0)
+  ambLight.intensity = 0.5; dirLight.intensity = 0.85;   // v1.27.0: ACES-tuned dusk
   mapTickFn = null;
-  scene.background = new THREE.Color(0xc97f3f);
+  hemiLight.intensity = 0.25; hemiLight.color.setHex(0xcf8a4a); hemiLight.groundColor.setHex(0x2e2620);
+  renderer.toneMappingExposure = 1.05;
+  setMapSky('#6b4a6e', '#c97f3f', '#e8a862');   // dusk gradient, horizon matches the fog
   scene.fog = new THREE.Fog(0xc97f3f, 26, 95);
   // dry cracked dirt ground
   var syTex = makeCanvasTex(function(c, w, h) {
@@ -3416,8 +3634,10 @@ function loadScrapyardMap() {
 // tank, an antenna cluster with blinking beacons, a maintenance hut and an
 // elevator bulkhead - and the whole city far BELOW the parapet edge.
 function loadSkyscraperMap() {
-  ambLight.intensity = 0.55; dirLight.intensity = 0.85;
-  scene.background = new THREE.Color(0x8db8e8);
+  ambLight.intensity = 0.52; dirLight.intensity = 0.85;   // v1.27.0: bright open sky
+  hemiLight.intensity = 0.35; hemiLight.color.setHex(0xbdd8f2); hemiLight.groundColor.setHex(0x5a616b);
+  renderer.toneMappingExposure = 1.05;
+  setMapSky('#4a86cc', '#a9c6e4', '#e2ecf5');
   scene.fog = new THREE.Fog(0xa9c6e4, 40, 150);
 
   // ---- rooftop surface (finite slab - the void and the city are below) ----
@@ -3651,9 +3871,11 @@ function loadSkyscraperMap() {
 // mud-brick outpost at its heart, a half-buried military convoy, a dead
 // oasis and scattered rock formations - all fighting ~30m of choking dust.
 function loadSandstormMap() {
-  ambLight.intensity = 0.5; dirLight.intensity = 0.75;
+  ambLight.intensity = 0.5; dirLight.intensity = 0.75;   // v1.27.0: storm glow
   mapTickFn = null;
-  scene.background = new THREE.Color(0xc08450);
+  hemiLight.intensity = 0.4; hemiLight.color.setHex(0xd39a5e); hemiLight.groundColor.setHex(0x4a3826);
+  renderer.toneMappingExposure = 1.08;
+  setMapSky('#7d5228', '#c08450', '#d8a468');
   scene.fog = new THREE.Fog(0xc08450, 4, 30);
   setGround(tex.sandGround, 0x9e8060, 0xb09870);
   var SAND=tex.sand, CRATE=tex.crate, BRICK=tex.brick;
@@ -3821,8 +4043,10 @@ function loadSandstormMap() {
 // rooms - every space connected by real doorways. Sealed roof, strip
 // lights, red emergency glow, stenciled signs and glowing zombie eyes.
 function loadKillhouseMap() {
-  ambLight.intensity = 0.6; dirLight.intensity = 0.15;   // interior: lights do the work
+  ambLight.intensity = 0.55; dirLight.intensity = 0.18;   // v1.27.0: interior - emissives do the work
   mapTickFn = null;
+  hemiLight.intensity = 0.22; hemiLight.color.setHex(0x3a3f47); hemiLight.groundColor.setHex(0x141518);
+  renderer.toneMappingExposure = 1.05;
   scene.background = new THREE.Color(0x0b0d10);
   scene.fog = new THREE.Fog(0x0b0d10, 6, 38);
   setGround(tex.concreteFloor, 0x444444, 0x4a4a4a);
@@ -4325,7 +4549,7 @@ function shoot() {
   muzzleFlashEl.classList.remove('fire');
   void muzzleFlashEl.offsetWidth;
   muzzleFlashEl.classList.add('fire');
-  muzzleLight.intensity = 3;
+  muzzleLight.intensity = 5;   // v1.27.0: brighter world flash under the filmic curve
   setTimeout(() => { muzzleLight.intensity = 0; }, 50);
 
   // Gun recoil (Three.js, not DOM) - heavier guns kick harder
@@ -4347,9 +4571,18 @@ function shoot() {
     enemies[ei].group.traverse(function(ch) { if (ch.isMesh) allTargets.push(ch); });
   }
   const hits = raycaster.intersectObjects(allTargets);
+  // v1.27.0: combat VFX - a tracer streak from the muzzle to the impact point,
+  // then sparks (world) or blood (flesh) at the hit. Pooled: zero allocations
+  // except the two one-shot Vector3 temps here, once per trigger pull.
+  var _mz = muzzleLight.getWorldPosition(new THREE.Vector3());
+  var _sparks = isMobileDevice ? 4 : 8;
   if (hits.length > 0) {
     const hit = hits[0];
+    vfxTracer(_mz, hit.point);
+    var _vn = (hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize()
+                        : raycaster.ray.direction.clone().negate());
     if (hit.object.userData.enemyRef) {
+      vfxBurst(hit.point.x, hit.point.y, hit.point.z, _vn.x, _vn.y, _vn.z, _sparks, 0.75, 0.1, 0.06, 0.9, 3);
       const enemy = hit.object.userData.enemyRef;
       // v1.25.0: in co-op the guest's damage is applied by the HOST (authority)
       if (netIsGuest()) {
@@ -4382,6 +4615,7 @@ function shoot() {
       }
       }
     } else if (hit.face) {
+      vfxBurst(hit.point.x, hit.point.y, hit.point.z, _vn.x, _vn.y, _vn.z, _sparks, 1.0, 0.72, 0.35, 0.8, 3.2);   // impact sparks
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
       const holeGroup = new THREE.Group();
       const coreGeo = new THREE.CircleGeometry(0.06, 8);
@@ -4398,6 +4632,8 @@ function shoot() {
       holeGroup.renderOrder = 999;
       bulletHoles.add(holeGroup);
     }
+  } else {
+    vfxTracer(_mz, raycaster.ray.at(60, new THREE.Vector3()));   // v1.27.0: tracer into the distance
   }
 
   // Fire rate cooldown - per-weapon (lancer 500ms ... default 1000ms, P90 none)
@@ -4429,6 +4665,7 @@ function startGame(mode) {
   if (autoFullscreen) goFullscreenSafe();
   clearMap(); clearMedkits();
   mapLoaders[currentMap]();
+  gfxEnhanceAllMaterials();   // v1.27.0: attach normal maps to the fresh map materials (desktop)
   document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
   pauseOvl.classList.add('hidden');
   document.getElementById('crosshair').style.display = 'block';
@@ -4670,6 +4907,7 @@ function animate() {
     }
   }
   if (mapTickFn) mapTickFn(dt);   // v1.21.0 living-map hook
+  updateCombatVfx(dt);            // v1.27.0: tracer/spark/blood particle step
   const gamePaused = isGamePaused();
   if (!gamePaused && gameStarted && ++musicTick % 10 === 0) updateMusicIntensity();   // v1.19.4 zombie heat
   if (!gamePaused && ++crosshairTick % 7 === 0) updateCrosshairEnemy();
@@ -4848,6 +5086,20 @@ function animate() {
     
     // Draw minimap
     drawMinimap();
+  }
+
+  // v1.27.0: dynamic resolution governor - watches the real frame rate and
+  // scales the drawing buffer up/down in small steps (0.85x / 1.12x, 4s
+  // cooldown, floor 0.55) so every device holds its FPS target without
+  // touching the visual feature set. Desktop and mobile both benefit.
+  gfxFpsAcc += dt; gfxFpsN++; gfxFpsCool -= dt;
+  if (gfxFpsAcc > 2.5) {
+    var fps = gfxFpsN / gfxFpsAcc;
+    if (gfxFpsCool <= 0) {
+      if (fps < 42 && gfxPrScale > 0.58) { gfxPrScale *= 0.85; gfxApplyRatio(); gfxFpsCool = 4; }
+      else if (fps > 57 && gfxPrScale < 1) { gfxPrScale = Math.min(1, gfxPrScale * 1.12); gfxApplyRatio(); gfxFpsCool = 4; }
+    }
+    gfxFpsAcc = 0; gfxFpsN = 0;
   }
 
   renderer.render(scene, camera);
@@ -5161,42 +5413,49 @@ function netBuildGunModel(idx) {
 }
 function netBuildHumanModel(idx, shirtColor) {
   var g = new THREE.Group();
+  // v1.27.0: everything hangs off a body group shifted down so the GROUP
+  // ORIGIN is exactly the feet (shoe bottoms used to sit 0.13 above the old
+  // origin). netUpdatePeerModel now places the group at the peer's FEET y, so
+  // the model must stand on its own origin - never hover, never sink.
+  var body = new THREE.Group();
+  body.position.y = -0.13;
+  g.add(body);
   var skin = new THREE.MeshStandardMaterial({ color: 0xe0ac69, roughness: 0.8 });
   var shirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.85 });
   var pants = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.85 });
   var hair = new THREE.MeshStandardMaterial({ color: 0x3b2a1a, roughness: 0.9 });
   var shoe = new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.9 });
-  var torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), shirt); torso.position.y = 1.18; g.add(torso);
-  var head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.34), skin); head.position.y = 1.68; g.add(head);
-  var hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.36), hair); hairTop.position.y = 1.89; g.add(hairTop);
+  var torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), shirt); torso.position.y = 1.18; body.add(torso);
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.34), skin); head.position.y = 1.68; body.add(head);
+  var hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.36), hair); hairTop.position.y = 1.89; body.add(hairTop);
   var eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-  var eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeL.position.set(-0.08, 1.72, 0.18); g.add(eyeL);
-  var eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeR.position.set(0.08, 1.72, 0.18); g.add(eyeR);
+  var eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeL.position.set(-0.08, 1.72, 0.18); body.add(eyeL);
+  var eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), eyeMat); eyeR.position.set(0.08, 1.72, 0.18); body.add(eyeR);
   // left arm swings while walking; right arm holds the gun forward
   var la = new THREE.Group(); la.position.set(-0.34, 1.44, 0);
   var laM = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.52, 0.13), shirt); laM.position.y = -0.26; la.add(laM);
   var laH = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.1, 0.11), skin); laH.position.y = -0.56; la.add(laH);
-  g.add(la);
+  body.add(la);
   var ra = new THREE.Group(); ra.position.set(0.34, 1.44, 0);
   var raM = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.5, 0.13), shirt); raM.position.y = -0.25; ra.add(raM);
   ra.rotation.x = -1.25;   // arm raised aiming forward
-  g.add(ra);
+  body.add(ra);
   var gun = netBuildGunModel(idx); gun.position.set(0, -0.52, 0.1); ra.add(gun);
   var ll = new THREE.Group(); ll.position.set(-0.14, 0.86, 0);
   var llM = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.6, 0.17), pants); llM.position.y = -0.34; ll.add(llM);
   var llF = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.24), shoe); llF.position.set(0, -0.68, 0.04); ll.add(llF);
-  g.add(ll);
+  body.add(ll);
   var rl = new THREE.Group(); rl.position.set(0.14, 0.86, 0);
   var rlM = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.6, 0.17), pants); rlM.position.y = -0.34; rl.add(rlM);
   var rlF = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.24), shoe); rlF.position.set(0, -0.68, 0.04); rl.add(rlF);
-  g.add(rl);
+  body.add(rl);
   // floating health bar (billboarded every frame)
   var bar = new THREE.Group(); bar.position.y = 2.12;
   var bg = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.11), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthTest: false }));
   bg.renderOrder = 998; bar.add(bg);
   var fill = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.07), new THREE.MeshBasicMaterial({ color: 0x2ecc71, depthTest: false }));
   fill.renderOrder = 999; fill.position.z = 0.001; bar.add(fill);
-  g.add(bar);
+  body.add(bar);
   g.traverse(function(ch) { if (ch.isMesh) { ch.userData.peerModel = true; ch.frustumCulled = false; } });
   g.userData = { leftArm: la, rightArm: ra, leftLeg: ll, rightLeg: rl, bar: bar, fill: fill, gunHolder: ra };
   return g;
@@ -5233,7 +5492,15 @@ function netUpdatePeerModel(dt, px, py, pz, yaw, hp, alive) {
   var k = 1 - Math.exp(-14 * dt);
   var prev = netPeerModel.position.x + netPeerModel.position.z;
   netPeerModel.position.x += (px - netPeerModel.position.x) * k;
-  netPeerModel.position.y += (py - netPeerModel.position.y) * k;
+  // v1.27.0 ROOT-CAUSE FIX for the floating player 2: the wire format (both
+  // 'input' and 'snap'.pg) carries the peer's CAMERA-EYE y (feet +
+  // PLAYER_HEIGHT), but the human model's group origin is its FEET. Rendering
+  // the raw wire y put the model's feet at eye height - exactly one
+  // PLAYER_HEIGHT (1.7m) above the ground, on BOTH screens. Convert eye ->
+  // feet here at the render boundary (one place, both directions) and keep
+  // the wire format unchanged so v1.26.0 peers stay compatible.
+  var fy = py - PLAYER_HEIGHT;
+  netPeerModel.position.y += (fy - netPeerModel.position.y) * k;
   netPeerModel.position.z += (pz - netPeerModel.position.z) * k;
   netPeerModel.rotation.y = yaw + Math.PI;   // model faces +Z, camera forward is -Z
   var moved = Math.abs((netPeerModel.position.x + netPeerModel.position.z) - prev) > 0.001;
@@ -5327,6 +5594,12 @@ function netGuestStart(cfg) {
   startGame(cfg.mode);
   // slight offset so the two players do not spawn inside each other
   player.position.x += 1.5; player.position.z += 1.5;
+  // v1.27.0: the offset can land on different floor height than the map's
+  // spawn point (dunes, ramps, slab edges) - re-ground P2 exactly like P1
+  // (eye = floorTopAt + PLAYER_HEIGHT) so the second player spawns ON the
+  // surface at its own spot, never inside it or floating above it.
+  player.position.y = floorTopAt(player.position.x, player.position.z) + PLAYER_HEIGHT;
+  velocityY = 0;
   netChip(false);
   netToast(currentLang === 'fa' ? 'بازی دونفره شروع شد!' : 'CO-OP GAME STARTED!');
 }
@@ -5601,6 +5874,7 @@ function netLobbyStart() {
 }
 
 applySavedSettings();
+applyGfxTier();   // v1.27.0: resolve the device tier once saved settings are in
 animate();
 </script>
 </body>
